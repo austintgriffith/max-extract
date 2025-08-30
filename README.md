@@ -1,6 +1,5 @@
-# 👨‍🚀 Max Extract
-
 <img width="533" height="800" alt="Image" src="https://github.com/user-attachments/assets/7b85b519-6cf1-4ff5-aa7d-c0bebd37fda5" />
+
 
 Max Extract wasn’t a captain or a warlord. Just another code monkey in the asteroid belt, known for keeping his head down and drill spinning. Out here, among scattered wrecks and drifting cargo, the real battles weren’t fought with lasers—they were waged in silence, when one crew mined a rock for hours only to have another swoop in and take everything. No treaties held. Anarchy ruled, but it squandered more than it gave. No one trusted anyone, and every mission risked ending in blood or bankruptcy. Max didn’t try to stop the violence, only the inefficiency.
 
