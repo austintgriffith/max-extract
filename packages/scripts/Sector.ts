@@ -13,6 +13,9 @@ import {
   SectorSnapshot,
   SECTOR_CONFIG,
 } from "./types";
+import { PositionUtils } from "./utils/PositionUtils";
+import { ShipAI } from "./utils/ShipAI";
+import { AsteroidUtils } from "./utils/AsteroidUtils";
 
 export class Sector {
   public id: string;
@@ -25,7 +28,7 @@ export class Sector {
 
   constructor(id: string, seed?: string) {
     this.id = id;
-    // Simple seeded random number generator
+
     let seedValue = seed ? this.hashSeed(seed) : Math.random() * 1000000;
     this.rng = () => {
       seedValue = (seedValue * 9301 + 49297) % 233280;
@@ -119,26 +122,6 @@ export class Sector {
     return { position, velocity };
   }
 
-  private calculatePosition(
-    entity: Asteroid | Ship,
-    currentTime: number
-  ): Vector2D {
-    const elapsed = currentTime - entity.spawnTime;
-    return {
-      x: entity.position.x + entity.velocity.x * (elapsed / 1000),
-      y: entity.position.y + entity.velocity.y * (elapsed / 1000),
-    };
-  }
-
-  private isOutOfBounds(position: Vector2D): boolean {
-    return (
-      position.x < -100 ||
-      position.x > SECTOR_CONFIG.WIDTH + 100 ||
-      position.y < -100 ||
-      position.y > SECTOR_CONFIG.HEIGHT + 100
-    );
-  }
-
   private findBiggestReachableAsteroid(shipPos: Vector2D): string | null {
     let bestId: string | null = null;
     let bestSize = 0;
@@ -167,10 +150,10 @@ export class Sector {
 
   private canShipReachAsteroid(shipPos: Vector2D, asteroid: Asteroid): boolean {
     const currentTime = Date.now();
-    const asteroidPos = this.calculatePosition(asteroid, currentTime);
+    const asteroidPos = PositionUtils.calculatePosition(asteroid, currentTime);
 
     // Calculate time for asteroid to reach map edge
-    const timeToEdge = this.calculateTimeToMapEdge(asteroid);
+    const timeToEdge = AsteroidUtils.calculateTimeToMapEdge(asteroid);
 
     // Calculate actual intercept time using the intercept math
     const d = { x: asteroidPos.x - shipPos.x, y: asteroidPos.y - shipPos.y };
@@ -213,55 +196,21 @@ export class Sector {
     return canReach;
   }
 
-  private calculateTimeToMapEdge(asteroid: Asteroid): number {
-    const currentTime = Date.now();
-    const currentPos = this.calculatePosition(asteroid, currentTime);
-
-    // Calculate time to reach each edge
-    let minTime = Infinity;
-
-    // Time to reach left edge (x = -100)
-    if (asteroid.velocity.x < 0) {
-      const timeToLeft = (currentPos.x + 100) / Math.abs(asteroid.velocity.x);
-      minTime = Math.min(minTime, timeToLeft);
-    }
-
-    // Time to reach right edge (x = WIDTH + 100)
-    if (asteroid.velocity.x > 0) {
-      const timeToRight =
-        (SECTOR_CONFIG.WIDTH + 100 - currentPos.x) / asteroid.velocity.x;
-      minTime = Math.min(minTime, timeToRight);
-    }
-
-    // Time to reach top edge (y = -100)
-    if (asteroid.velocity.y < 0) {
-      const timeToTop = (currentPos.y + 100) / Math.abs(asteroid.velocity.y);
-      minTime = Math.min(minTime, timeToTop);
-    }
-
-    // Time to reach bottom edge (y = HEIGHT + 100)
-    if (asteroid.velocity.y > 0) {
-      const timeToBottom =
-        (SECTOR_CONFIG.HEIGHT + 100 - currentPos.y) / asteroid.velocity.y;
-      minTime = Math.min(minTime, timeToBottom);
-    }
-
-    return minTime === Infinity ? 1000 : minTime; // Default to 1000 seconds if not moving
-  }
-
   private retargetShip(ship: Ship): void {
     // Find biggest reachable asteroid that's not already the current target
-    const currentPos = this.calculatePosition(ship, Date.now());
+    const currentPos = PositionUtils.calculatePosition(ship, Date.now());
     const targetId = this.findBiggestReachableAsteroid(currentPos);
     if (targetId && targetId !== ship.targetAsteroidId) {
       const targetAsteroid = this.asteroids.get(targetId);
       if (targetAsteroid) {
         const oldTarget = ship.targetAsteroidId;
         ship.targetAsteroidId = targetId;
-        ship.velocity = this.calculateInterceptCourse(
+        const interceptResult = ShipAI.calculateInterceptCourse(
           currentPos,
           targetAsteroid
         );
+        ship.velocity = interceptResult.velocity;
+        ship.interceptTime = interceptResult.interceptTime;
         ship.position = currentPos;
         ship.spawnTime = Date.now();
         console.log(
@@ -287,21 +236,8 @@ export class Sector {
 
     // If no suitable target found, fly toward center and wait
     ship.targetAsteroidId = null;
-    const shipPos = this.calculatePosition(ship, Date.now());
-    const centerX = SECTOR_CONFIG.WIDTH / 2;
-    const centerY = SECTOR_CONFIG.HEIGHT / 2;
-    const dx = centerX - shipPos.x;
-    const dy = centerY - shipPos.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > 0) {
-      ship.velocity = {
-        x: (dx / distance) * SECTOR_CONFIG.SHIP_SPEED * 0.5, // Half speed toward center
-        y: (dy / distance) * SECTOR_CONFIG.SHIP_SPEED * 0.5,
-      };
-    } else {
-      ship.velocity = { x: 0, y: 0 }; // Already at center, wait
-    }
+    const shipPos = PositionUtils.calculatePosition(ship, Date.now());
+    ship.velocity = ShipAI.calculateCenterVelocity(shipPos);
     ship.position = shipPos;
     ship.spawnTime = Date.now();
     console.log(
@@ -323,74 +259,6 @@ export class Sector {
     });
   }
 
-  private calculateInterceptCourse(
-    shipPos: Vector2D,
-    asteroid: Asteroid
-  ): Vector2D {
-    const currentTime = Date.now();
-    const asteroidPos = this.calculatePosition(asteroid, currentTime);
-    const d = { x: asteroidPos.x - shipPos.x, y: asteroidPos.y - shipPos.y };
-    const dv = asteroid.velocity;
-    const Vs = SECTOR_CONFIG.SHIP_SPEED;
-
-    const a = dv.x * dv.x + dv.y * dv.y - Vs * Vs;
-    const b = 2 * (d.x * dv.x + d.y * dv.y);
-    const c = d.x * d.x + d.y * d.y;
-
-    const disc = b * b - 4 * a * c;
-    if (disc < 0) {
-      // Can't catch → just aim at current pos
-      const dist = Math.sqrt(d.x * d.x + d.y * d.y);
-      return { x: (d.x / dist) * Vs, y: (d.y / dist) * Vs };
-    }
-
-    const sqrtDisc = Math.sqrt(disc);
-    let t1 = (-b - sqrtDisc) / (2 * a);
-    let t2 = (-b + sqrtDisc) / (2 * a);
-    const t = Math.min(t1, t2) > 0 ? Math.min(t1, t2) : Math.max(t1, t2);
-
-    const intercept = {
-      x: asteroidPos.x + dv.x * t,
-      y: asteroidPos.y + dv.y * t,
-    };
-
-    const dx = intercept.x - shipPos.x;
-    const dy = intercept.y - shipPos.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    return { x: (dx / dist) * Vs, y: (dy / dist) * Vs };
-  }
-
-  // Compute velocity pointing to the nearest edge (fastest way off-screen)
-  private calculateExitVelocity(shipPos: Vector2D): Vector2D {
-    const Vs = SECTOR_CONFIG.SHIP_SPEED;
-
-    const distLeft = shipPos.x;
-    const distRight = SECTOR_CONFIG.WIDTH - shipPos.x;
-    const distTop = shipPos.y;
-    const distBottom = SECTOR_CONFIG.HEIGHT - shipPos.y;
-
-    // Choose nearest edge
-    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-
-    // Aim slightly beyond the edge so removal triggers quickly (out-of-bounds uses ±100 padding)
-    let target: Vector2D;
-    if (minDist === distLeft) {
-      target = { x: -200, y: shipPos.y };
-    } else if (minDist === distRight) {
-      target = { x: SECTOR_CONFIG.WIDTH + 200, y: shipPos.y };
-    } else if (minDist === distTop) {
-      target = { x: shipPos.x, y: -200 };
-    } else {
-      target = { x: shipPos.x, y: SECTOR_CONFIG.HEIGHT + 200 };
-    }
-
-    const dx = target.x - shipPos.x;
-    const dy = target.y - shipPos.y;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    return { x: (dx / len) * Vs, y: (dy / len) * Vs };
-  }
-
   private checkArrival(): void {
     const currentTime = Date.now();
 
@@ -405,8 +273,11 @@ export class Sector {
         continue;
       }
 
-      const shipPos = this.calculatePosition(ship, currentTime);
-      const asteroidPos = this.calculatePosition(asteroid, currentTime);
+      const shipPos = PositionUtils.calculatePosition(ship, currentTime);
+      const asteroidPos = PositionUtils.calculatePosition(
+        asteroid,
+        currentTime
+      );
 
       const distance = Math.sqrt(
         Math.pow(asteroidPos.x - shipPos.x, 2) +
@@ -454,7 +325,7 @@ export class Sector {
         ship.state = "exiting";
         ship.targetAsteroidId = null; // clear target so no further re-aiming happens
         ship.position = shipPos;
-        ship.velocity = this.calculateExitVelocity(shipPos);
+        ship.velocity = ShipAI.calculateExitVelocity(shipPos);
         ship.spawnTime = currentTime;
 
         console.log(
@@ -523,7 +394,7 @@ export class Sector {
       address: account.address,
       privateKey,
       position,
-      velocity: { x: 0, y: 0 }, // Will be set when target is chosen
+      velocity: { x: 0, y: 0 },
       targetAsteroidId: null,
       state: "flying",
       spawnTime: Date.now(),
@@ -531,36 +402,25 @@ export class Sector {
       score: 0,
       fuel: startingFuel,
       maxFuel: startingFuel,
+      isLockedOn: false,
+      interceptTime: null,
     };
 
-    // Find biggest reachable asteroid and set intercept course
     const targetId = this.findBiggestReachableAsteroid(ship.position);
     if (targetId) {
       const targetAsteroid = this.asteroids.get(targetId);
       if (targetAsteroid) {
         ship.targetAsteroidId = targetId;
-        ship.velocity = this.calculateInterceptCourse(
+        const interceptResult = ShipAI.calculateInterceptCourse(
           ship.position,
           targetAsteroid
         );
+        ship.velocity = interceptResult.velocity;
+        ship.interceptTime = interceptResult.interceptTime;
       }
     } else {
-      // No reachable asteroids - fly toward center and wait
       ship.targetAsteroidId = null;
-      const centerX = SECTOR_CONFIG.WIDTH / 2;
-      const centerY = SECTOR_CONFIG.HEIGHT / 2;
-      const dx = centerX - ship.position.x;
-      const dy = centerY - ship.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance > 0) {
-        ship.velocity = {
-          x: (dx / distance) * SECTOR_CONFIG.SHIP_SPEED * 0.5, // Half speed toward center
-          y: (dy / distance) * SECTOR_CONFIG.SHIP_SPEED * 0.5,
-        };
-      } else {
-        ship.velocity = { x: 0, y: 0 }; // Already at center, wait
-      }
+      ship.velocity = ShipAI.calculateCenterVelocity(ship.position);
       console.log(
         `Ship ${ship.id} spawned but no reachable asteroids, flying toward center`
       );
@@ -610,7 +470,7 @@ export class Sector {
         ship.velocity.x * ship.velocity.x + ship.velocity.y * ship.velocity.y
       );
       if (speed > 0) {
-        const timeSinceUpdate = (currentTime - this.lastUpdate) / 1000; // Convert to seconds
+        const timeSinceUpdate = (currentTime - this.lastUpdate) / 1000;
         const fuelConsumed =
           SECTOR_CONFIG.FUEL_CONSUMPTION_RATE * timeSinceUpdate;
         ship.fuel = Math.max(0, ship.fuel - fuelConsumed);
@@ -628,8 +488,11 @@ export class Sector {
         );
         ship.state = "exiting";
         ship.targetAsteroidId = null;
-        const currentShipPos = this.calculatePosition(ship, currentTime);
-        ship.velocity = this.calculateExitVelocity(currentShipPos);
+        const currentShipPos = PositionUtils.calculatePosition(
+          ship,
+          currentTime
+        );
+        ship.velocity = ShipAI.calculateExitVelocity(currentShipPos);
         ship.position = currentShipPos;
         ship.spawnTime = currentTime;
 
@@ -654,20 +517,30 @@ export class Sector {
         ) {
           const asteroid = this.asteroids.get(ship.targetAsteroidId);
           if (asteroid) {
-            const currentShipPos = this.calculatePosition(ship, currentTime);
-            const newVelocity = this.calculateInterceptCourse(
+            const currentShipPos = PositionUtils.calculatePosition(
+              ship,
+              currentTime
+            );
+            const interceptResult = ShipAI.calculateInterceptCourse(
               currentShipPos,
               asteroid
             );
-            ship.velocity = newVelocity;
+            ship.velocity = interceptResult.velocity;
+            ship.interceptTime = interceptResult.interceptTime;
             ship.position = currentShipPos;
             ship.spawnTime = currentTime;
           }
         }
       } else if (ship.state === "exiting") {
         // Check if ship is out of bounds
-        const currentPos = this.calculatePosition(ship, currentTime);
-        if (this.isOutOfBounds(currentPos)) {
+        const currentPos = PositionUtils.calculatePosition(ship, currentTime);
+        if (
+          PositionUtils.isOutOfBounds(
+            currentPos,
+            SECTOR_CONFIG.WIDTH,
+            SECTOR_CONFIG.HEIGHT
+          )
+        ) {
           // Add fuel bonus to final score
           const fuelBonus = Math.floor(ship.fuel / 3); // fuel remaining / 3 for bonus points
           const finalScore = ship.score + fuelBonus;
@@ -713,9 +586,15 @@ export class Sector {
     const asteroidsToRemove: string[] = [];
 
     for (const [asteroidId, asteroid] of this.asteroids) {
-      const currentPos = this.calculatePosition(asteroid, currentTime);
+      const currentPos = PositionUtils.calculatePosition(asteroid, currentTime);
 
-      if (this.isOutOfBounds(currentPos)) {
+      if (
+        PositionUtils.isOutOfBounds(
+          currentPos,
+          SECTOR_CONFIG.WIDTH,
+          SECTOR_CONFIG.HEIGHT
+        )
+      ) {
         asteroidsToRemove.push(asteroidId);
       }
     }
@@ -809,7 +688,10 @@ export class Sector {
     // Check all flying ships to see if they should switch to the new (potentially bigger) asteroid
     for (const [shipId, ship] of this.ships) {
       if (ship.state === "flying") {
-        const currentShipPos = this.calculatePosition(ship, Date.now());
+        const currentShipPos = PositionUtils.calculatePosition(
+          ship,
+          Date.now()
+        );
         const newBestTarget = this.findBiggestReachableAsteroid(currentShipPos);
 
         // Switch target if:

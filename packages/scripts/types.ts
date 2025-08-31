@@ -25,8 +25,10 @@ export interface Ship {
   spawnTime: number;
   spawnAngle: number;
   score: number;
-  fuel: number; // 0-100 percentage
-  maxFuel: number; // Starting fuel amount
+  fuel: number;
+  maxFuel: number;
+  isLockedOn: boolean;
+  interceptTime: number | null;
 }
 
 export interface SectorEvent {
@@ -58,9 +60,9 @@ export const SECTOR_CONFIG = {
   MAX_ASTEROID_RESOURCES: 500,
   ASTEROID_SPEED: 40,
   SHIP_SPEED: 80,
-  UPDATE_INTERVAL: 5000,
+  UPDATE_INTERVAL: 1000,
   ASTEROID_SPAWN_CHANCE: 0.4,
   SHIP_SPAWN_CHANCE: 0.1,
-  FUEL_CONSUMPTION_RATE: 0.7, // Fuel consumed per second while moving
-  LOW_FUEL_THRESHOLD: 20, // Exit when fuel drops below this percentage
+  FUEL_CONSUMPTION_RATE: 0.7,
+  LOW_FUEL_THRESHOLD: 20,
 };
