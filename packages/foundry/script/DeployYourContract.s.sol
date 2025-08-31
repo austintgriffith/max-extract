@@ -2,10 +2,12 @@
 pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
-import "../contracts/YourContract.sol";
+import "../contracts/Universe.sol";
+import "../contracts/Credits.sol";
+import "../contracts/MaxExtract.sol";
 
 /**
- * @notice Deploy script for YourContract contract
+ * @notice Deploy script for Max Extract Protocol contracts
  * @dev Inherits ScaffoldETHDeploy which:
  *      - Includes forge-std/Script.sol for deployment
  *      - Includes ScaffoldEthDeployerRunner modifier
@@ -25,6 +27,52 @@ contract DeployYourContract is ScaffoldETHDeploy {
      *      - Export contract addresses & ABIs to `nextjs` packages
      */
     function run() external ScaffoldEthDeployerRunner {
-        new YourContract(deployer);
+        // Deploy the three core contracts of the Max Extract Protocol
+        Universe universe = new Universe(deployer);
+        new Credits(deployer);
+        new MaxExtract(address(universe));
+        
+        // DEVELOPMENT MODE: Auto-setup entropy
+        // For production, comment out the line below and manually run commit-reveal
+        setupUniverseEntropyDev(universe);
     }
+    
+    /**
+     * DEVELOPMENT ONLY: Automatically sets entropy using direct method
+     * For production, use the manual commit-reveal process instead
+     */
+    function setupUniverseEntropyDev(Universe universe) internal {
+        // Generate entropy directly for development ease
+        bytes32 entropy = keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            msg.sender,
+            address(this),
+            "max-extract-universe-entropy"
+        ));
+        
+        // Set entropy directly (development function)
+        universe.setEntropyDirect(entropy);
+    }
+    
+    /**
+     * PRODUCTION: Manual commit-reveal process
+     * Uncomment and use this instead of setupUniverseEntropyDev() for production
+     * 
+     * Steps for production deployment:
+     * 1. Deploy contracts (comment out setupUniverseEntropyDev call above)
+     * 2. Manually call universe.commit(keccak256(abi.encodePacked(yourRandomNumber)))
+     * 3. Wait for next block
+     * 4. Manually call universe.reveal(yourRandomNumber)
+     */
+    /*
+    function setupUniverseEntropyProd(Universe universe, uint256 randomNumber) internal {
+        // Step 1: Commit to the random number
+        bytes32 commitment = keccak256(abi.encodePacked(randomNumber));
+        universe.commit(commitment);
+        
+        // Step 2: This would need to be called in a separate transaction/block
+        // universe.reveal(randomNumber); // Call this manually after block advancement
+    }
+    */
 }
