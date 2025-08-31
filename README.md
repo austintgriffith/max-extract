@@ -42,7 +42,7 @@ Once your broadcast is live, pirates drifting into your corner of space will kno
 - **Sector ID Generation:** The MaxExtract contract automatically generates your unique sector ID using: `keccak256(universeEntropy + tx.origin + msg.sender + contractAddress + nonce)`. This ensures:
   - **Uniqueness**: Each sector ID is cryptographically unique
   - **Unpredictability**: Uses universe entropy (set by God via commit-reveal)
-  - **Anti-Sybil**: Incorporates both the caller (tx.origin) and contract (msg.sender) addresses
+  - **Contract-Only Access**: The `tx.origin != msg.sender` check ensures calls come from contracts, not directly from EOAs
   - **Collision Resistance**: Includes a nonce that increments with each broadcast
 - The Registry Contract also doubles as your **treasury**. Pirates will only stake and settle up if the contract code is verified and provably unruggable. If they detect a backdoor to drain the treasury, they won't trust your guild.
 

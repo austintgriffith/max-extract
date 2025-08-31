@@ -89,20 +89,26 @@ export class Sector {
     const radians = (angle * Math.PI) / 180;
     const speed = SECTOR_CONFIG.SHIP_SPEED;
 
-    // Spawn at edge based on angle
+    // Spawn at random position along edge based on angle
     let position: Vector2D;
     if (angle >= 315 || angle < 45) {
       // right edge
-      position = { x: SECTOR_CONFIG.WIDTH, y: SECTOR_CONFIG.HEIGHT / 2 };
+      position = {
+        x: SECTOR_CONFIG.WIDTH,
+        y: this.rng() * SECTOR_CONFIG.HEIGHT,
+      };
     } else if (angle >= 45 && angle < 135) {
       // bottom edge
-      position = { x: SECTOR_CONFIG.WIDTH / 2, y: SECTOR_CONFIG.HEIGHT };
+      position = {
+        x: this.rng() * SECTOR_CONFIG.WIDTH,
+        y: SECTOR_CONFIG.HEIGHT,
+      };
     } else if (angle >= 135 && angle < 225) {
       // left edge
-      position = { x: 0, y: SECTOR_CONFIG.HEIGHT / 2 };
+      position = { x: 0, y: this.rng() * SECTOR_CONFIG.HEIGHT };
     } else {
       // top edge
-      position = { x: SECTOR_CONFIG.WIDTH / 2, y: 0 };
+      position = { x: this.rng() * SECTOR_CONFIG.WIDTH, y: 0 };
     }
 
     const velocity = {
@@ -407,17 +413,8 @@ export class Sector {
           Math.pow(asteroidPos.y - shipPos.y, 2)
       );
 
-      // Add debugging for close misses
-      if (distance < asteroid.size + 20) {
-        console.log(
-          `Ship ${ship.id} is ${Math.round(distance)} units from asteroid ${
-            asteroid.id
-          } (size: ${Math.round(asteroid.size)})`
-        );
-      }
-
       // Check if ship reached asteroid (within mining range) - balanced for all sizes
-      if (distance < asteroid.size / 5 + 35) {
+      if (distance < asteroid.size / 4 + 50) {
         // Ship immediately mines the asteroid - bounty based on asteroid size
         const baseBounty = Math.floor(asteroid.size * 2); // Bigger asteroids = more bounty
         const randomBonus = Math.floor(this.rng() * asteroid.size); // Random bonus based on size

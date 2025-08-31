@@ -128,7 +128,22 @@ export class GameServer {
 
   private async loadSectorsFromContract(): Promise<void> {
     try {
-      const maxExtractContract = deployedContracts[31337].MaxExtract;
+      // Check if MaxExtract contract is deployed
+      const contracts = deployedContracts[31337];
+      if (!contracts || !contracts.MaxExtract) {
+        console.error(
+          "⚠️  MaxExtract contract not found in deployedContracts. Make sure to deploy all contracts first."
+        );
+        console.log("💡 Run: yarn deploy");
+        return;
+      }
+
+      const maxExtractContract = contracts.MaxExtract;
+      if (!maxExtractContract.address) {
+        console.error("⚠️  MaxExtract contract address is undefined");
+        return;
+      }
+
       const activeSectors = (await publicClient.readContract({
         address: maxExtractContract.address,
         abi: maxExtractContract.abi,

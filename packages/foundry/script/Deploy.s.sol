@@ -13,13 +13,9 @@ import { DeployRegistry } from "./DeployRegistry.s.sol";
  */
 contract DeployScript is ScaffoldETHDeploy {
     function run() external {
-        // Deploys all Max Extract Protocol contracts sequentially
-        // Universe, Credits, and MaxExtract contracts
-
-        DeployYourContract deployMaxExtractContracts = new DeployYourContract();
-        deployMaxExtractContracts.run();
-
-        // Deploy Chapter1Registry after core contracts
+        // Deploy all Max Extract Protocol contracts in the correct order
+        // The DeployRegistry script now handles all contracts to avoid hardcoding addresses
+        
         DeployRegistry deployRegistry = new DeployRegistry();
         deployRegistry.run();
 

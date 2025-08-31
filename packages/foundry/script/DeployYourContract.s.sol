@@ -29,8 +29,13 @@ contract DeployYourContract is ScaffoldETHDeploy {
     function run() external ScaffoldEthDeployerRunner {
         // Deploy the three core contracts of the Max Extract Protocol
         Universe universe = new Universe(deployer);
-        new Credits(deployer);
-        new MaxExtract(address(universe));
+        Credits credits = new Credits(deployer);
+        MaxExtract maxExtract = new MaxExtract(address(universe));
+        
+        // Log deployed contract addresses for verification
+        console.log("Universe deployed at:", address(universe));
+        console.log("Credits deployed at:", address(credits));
+        console.log("MaxExtract deployed at:", address(maxExtract));
         
         // DEVELOPMENT MODE: Auto-setup entropy
         // For production, comment out the line below and manually run commit-reveal

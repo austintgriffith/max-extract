@@ -60,7 +60,7 @@ contract MaxExtract {
      * 
      * Note: tx.origin != msg.sender requirement means you can't call this directly
      * with an EOA. You must call it from another contract (your Registry Contract).
-     * This prevents simple sybil attacks and ensures proper sector setup.
+     * This ensures proper sector setup through contract infrastructure.
      * 
      * Sector ID is automatically generated using universe entropy, tx.origin, 
      * msg.sender, contract address, and a nonce for uniqueness.
@@ -69,7 +69,7 @@ contract MaxExtract {
      * @return sectorId The generated sector ID that was claimed
      */
     function broadcast(address registry) external returns (uint256 sectorId) {
-        // Max's anti-sybil mechanism: must be called from a contract, not directly from EOA
+        // Contract-only access: must be called from a contract, not directly from EOA
         require(tx.origin != msg.sender, "Cannot broadcast directly from EOA - use your Registry Contract");
         
         // Universe entropy must be set for sector generation

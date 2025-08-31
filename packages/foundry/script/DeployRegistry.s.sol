@@ -5,6 +5,7 @@ import "./DeployHelpers.s.sol";
 import "../contracts/Chapter1Registry.sol";
 import "../contracts/MaxExtract.sol";
 import "../contracts/Credits.sol";
+import "../contracts/Universe.sol";
 
 /**
  * @notice Deploy script for Chapter 1 Registry Contract
@@ -24,11 +25,28 @@ contract DeployRegistry is ScaffoldETHDeploy {
      * Uses the already deployed MaxExtract and Credits contracts
      */
     function run() external ScaffoldEthDeployerRunner {
-        // Get addresses of already deployed contracts from the deployments
-        // Read from the deployment artifacts instead of hardcoding
-        address maxExtractAddress = 0xa7328DEAa1B585a494f055Fc9Bd99ea56d52CD3d; // Updated from deployedContracts.ts
-        address creditsAddress = 0xDcE79D5f359C7aB52e3d6B45be2D0D382696D323;     // Updated from deployedContracts.ts
+        // Deploy the core contracts first if not already deployed
+        Universe universe = new Universe(deployer);
+        Credits credits = new Credits(deployer);
+        MaxExtract maxExtract = new MaxExtract(address(universe));
         
+        // Setup entropy for development
+        setupUniverseEntropyDev(universe);
+        
+        console.log("Core contracts deployed:");
+        console.log("Universe:", address(universe));
+        console.log("Credits:", address(credits));
+        console.log("MaxExtract:", address(maxExtract));
+        
+        // Deploy the Chapter1Registry contract with the deployed contract addresses
+        deployRegistry(address(maxExtract), address(credits));
+    }
+    
+    /**
+     * @dev Deploy Registry with specific contract addresses
+     * This can be called externally or internally
+     */
+    function deployRegistry(address maxExtractAddress, address creditsAddress) public {
         console.log("Deploying Registry contract...");
         console.log("MaxExtract address:", maxExtractAddress);
         console.log("Credits address:", creditsAddress);
@@ -46,6 +64,24 @@ contract DeployRegistry is ScaffoldETHDeploy {
         
         // Verify the deployment
         verifyRegistryDeployment(registry, maxExtractAddress, creditsAddress);
+    }
+    
+    /**
+     * DEVELOPMENT ONLY: Automatically sets entropy using direct method
+     * For production, use the manual commit-reveal process instead
+     */
+    function setupUniverseEntropyDev(Universe universe) internal {
+        // Generate entropy directly for development ease
+        bytes32 entropy = keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            msg.sender,
+            address(this),
+            "max-extract-universe-entropy"
+        ));
+        
+        // Set entropy directly (development function)
+        universe.setEntropyDirect(entropy);
     }
     
     /**
