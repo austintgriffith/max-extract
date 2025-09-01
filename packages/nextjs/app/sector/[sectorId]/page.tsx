@@ -32,6 +32,8 @@ interface Ship {
   score: number;
   fuel: number; // 0-100 percentage
   maxFuel: number; // Starting fuel amount
+  isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
+  vectorMatchTime: number | null; // When the vector matching started
 }
 
 interface SectorSnapshot {
@@ -49,7 +51,8 @@ interface SectorEvent {
     | "asteroid_exit"
     | "ship_exit"
     | "ship_retarget"
-    | "ship_fuel_update";
+    | "ship_fuel_update"
+    | "ship_vector_matched";
   timestamp: number;
   data: any;
 }
@@ -179,7 +182,11 @@ const SectorPage = () => {
                     newData.asteroids[sectorEvent.data.id] = sectorEvent.data;
                     break;
                   case "ship_spawn":
-                    newData.ships[sectorEvent.data.id] = sectorEvent.data;
+                    newData.ships[sectorEvent.data.id] = {
+                      ...sectorEvent.data,
+                      isVectorMatched: false, // Ensure new ships start without vector matching
+                      vectorMatchTime: null,
+                    };
                     break;
                   case "asteroid_depleted":
                     // Create explosion particles at asteroid position before deleting
@@ -206,6 +213,19 @@ const SectorPage = () => {
                       if (sectorEvent.data.fuel !== undefined) {
                         newData.ships[sectorEvent.data.shipId].fuel = sectorEvent.data.fuel;
                       }
+                      // Reset vector matching when ship retargets
+                      newData.ships[sectorEvent.data.shipId].isVectorMatched = false;
+                      newData.ships[sectorEvent.data.shipId].vectorMatchTime = null;
+                    }
+                    break;
+                  case "ship_vector_matched":
+                    // Ship has matched vector with asteroid (frontend event)
+                    if (newData.ships[sectorEvent.data.shipId]) {
+                      newData.ships[sectorEvent.data.shipId].velocity = sectorEvent.data.velocity;
+                      newData.ships[sectorEvent.data.shipId].position = sectorEvent.data.position;
+                      newData.ships[sectorEvent.data.shipId].spawnTime = sectorEvent.timestamp;
+                      newData.ships[sectorEvent.data.shipId].isVectorMatched = true;
+                      newData.ships[sectorEvent.data.shipId].vectorMatchTime = sectorEvent.timestamp;
                     }
                     break;
                   case "ship_exit":
@@ -280,6 +300,101 @@ const SectorPage = () => {
       y: particle.position.y + particle.velocity.y * (elapsed / 1000),
     };
   };
+
+  // Frontend vector matching logic - handles automatic vector matching when ships reach asteroids
+  const checkAndHandleVectorMatching = useCallback(() => {
+    if (!sectorData) return;
+
+    const currentTime = Date.now();
+    let hasUpdates = false;
+
+    setSectorData(prev => {
+      if (!prev) return prev;
+      const newData = { ...prev };
+
+      // Track which asteroids have been claimed by vector-matched ships
+      const claimedAsteroids = new Set<string>();
+
+      // First pass: identify asteroids already claimed by vector-matched ships
+      Object.values(newData.ships).forEach(ship => {
+        if (ship.isVectorMatched && ship.targetAsteroidId) {
+          claimedAsteroids.add(ship.targetAsteroidId);
+        }
+      });
+
+      Object.values(newData.ships).forEach(ship => {
+        // Check for vector matching timeout (if ship has been vector-matched for too long without backend confirmation)
+        if (ship.isVectorMatched && ship.vectorMatchTime && currentTime - ship.vectorMatchTime > 10000) {
+          console.log(`Ship ${ship.id} vector matching timed out, resetting...`);
+          newData.ships[ship.id] = {
+            ...ship,
+            isVectorMatched: false,
+            vectorMatchTime: null,
+          };
+          hasUpdates = true;
+          return;
+        }
+
+        if (ship.state !== "flying" || !ship.targetAsteroidId || ship.isVectorMatched) {
+          return; // Skip non-flying, non-targeted, or already vector-matched ships
+        }
+
+        const asteroid = newData.asteroids[ship.targetAsteroidId];
+        if (!asteroid) return; // Target asteroid doesn't exist
+
+        const shipPos = calculatePosition(ship, currentTime);
+        const asteroidPos = calculatePosition(asteroid, currentTime);
+
+        const distance = Math.sqrt(Math.pow(asteroidPos.x - shipPos.x, 2) + Math.pow(asteroidPos.y - shipPos.y, 2));
+
+        // Check if ship has reached the asteroid (close enough to ensure mining but not too early)
+        const vectorMatchDistance = asteroid.size / 6 + 10; // Tighter than backend mining distance (size/4 + 50)
+
+        if (distance <= vectorMatchDistance) {
+          // Check if this asteroid is already claimed by another ship
+          if (claimedAsteroids.has(ship.targetAsteroidId)) {
+            console.log(
+              `Ship ${ship.id} reached asteroid ${ship.targetAsteroidId} but it's already claimed, will retarget when backend updates`,
+            );
+            return; // Let backend handle retargeting
+          }
+
+          // Claim this asteroid
+          claimedAsteroids.add(ship.targetAsteroidId);
+
+          console.log(`Frontend: Ship ${ship.id} reached asteroid ${ship.targetAsteroidId}, matching vector!`);
+
+          // Match the asteroid's velocity
+          newData.ships[ship.id] = {
+            ...ship,
+            velocity: { ...asteroid.velocity }, // Match asteroid's exact velocity
+            position: shipPos, // Update position to current calculated position
+            spawnTime: currentTime, // Reset spawn time for new movement
+            isVectorMatched: true,
+            vectorMatchTime: currentTime,
+          };
+
+          // Notify backend about vector matching
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(
+              JSON.stringify({
+                type: "ship_vector_matched",
+                sectorId: sectorId,
+                shipId: ship.id,
+                asteroidId: ship.targetAsteroidId,
+                position: shipPos,
+                velocity: asteroid.velocity,
+              }),
+            );
+          }
+
+          hasUpdates = true;
+        }
+      });
+
+      return hasUpdates ? newData : prev;
+    });
+  }, [sectorData]);
 
   const createExplosionParticles = (asteroidPos: Vector2D, asteroidSize: number): Particle[] => {
     const particleCount = Math.floor(asteroidSize / 4) + 5; // More particles for bigger asteroids
@@ -391,7 +506,7 @@ const SectorPage = () => {
           ctx.rotate(angle);
         }
 
-        // Draw ship based on fuel level
+        // Draw ship based on fuel level and state
         let shipColor = "#00FF00"; // Default green
         if (ship.fuel !== undefined) {
           const fuelRatio = ship.fuel / 100;
@@ -410,9 +525,11 @@ const SectorPage = () => {
           }
         }
 
-        // Override for exiting ships
+        // Override for special states
         if (ship.state === "exiting") {
           shipColor = "#666666"; // Gray for exiting
+        } else if (ship.isVectorMatched) {
+          shipColor = "#00FFFF"; // Cyan for vector-matched ships
         }
 
         ctx.fillStyle = shipColor;
@@ -470,6 +587,17 @@ const SectorPage = () => {
     ctx.fillText(`Ships: ${Object.keys(sectorData.ships).length}`, 10, 45);
     ctx.fillText(`Last Update: ${new Date(sectorData.lastUpdate).toLocaleTimeString()}`, 10, 65);
   }, [sectorData, particles]);
+
+  // Vector matching check - runs frequently to catch ships reaching asteroids
+  useEffect(() => {
+    if (!sectorData) return;
+
+    const interval = setInterval(() => {
+      checkAndHandleVectorMatching();
+    }, 100); // Check every 100ms for responsive vector matching
+
+    return () => clearInterval(interval);
+  }, [checkAndHandleVectorMatching]);
 
   // Animation loop
   useEffect(() => {
@@ -587,7 +715,7 @@ const SectorPage = () => {
                 className="border border-base-300 rounded-lg bg-black"
               />
               <div className="text-sm text-base-content/70 mt-2">
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <span className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
                     Asteroids
@@ -597,11 +725,11 @@ const SectorPage = () => {
                     Flying Ships
                   </span>
                   <span className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    Mining Ships
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
+                    Vector Matched
                   </span>
                   <span className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
                     Exiting Ships
                   </span>
                 </div>
@@ -665,7 +793,9 @@ const SectorPage = () => {
                                         ? "badge-warning"
                                         : event.type === "ship_retarget"
                                           ? "badge-accent"
-                                          : "badge-ghost"
+                                          : event.type === "ship_vector_matched"
+                                            ? "badge-primary"
+                                            : "badge-ghost"
                             }`}
                           >
                             {event.type.replace("_", " ")}
@@ -682,6 +812,7 @@ const SectorPage = () => {
                           {event.type === "ship_exit" &&
                             `Ship exited (total: ${event.data.score}${event.data.fuelBonus ? `, fuel bonus: ${event.data.fuelBonus}` : ""})`}
                           {event.type === "ship_retarget" && `Ship changed course (${event.data.state})`}
+                          {event.type === "ship_vector_matched" && `Ship matched asteroid vector (mining)`}
                         </div>
                       </div>
                     ))

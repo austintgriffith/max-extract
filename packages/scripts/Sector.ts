@@ -197,6 +197,10 @@ export class Sector {
   }
 
   private retargetShip(ship: Ship): void {
+    // Reset vector matching when retargeting
+    ship.isVectorMatched = false;
+    ship.vectorMatchTime = null;
+
     // Find biggest reachable asteroid that's not already the current target
     const currentPos = PositionUtils.calculatePosition(ship, Date.now());
     const targetId = this.findBiggestReachableAsteroid(currentPos);
@@ -262,14 +266,28 @@ export class Sector {
   private checkArrival(): void {
     const currentTime = Date.now();
 
+    // First, identify which asteroids are being mined by vector-matched ships
+    const asteroidsBeingMined = new Map<string, string>(); // asteroidId -> shipId
+    for (const [shipId, ship] of this.ships) {
+      if (
+        ship.state === "flying" &&
+        ship.isVectorMatched &&
+        ship.targetAsteroidId
+      ) {
+        asteroidsBeingMined.set(ship.targetAsteroidId, shipId);
+      }
+    }
+
     for (const [shipId, ship] of this.ships) {
       if (ship.state !== "flying" || !ship.targetAsteroidId) continue;
 
       const asteroid = this.asteroids.get(ship.targetAsteroidId);
       if (!asteroid) {
-        // Target asteroid no longer exists, find a new one
-        console.log(`Ship ${shipId} target asteroid missing, retargeting...`);
-        this.retargetShip(ship);
+        // Target asteroid no longer exists, find a new one (but only if not vector-matched)
+        if (!ship.isVectorMatched) {
+          console.log(`Ship ${shipId} target asteroid missing, retargeting...`);
+          this.retargetShip(ship);
+        }
         continue;
       }
 
@@ -285,7 +303,17 @@ export class Sector {
       );
 
       // Check if ship reached asteroid (within mining range) - balanced for all sizes
-      if (distance < asteroid.size / 4 + 50) {
+      if (distance < asteroid.size / 6 + 11) {
+        // If this asteroid is being mined by a vector-matched ship and this ship isn't that ship, retarget
+        const miningShipId = asteroidsBeingMined.get(ship.targetAsteroidId);
+        if (miningShipId && miningShipId !== ship.id) {
+          console.log(
+            `Ship ${ship.id} reached asteroid ${asteroid.id} but ship ${miningShipId} is already mining it, retargeting...`
+          );
+          this.retargetShip(ship);
+          continue;
+        }
+
         // Ship immediately mines the asteroid - bounty based on asteroid size
         const baseBounty = Math.floor(asteroid.size * 2); // Bigger asteroids = more bounty
         const randomBonus = Math.floor(this.rng() * asteroid.size); // Random bonus based on size
@@ -317,6 +345,9 @@ export class Sector {
             console.log(
               `Found ship ${otherShipId} also targeting ${asteroid.id}, retargeting...`
             );
+            // Reset vector matching for retargeted ships
+            otherShip.isVectorMatched = false;
+            otherShip.vectorMatchTime = null;
             this.retargetShip(otherShip);
           }
         }
@@ -327,6 +358,8 @@ export class Sector {
         ship.position = shipPos;
         ship.velocity = ShipAI.calculateExitVelocity(shipPos);
         ship.spawnTime = currentTime;
+        ship.isVectorMatched = false; // Reset vector matching
+        ship.vectorMatchTime = null;
 
         console.log(
           `Ship ${ship.id} finished mining, now exiting by shortest path`
@@ -404,6 +437,8 @@ export class Sector {
       maxFuel: startingFuel,
       isLockedOn: false,
       interceptTime: null,
+      isVectorMatched: false,
+      vectorMatchTime: null,
     };
 
     const targetId = this.findBiggestReachableAsteroid(ship.position);
@@ -509,8 +544,12 @@ export class Sector {
             fuel: ship.fuel,
           },
         });
-      } else if (ship.state === "flying" && ship.targetAsteroidId) {
-        // Recalculate course every 2 seconds to adjust for moving targets
+      } else if (
+        ship.state === "flying" &&
+        ship.targetAsteroidId &&
+        !ship.isVectorMatched
+      ) {
+        // Recalculate course every 2 seconds to adjust for moving targets (but not for vector-matched ships)
         if (
           currentTime - ship.spawnTime > 2000 &&
           (currentTime - ship.spawnTime) % 2000 < 1000
@@ -684,10 +723,48 @@ export class Sector {
     this.subscribers.delete(ws);
   }
 
+  public handleVectorMatching(
+    shipId: string,
+    asteroidId: string,
+    position: Vector2D,
+    velocity: Vector2D
+  ): void {
+    const ship = this.ships.get(shipId);
+    const asteroid = this.asteroids.get(asteroidId);
+
+    if (!ship || !asteroid || ship.targetAsteroidId !== asteroidId) {
+      return; // Invalid request
+    }
+
+    console.log(
+      `Backend: Ship ${shipId} vector matched with asteroid ${asteroidId}`
+    );
+
+    // Update ship state
+    ship.isVectorMatched = true;
+    ship.vectorMatchTime = Date.now();
+    ship.position = position;
+    ship.velocity = velocity;
+    ship.spawnTime = Date.now();
+
+    // Broadcast the vector matching event to all subscribers
+    this.broadcastEvent({
+      type: "ship_vector_matched",
+      timestamp: Date.now(),
+      data: {
+        shipId: ship.id,
+        asteroidId: asteroid.id,
+        position: ship.position,
+        velocity: ship.velocity,
+      },
+    });
+  }
+
   private notifyWaitingShips(): void {
     // Check all flying ships to see if they should switch to the new (potentially bigger) asteroid
     for (const [shipId, ship] of this.ships) {
-      if (ship.state === "flying") {
+      if (ship.state === "flying" && !ship.isVectorMatched) {
+        // Don't retarget vector-matched ships
         const currentShipPos = PositionUtils.calculatePosition(
           ship,
           Date.now()

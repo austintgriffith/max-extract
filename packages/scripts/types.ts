@@ -29,6 +29,8 @@ export interface Ship {
   maxFuel: number;
   isLockedOn: boolean;
   interceptTime: number | null;
+  isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
+  vectorMatchTime: number | null; // When the vector matching started
 }
 
 export interface SectorEvent {
@@ -40,7 +42,8 @@ export interface SectorEvent {
     | "asteroid_exit"
     | "ship_exit"
     | "ship_retarget"
-    | "ship_fuel_update";
+    | "ship_fuel_update"
+    | "ship_vector_matched"; // New event for when ship matches asteroid vector
   timestamp: number;
   data: any;
 }
@@ -62,7 +65,7 @@ export const SECTOR_CONFIG = {
   SHIP_SPEED: 80,
   UPDATE_INTERVAL: 1000,
   ASTEROID_SPAWN_CHANCE: 0.4,
-  SHIP_SPAWN_CHANCE: 0.1,
+  SHIP_SPAWN_CHANCE: 0.2,
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
 };

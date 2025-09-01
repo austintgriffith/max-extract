@@ -110,6 +110,21 @@ export class GameServer {
                 timestamp: Date.now(),
               })
             );
+          } else if (
+            data.type === "ship_vector_matched" &&
+            data.sectorId &&
+            data.shipId
+          ) {
+            // Handle frontend notification that a ship has matched vector with asteroid
+            const sector = this.sectors.get(data.sectorId);
+            if (sector) {
+              sector.handleVectorMatching(
+                data.shipId,
+                data.asteroidId,
+                data.position,
+                data.velocity
+              );
+            }
           }
         } catch (error) {
           console.error("WebSocket message error:", error);
