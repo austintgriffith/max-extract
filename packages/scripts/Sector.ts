@@ -25,15 +25,32 @@ export class Sector {
   public subscribers: Set<WebSocket> = new Set();
   private rng: () => number;
   private lastUpdate: number = Date.now();
+  private debugMode: boolean;
 
-  constructor(id: string, seed?: string) {
+  constructor(id: string, seed?: string, debugMode: boolean = false) {
     this.id = id;
+    this.debugMode = debugMode;
 
     let seedValue = seed ? this.hashSeed(seed) : Math.random() * 1000000;
     this.rng = () => {
       seedValue = (seedValue * 9301 + 49297) % 233280;
       return seedValue / 233280;
     };
+
+    if (this.debugMode) {
+      this.debugLog(`Sector ${id} initialized with seed: ${seedValue}`);
+    }
+  }
+
+  private debugLog(message: string, data?: any): void {
+    if (this.debugMode) {
+      const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
+      if (data) {
+        console.log(`🎯 [${timestamp}] Sector ${this.id}: ${message}:`, data);
+      } else {
+        console.log(`🎯 [${timestamp}] Sector ${this.id}: ${message}`);
+      }
+    }
   }
 
   private hashSeed(seed: string): number {
@@ -122,33 +139,135 @@ export class Sector {
     return { position, velocity };
   }
 
-  private findBiggestReachableAsteroid(shipPos: Vector2D): string | null {
+  private findBestTargetAsteroid(
+    shipPos: Vector2D,
+    ship: Ship,
+    currentTargetId?: string | null
+  ): string | null {
     let bestId: string | null = null;
-    let bestSize = 0;
+    let bestScore = 0;
     let reachableCount = 0;
     let totalCount = 0;
+
+    // Get current target info for comparison
+    const currentTarget = currentTargetId
+      ? this.asteroids.get(currentTargetId)
+      : null;
+    const currentTargetScore = currentTarget
+      ? this.calculateTargetScore(shipPos, currentTarget, ship)
+      : 0;
+
+    this.debugLog(
+      `Evaluating targets for ship at (${Math.round(shipPos.x)}, ${Math.round(
+        shipPos.y
+      )})`
+    );
+    if (currentTarget) {
+      this.debugLog(
+        `Current target ${currentTargetId}: score=${
+          Math.round(currentTargetScore * 100) / 100
+        }`
+      );
+    }
 
     for (const [id, asteroid] of this.asteroids) {
       totalCount++;
       // Check if this asteroid can be reached before it leaves the map
-      if (this.canShipReachAsteroid(shipPos, asteroid)) {
+      if (this.canShipReachAsteroid(shipPos, asteroid, ship)) {
         reachableCount++;
-        if (asteroid.size > bestSize) {
-          bestSize = asteroid.size;
+        const score = this.calculateTargetScore(shipPos, asteroid, ship);
+
+        this.debugLog(
+          `  Asteroid ${id}: size=${Math.round(asteroid.size)}, score=${
+            Math.round(score * 100) / 100
+          }`
+        );
+
+        if (score > bestScore) {
+          bestScore = score;
           bestId = id;
         }
       }
     }
 
-    console.log(
-      `Ship at (${Math.round(shipPos.x)}, ${Math.round(
-        shipPos.y
-      )}) found ${reachableCount}/${totalCount} reachable asteroids, best: ${bestId}`
+    // Only switch if the new target is significantly better than current target
+    if (currentTarget && bestId !== currentTargetId) {
+      const improvementRatio = bestScore / currentTargetScore;
+      const minImprovement = ship.fullCargo ? 2.0 : 1.3; // Cargo ships need 2x improvement, empty ships need 1.3x
+
+      this.debugLog(
+        `Best new target ${bestId}: score=${
+          Math.round(bestScore * 100) / 100
+        }, improvement=${
+          Math.round(improvementRatio * 100) / 100
+        }x (need ${minImprovement}x)`
+      );
+
+      if (improvementRatio < minImprovement) {
+        this.debugLog(
+          `Sticking with current target - improvement not worth the switch`
+        );
+        return currentTargetId;
+      } else {
+        this.debugLog(`Switching targets - significant improvement detected`);
+      }
+    }
+
+    this.debugLog(
+      `Ship found ${reachableCount}/${totalCount} reachable asteroids, selected: ${bestId} (score: ${
+        Math.round(bestScore * 100) / 100
+      })`
     );
     return bestId;
   }
 
-  private canShipReachAsteroid(shipPos: Vector2D, asteroid: Asteroid): boolean {
+  private calculateTargetScore(
+    shipPos: Vector2D,
+    asteroid: Asteroid,
+    ship: Ship
+  ): number {
+    const currentTime = Date.now();
+    const asteroidPos = PositionUtils.calculatePosition(asteroid, currentTime);
+
+    // Calculate distance to asteroid
+    const distance = Math.sqrt(
+      Math.pow(asteroidPos.x - shipPos.x, 2) +
+        Math.pow(asteroidPos.y - shipPos.y, 2)
+    );
+
+    // Calculate time to reach asteroid
+    const shipSpeed = ShipAI.getShipSpeed(ship);
+    const timeToReach = distance / shipSpeed;
+
+    // Calculate fuel cost (time * fuel consumption rate)
+    const fuelCost = timeToReach * SECTOR_CONFIG.FUEL_CONSUMPTION_RATE;
+
+    // Calculate reward (asteroid size translates to points)
+    const reward = asteroid.size * 2; // Base bounty calculation
+
+    // Calculate time to edge (how long we have to mine this asteroid)
+    const timeToEdge = AsteroidUtils.calculateTimeToMapEdge(asteroid);
+
+    // Penalty for asteroids that will leave soon
+    const urgencyFactor = Math.max(0.1, Math.min(1.0, timeToEdge / 20)); // 20 second reference
+
+    // Score = Reward / (Distance Cost + Fuel Cost + Time Pressure)
+    // Higher score = better target
+    const distanceCost = distance / 100; // Normalize distance
+    const timeCost = timeToReach / 10; // Normalize time
+    const fuelPenalty = fuelCost * 2; // Fuel is precious
+
+    const totalCost = Math.max(1, distanceCost + timeCost + fuelPenalty);
+    const score = (reward * urgencyFactor) / totalCost;
+
+    return score;
+  }
+
+  private canShipReachAsteroid(
+    shipPos: Vector2D,
+    asteroid: Asteroid,
+    ship: Ship
+  ): boolean {
     const currentTime = Date.now();
     const asteroidPos = PositionUtils.calculatePosition(asteroid, currentTime);
 
@@ -158,7 +277,7 @@ export class Sector {
     // Calculate actual intercept time using the intercept math
     const d = { x: asteroidPos.x - shipPos.x, y: asteroidPos.y - shipPos.y };
     const dv = asteroid.velocity;
-    const Vs = SECTOR_CONFIG.SHIP_SPEED;
+    const Vs = ShipAI.getShipSpeed(ship); // Use actual ship speed based on cargo status
 
     const a = dv.x * dv.x + dv.y * dv.y - Vs * Vs;
     const b = 2 * (d.x * dv.x + d.y * dv.y);
@@ -168,7 +287,7 @@ export class Sector {
     if (disc < 0) {
       // Can't intercept, use simple distance estimate
       const distance = Math.sqrt(d.x * d.x + d.y * d.y);
-      const timeToReach = distance / SECTOR_CONFIG.SHIP_SPEED;
+      const timeToReach = distance / ShipAI.getShipSpeed(ship);
       const canReach = timeToReach < timeToEdge;
       console.log(
         `Asteroid ${asteroid.id}: No intercept possible, distance=${Math.round(
@@ -203,7 +322,11 @@ export class Sector {
 
     // Find biggest reachable asteroid that's not already the current target
     const currentPos = PositionUtils.calculatePosition(ship, Date.now());
-    const targetId = this.findBiggestReachableAsteroid(currentPos);
+    const targetId = this.findBestTargetAsteroid(
+      currentPos,
+      ship,
+      ship.targetAsteroidId
+    );
     if (targetId && targetId !== ship.targetAsteroidId) {
       const targetAsteroid = this.asteroids.get(targetId);
       if (targetAsteroid) {
@@ -211,7 +334,8 @@ export class Sector {
         ship.targetAsteroidId = targetId;
         const interceptResult = ShipAI.calculateInterceptCourse(
           currentPos,
-          targetAsteroid
+          targetAsteroid,
+          ship
         );
         ship.velocity = interceptResult.velocity;
         ship.interceptTime = interceptResult.interceptTime;
@@ -241,7 +365,7 @@ export class Sector {
     // If no suitable target found, fly toward center and wait
     ship.targetAsteroidId = null;
     const shipPos = PositionUtils.calculatePosition(ship, Date.now());
-    ship.velocity = ShipAI.calculateCenterVelocity(shipPos);
+    ship.velocity = ShipAI.calculateCenterVelocity(shipPos, ship);
     ship.position = shipPos;
     ship.spawnTime = Date.now();
     console.log(
@@ -318,10 +442,19 @@ export class Sector {
         const baseBounty = Math.floor(asteroid.size * 2); // Bigger asteroids = more bounty
         const randomBonus = Math.floor(this.rng() * asteroid.size); // Random bonus based on size
         ship.score = baseBounty + randomBonus;
+        ship.fullCargo = true; // Ship now has cargo and moves slower
 
         console.log(
-          `Ship ${ship.id} reached asteroid ${asteroid.id} and mined it for ${ship.score} points!`
+          `Ship ${ship.id} reached asteroid ${asteroid.id} and mined it for ${ship.score} points! Now carrying cargo and moving slower.`
         );
+
+        this.debugLog(`Ship ${ship.id} mined asteroid ${asteroid.id}`, {
+          asteroidSize: Math.round(asteroid.size),
+          baseBounty,
+          randomBonus,
+          totalScore: ship.score,
+          shipNowSlower: ship.fullCargo,
+        });
 
         // Delete the asteroid immediately
         this.asteroids.delete(asteroid.id);
@@ -356,7 +489,7 @@ export class Sector {
         ship.state = "exiting";
         ship.targetAsteroidId = null; // clear target so no further re-aiming happens
         ship.position = shipPos;
-        ship.velocity = ShipAI.calculateExitVelocity(shipPos);
+        ship.velocity = ShipAI.calculateExitVelocity(shipPos, ship);
         ship.spawnTime = currentTime;
         ship.isVectorMatched = false; // Reset vector matching
         ship.vectorMatchTime = null;
@@ -402,6 +535,12 @@ export class Sector {
       spawnTime: Date.now(),
     };
 
+    this.debugLog(
+      `Spawning asteroid ${asteroid.id} at (${Math.round(
+        position.x
+      )}, ${Math.round(position.y)}) size: ${Math.round(asteroid.size)}`
+    );
+
     this.asteroids.set(asteroid.id, asteroid);
     this.broadcastEvent({
       type: "asteroid_spawn",
@@ -439,23 +578,31 @@ export class Sector {
       interceptTime: null,
       isVectorMatched: false,
       vectorMatchTime: null,
+      fullCargo: false, // Ships start with no cargo
     };
 
-    const targetId = this.findBiggestReachableAsteroid(ship.position);
+    this.debugLog(
+      `Spawning ship ${ship.id} at (${Math.round(position.x)}, ${Math.round(
+        position.y
+      )}) with ${Math.round(startingFuel)}% fuel`
+    );
+
+    const targetId = this.findBestTargetAsteroid(ship.position, ship, null);
     if (targetId) {
       const targetAsteroid = this.asteroids.get(targetId);
       if (targetAsteroid) {
         ship.targetAsteroidId = targetId;
         const interceptResult = ShipAI.calculateInterceptCourse(
           ship.position,
-          targetAsteroid
+          targetAsteroid,
+          ship
         );
         ship.velocity = interceptResult.velocity;
         ship.interceptTime = interceptResult.interceptTime;
       }
     } else {
       ship.targetAsteroidId = null;
-      ship.velocity = ShipAI.calculateCenterVelocity(ship.position);
+      ship.velocity = ShipAI.calculateCenterVelocity(ship.position, ship);
       console.log(
         `Ship ${ship.id} spawned but no reachable asteroids, flying toward center`
       );
@@ -527,7 +674,7 @@ export class Sector {
           ship,
           currentTime
         );
-        ship.velocity = ShipAI.calculateExitVelocity(currentShipPos);
+        ship.velocity = ShipAI.calculateExitVelocity(currentShipPos, ship);
         ship.position = currentShipPos;
         ship.spawnTime = currentTime;
 
@@ -562,7 +709,8 @@ export class Sector {
             );
             const interceptResult = ShipAI.calculateInterceptCourse(
               currentShipPos,
-              asteroid
+              asteroid,
+              ship
             );
             ship.velocity = interceptResult.velocity;
             ship.interceptTime = interceptResult.interceptTime;
@@ -769,40 +917,25 @@ export class Sector {
           ship,
           Date.now()
         );
-        const newBestTarget = this.findBiggestReachableAsteroid(currentShipPos);
+        const newBestTarget = this.findBestTargetAsteroid(
+          currentShipPos,
+          ship,
+          ship.targetAsteroidId
+        );
 
-        // Switch target if:
-        // 1. Ship has no target and new target is available
-        // 2. Ship has target but new target is bigger
-        if (!ship.targetAsteroidId && newBestTarget) {
-          console.log(
-            `Waiting ship ${shipId} targeting new asteroid ${newBestTarget}`
-          );
-          this.retargetShip(ship);
-        } else if (
-          ship.targetAsteroidId &&
-          newBestTarget &&
-          newBestTarget !== ship.targetAsteroidId
-        ) {
-          const currentTarget = this.asteroids.get(ship.targetAsteroidId);
-          const newTarget = this.asteroids.get(newBestTarget);
-
-          if (
-            currentTarget &&
-            newTarget &&
-            newTarget.size > currentTarget.size
-          ) {
-            console.log(
-              `Ship ${shipId} switching from asteroid ${
-                ship.targetAsteroidId
-              } (size: ${Math.round(
-                currentTarget.size
-              )}) to bigger asteroid ${newBestTarget} (size: ${Math.round(
-                newTarget.size
-              )})`
+        // The smart targeting logic is now built into findBestTargetAsteroid
+        // It will only return a different target if it's worth switching
+        if (newBestTarget && newBestTarget !== ship.targetAsteroidId) {
+          if (!ship.targetAsteroidId) {
+            this.debugLog(
+              `Waiting ship ${shipId} targeting new asteroid ${newBestTarget}`
             );
-            this.retargetShip(ship);
+          } else {
+            this.debugLog(
+              `Ship ${shipId} switching from ${ship.targetAsteroidId} to better target ${newBestTarget}`
+            );
           }
+          this.retargetShip(ship);
         }
       }
     }

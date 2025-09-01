@@ -31,6 +31,7 @@ export interface Ship {
   interceptTime: number | null;
   isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
   vectorMatchTime: number | null; // When the vector matching started
+  fullCargo: boolean; // Flag to indicate if ship has mined cargo and should move slower
 }
 
 export interface SectorEvent {

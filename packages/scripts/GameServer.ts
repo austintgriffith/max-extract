@@ -19,8 +19,10 @@ export class GameServer {
   private wss: WebSocketServer;
   private sectors: Map<string, Sector> = new Map();
   private simulationInterval: NodeJS.Timeout | null = null;
+  private debugMode: boolean;
 
-  constructor() {
+  constructor(debugMode: boolean = false) {
+    this.debugMode = debugMode;
     this.app = express();
     this.server = createServer(this.app);
     this.wss = new WebSocketServer({
@@ -34,6 +36,21 @@ export class GameServer {
     this.setupMiddleware();
     this.setupRoutes();
     this.setupWebSocket();
+
+    if (this.debugMode) {
+      this.debugLog("GameServer initialized in DEBUG mode");
+    }
+  }
+
+  private debugLog(message: string, data?: any): void {
+    if (this.debugMode) {
+      const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
+      if (data) {
+        console.log(`🐛 [${timestamp}] ${message}:`, data);
+      } else {
+        console.log(`🐛 [${timestamp}] ${message}`);
+      }
+    }
   }
 
   private setupMiddleware(): void {
@@ -143,6 +160,8 @@ export class GameServer {
 
   private async loadSectorsFromContract(): Promise<void> {
     try {
+      this.debugLog("Loading sectors from contract...");
+
       // Check if MaxExtract contract is deployed
       const contracts = deployedContracts[31337];
       if (!contracts || !contracts.MaxExtract) {
@@ -150,14 +169,20 @@ export class GameServer {
           "⚠️  MaxExtract contract not found in deployedContracts. Make sure to deploy all contracts first."
         );
         console.log("💡 Run: yarn deploy");
+        this.debugLog("MaxExtract contract not found");
         return;
       }
 
       const maxExtractContract = contracts.MaxExtract;
       if (!maxExtractContract.address) {
         console.error("⚠️  MaxExtract contract address is undefined");
+        this.debugLog("MaxExtract contract address is undefined");
         return;
       }
+
+      this.debugLog(
+        `Calling getActiveSectors on contract: ${maxExtractContract.address}`
+      );
 
       const activeSectors = (await publicClient.readContract({
         address: maxExtractContract.address,
@@ -165,12 +190,20 @@ export class GameServer {
         functionName: "getActiveSectors",
       })) as bigint[];
 
+      this.debugLog(
+        `Found ${activeSectors.length} active sectors from contract`
+      );
+
       let newSectorsAdded = false;
       for (const sectorId of activeSectors) {
         const sectorIdStr = sectorId.toString();
         if (!this.sectors.has(sectorIdStr)) {
-          this.sectors.set(sectorIdStr, new Sector(sectorIdStr));
+          this.sectors.set(
+            sectorIdStr,
+            new Sector(sectorIdStr, undefined, this.debugMode)
+          );
           console.log(`  ✅ New Sector ${sectorIdStr} initialized`);
+          this.debugLog(`Created new sector: ${sectorIdStr}`);
           newSectorsAdded = true;
         }
       }
@@ -179,20 +212,42 @@ export class GameServer {
       if (newSectorsAdded) {
         console.log(`📡 Loaded ${activeSectors.length} sectors from contract`);
       }
+
+      this.debugLog(`Total sectors managed: ${this.sectors.size}`);
     } catch (error) {
       console.error("Error loading sectors from contract:", error);
+      this.debugLog("Failed to load sectors from contract", error);
     }
   }
 
   private startSimulation(): void {
+    this.debugLog("Starting simulation loop");
+
     const simulate = async () => {
+      this.debugLog("Simulation tick starting...");
+
       // Reload sectors from contract periodically
       await this.loadSectorsFromContract();
 
       // Update all sectors
-      for (const sector of this.sectors.values()) {
+      let totalAsteroids = 0;
+      let totalShips = 0;
+      for (const [sectorId, sector] of this.sectors.entries()) {
+        const snapshot = sector.getSnapshot();
+        totalAsteroids += Object.keys(snapshot.asteroids).length;
+        totalShips += Object.keys(snapshot.ships).length;
+
+        this.debugLog(
+          `Sector ${sectorId}: ${
+            Object.keys(snapshot.asteroids).length
+          } asteroids, ${Object.keys(snapshot.ships).length} ships`
+        );
         sector.update();
       }
+
+      this.debugLog(
+        `Total across all sectors: ${totalAsteroids} asteroids, ${totalShips} ships`
+      );
 
       // Schedule next update
       this.simulationInterval = setTimeout(

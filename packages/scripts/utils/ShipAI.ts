@@ -1,16 +1,29 @@
-import { Vector2D, Asteroid, SECTOR_CONFIG } from "../types";
+import { Vector2D, Asteroid, Ship, SECTOR_CONFIG } from "../types";
 import { PositionUtils } from "./PositionUtils";
 
 export class ShipAI {
+  /**
+   * Calculate ship speed based on cargo status - ships with full cargo move slower
+   * @param ship The ship to calculate speed for
+   * @returns The adjusted speed for the ship
+   */
+  static getShipSpeed(ship: Ship): number {
+    if (ship.fullCargo) {
+      return SECTOR_CONFIG.SHIP_SPEED * 0.25; // 25% speed when carrying cargo
+    }
+
+    return SECTOR_CONFIG.SHIP_SPEED; // Full speed when no cargo
+  }
   static calculateInterceptCourse(
     shipPos: Vector2D,
-    asteroid: Asteroid
+    asteroid: Asteroid,
+    ship: Ship
   ): { velocity: Vector2D; interceptTime: number | null } {
     const currentTime = Date.now();
     const asteroidPos = PositionUtils.calculatePosition(asteroid, currentTime);
     const d = { x: asteroidPos.x - shipPos.x, y: asteroidPos.y - shipPos.y };
     const dv = asteroid.velocity;
-    const shipSpeed = SECTOR_CONFIG.SHIP_SPEED;
+    const shipSpeed = this.getShipSpeed(ship);
 
     // Quadratic formula for intercept calculation
     const a = dv.x * dv.x + dv.y * dv.y - shipSpeed * shipSpeed;
@@ -48,8 +61,8 @@ export class ShipAI {
     };
   }
 
-  static calculateExitVelocity(shipPos: Vector2D): Vector2D {
-    const speed = SECTOR_CONFIG.SHIP_SPEED;
+  static calculateExitVelocity(shipPos: Vector2D, ship: Ship): Vector2D {
+    const speed = this.getShipSpeed(ship);
     const distances = {
       left: shipPos.x,
       right: SECTOR_CONFIG.WIDTH - shipPos.x,
@@ -77,7 +90,7 @@ export class ShipAI {
     return { x: (dx / len) * speed, y: (dy / len) * speed };
   }
 
-  static calculateCenterVelocity(shipPos: Vector2D): Vector2D {
+  static calculateCenterVelocity(shipPos: Vector2D, ship: Ship): Vector2D {
     const centerX = SECTOR_CONFIG.WIDTH / 2;
     const centerY = SECTOR_CONFIG.HEIGHT / 2;
     const dx = centerX - shipPos.x;
@@ -85,7 +98,8 @@ export class ShipAI {
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     if (distance > 0) {
-      const speed = SECTOR_CONFIG.SHIP_SPEED * 0.5; // Half speed toward center
+      const baseSpeed = this.getShipSpeed(ship);
+      const speed = baseSpeed * 0.5; // Half speed toward center
       return {
         x: (dx / distance) * speed,
         y: (dy / distance) * speed,

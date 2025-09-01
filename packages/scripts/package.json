@@ -6,6 +6,8 @@
   "scripts": {
     "start": "tsx index.ts",
     "dev": "tsx --watch index.ts",
+    "debug": "DEBUG=true tsx index.ts",
+    "debug:dev": "DEBUG=true tsx --watch index.ts",
     "backend": "tsx backend.ts",
     "backend:dev": "tsx --watch backend.ts",
     "build": "tsc"
