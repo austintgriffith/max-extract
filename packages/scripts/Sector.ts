@@ -315,23 +315,43 @@ export class Sector {
     return canReach;
   }
 
-  private retargetShip(ship: Ship): void {
+  /**
+   * Unified targeting function that handles all ship targeting scenarios
+   * @param ship The ship to assign a target to
+   * @param reason Why targeting is happening (for debugging)
+   * @param forceRetarget Whether to force a retarget even if current target is good
+   */
+  private assignTarget(
+    ship: Ship,
+    reason: string,
+    forceRetarget: boolean = false
+  ): void {
     // Reset vector matching when retargeting
-    ship.isVectorMatched = false;
-    ship.vectorMatchTime = null;
+    if (forceRetarget || !ship.targetAsteroidId) {
+      ship.isVectorMatched = false;
+      ship.vectorMatchTime = null;
+    }
 
-    // Find biggest reachable asteroid that's not already the current target
     const currentPos = PositionUtils.calculatePosition(ship, Date.now());
+    const currentTarget = ship.targetAsteroidId;
+
+    this.debugLog(`Assigning target for ship ${ship.id} - reason: ${reason}`);
+
+    // Find the best target considering current target (if any)
     const targetId = this.findBestTargetAsteroid(
       currentPos,
       ship,
-      ship.targetAsteroidId
+      forceRetarget ? null : ship.targetAsteroidId
     );
-    if (targetId && targetId !== ship.targetAsteroidId) {
+
+    if (targetId && targetId !== currentTarget) {
+      // Found a new target
       const targetAsteroid = this.asteroids.get(targetId);
       if (targetAsteroid) {
         const oldTarget = ship.targetAsteroidId;
         ship.targetAsteroidId = targetId;
+
+        // Calculate intercept course
         const interceptResult = ShipAI.calculateInterceptCourse(
           currentPos,
           targetAsteroid,
@@ -341,11 +361,14 @@ export class Sector {
         ship.interceptTime = interceptResult.interceptTime;
         ship.position = currentPos;
         ship.spawnTime = Date.now();
-        console.log(
-          `Ship ${ship.id} retargeted from ${oldTarget} to asteroid ${targetId}`
+
+        this.debugLog(
+          `Ship ${ship.id} targeted asteroid ${targetId} (was: ${
+            oldTarget || "none"
+          })`
         );
 
-        // Broadcast retarget event
+        // Broadcast the targeting event
         this.broadcastEvent({
           type: "ship_retarget",
           timestamp: Date.now(),
@@ -360,25 +383,27 @@ export class Sector {
         });
         return;
       }
+    } else if (targetId === currentTarget && currentTarget) {
+      // Keeping current target - no change needed
+      this.debugLog(`Ship ${ship.id} keeping current target ${currentTarget}`);
+      return;
     }
 
-    // If no suitable target found, fly toward center and wait
+    // No suitable target found - fly toward center and wait
     ship.targetAsteroidId = null;
-    const shipPos = PositionUtils.calculatePosition(ship, Date.now());
-    ship.velocity = ShipAI.calculateCenterVelocity(shipPos, ship);
-    ship.position = shipPos;
+    ship.velocity = ShipAI.calculateCenterVelocity(currentPos, ship);
+    ship.position = currentPos;
     ship.spawnTime = Date.now();
-    console.log(
-      `Ship ${ship.id} lost target, flying toward center to wait for asteroids`
-    );
 
-    // Broadcast retarget event for center-flying
+    this.debugLog(`Ship ${ship.id} has no target, flying to center to wait`);
+
+    // Broadcast center-flying event
     this.broadcastEvent({
       type: "ship_retarget",
       timestamp: Date.now(),
       data: {
         shipId: ship.id,
-        position: shipPos,
+        position: currentPos,
         velocity: ship.velocity,
         targetAsteroidId: null,
         state: ship.state,
@@ -409,8 +434,7 @@ export class Sector {
       if (!asteroid) {
         // Target asteroid no longer exists, find a new one (but only if not vector-matched)
         if (!ship.isVectorMatched) {
-          console.log(`Ship ${shipId} target asteroid missing, retargeting...`);
-          this.retargetShip(ship);
+          this.assignTarget(ship, "target asteroid missing", true);
         }
         continue;
       }
@@ -431,10 +455,10 @@ export class Sector {
         // If this asteroid is being mined by a vector-matched ship and this ship isn't that ship, retarget
         const miningShipId = asteroidsBeingMined.get(ship.targetAsteroidId);
         if (miningShipId && miningShipId !== ship.id) {
-          console.log(
-            `Ship ${ship.id} reached asteroid ${asteroid.id} but ship ${miningShipId} is already mining it, retargeting...`
+          this.debugLog(
+            `Ship ${ship.id} reached asteroid ${asteroid.id} but ship ${miningShipId} is already mining it`
           );
-          this.retargetShip(ship);
+          this.assignTarget(ship, "asteroid already being mined", true);
           continue;
         }
 
@@ -478,10 +502,8 @@ export class Sector {
             console.log(
               `Found ship ${otherShipId} also targeting ${asteroid.id}, retargeting...`
             );
-            // Reset vector matching for retargeted ships
-            otherShip.isVectorMatched = false;
-            otherShip.vectorMatchTime = null;
-            this.retargetShip(otherShip);
+            // Retarget ships that were targeting the mined asteroid
+            this.assignTarget(otherShip, "target asteroid was mined", true);
           }
         }
 
@@ -587,40 +609,8 @@ export class Sector {
       )}) with ${Math.round(startingFuel)}% fuel`
     );
 
-    const targetId = this.findBestTargetAsteroid(ship.position, ship, null);
-    if (targetId) {
-      const targetAsteroid = this.asteroids.get(targetId);
-      if (targetAsteroid) {
-        ship.targetAsteroidId = targetId;
-        const interceptResult = ShipAI.calculateInterceptCourse(
-          ship.position,
-          targetAsteroid,
-          ship
-        );
-        ship.velocity = interceptResult.velocity;
-        ship.interceptTime = interceptResult.interceptTime;
-      }
-    } else {
-      ship.targetAsteroidId = null;
-      ship.velocity = ShipAI.calculateCenterVelocity(ship.position, ship);
-      console.log(
-        `Ship ${ship.id} spawned but no reachable asteroids, flying toward center`
-      );
-
-      // Broadcast retarget event for initial center-flying
-      this.broadcastEvent({
-        type: "ship_retarget",
-        timestamp: Date.now(),
-        data: {
-          shipId: ship.id,
-          position: ship.position,
-          velocity: ship.velocity,
-          targetAsteroidId: null,
-          state: ship.state,
-          fuel: ship.fuel,
-        },
-      });
-    }
+    // Assign initial target for newly spawned ship
+    this.assignTarget(ship, "initial spawn targeting", false);
 
     this.ships.set(ship.id, ship);
     this.broadcastEvent({
@@ -718,17 +708,19 @@ export class Sector {
             ship.spawnTime = currentTime;
           }
         }
-      } else if (ship.state === "exiting") {
-        // Check if ship is out of bounds
-        const currentPos = PositionUtils.calculatePosition(ship, currentTime);
-        if (
-          PositionUtils.isOutOfBounds(
-            currentPos,
-            SECTOR_CONFIG.WIDTH,
-            SECTOR_CONFIG.HEIGHT
-          )
-        ) {
-          // Add fuel bonus to final score
+      }
+
+      // Check if ANY ship (flying or exiting) is out of bounds
+      const currentPos = PositionUtils.calculatePosition(ship, currentTime);
+      if (
+        PositionUtils.isOutOfBounds(
+          currentPos,
+          SECTOR_CONFIG.WIDTH,
+          SECTOR_CONFIG.HEIGHT
+        )
+      ) {
+        if (ship.state === "exiting") {
+          // Normal exit - ship intentionally left
           const fuelBonus = Math.floor(ship.fuel / 3); // fuel remaining / 3 for bonus points
           const finalScore = ship.score + fuelBonus;
 
@@ -753,10 +745,110 @@ export class Sector {
               fuelRemaining: ship.fuel,
             },
           });
+        } else if (ship.state === "flying" && ship.isVectorMatched && ship.targetAsteroidId) {
+          // Vector-matched ship drifted off with asteroid - let them mine it!
+          const asteroid = this.asteroids.get(ship.targetAsteroidId);
+          if (asteroid) {
+            this.debugLog(`Vector-matched ship ${ship.id} and asteroid ${ship.targetAsteroidId} drifted off together - mining asteroid`);
+            
+            // Ship successfully mines the asteroid even though off-screen
+            const baseBounty = Math.floor(asteroid.size * 2);
+            const randomBonus = Math.floor(this.rng() * asteroid.size);
+            ship.score = baseBounty + randomBonus;
+            ship.fullCargo = true;
 
-          shipsToRemove.push(shipId);
-          console.log(`Marking ship ${ship.id} for removal`);
+            console.log(
+              `Ship ${ship.id} mined asteroid ${asteroid.id} while drifting off-screen for ${ship.score} points!`
+            );
+
+            this.debugLog(`Off-screen mining`, {
+              asteroidSize: Math.round(asteroid.size),
+              baseBounty,
+              randomBonus,
+              totalScore: ship.score,
+              shipNowSlower: ship.fullCargo
+            });
+
+            // Remove the asteroid since it was mined
+            this.asteroids.delete(asteroid.id);
+            
+            // Broadcast asteroid depletion
+            this.broadcastEvent({
+              type: "asteroid_depleted",
+              timestamp: currentTime,
+              data: { asteroidId: asteroid.id, score: ship.score },
+            });
+
+            // Now treat as normal exit with full rewards
+            const fuelBonus = Math.floor(ship.fuel / 3);
+            const finalScore = ship.score + fuelBonus;
+
+            console.log(
+              `Ship ${ship.id} has left the sector with mining score ${
+                ship.score
+              } + fuel bonus ${fuelBonus} = total ${finalScore} (off-screen mining)`
+            );
+
+            // Broadcast normal ship_exit event
+            this.broadcastEvent({
+              type: "ship_exit",
+              timestamp: currentTime,
+              data: {
+                shipId: ship.id,
+                position: currentPos,
+                score: finalScore,
+                miningScore: ship.score,
+                fuelBonus: fuelBonus,
+                fuelRemaining: ship.fuel,
+              },
+            });
+          } else {
+            // Vector-matched but asteroid already gone - emergency exit
+            this.debugLog(`Vector-matched ship ${ship.id} drifted off but asteroid ${ship.targetAsteroidId} was already gone`);
+            
+            console.log(
+              `Ship ${ship.id} drifted off the map while flying (score: ${ship.score})`
+            );
+
+            this.broadcastEvent({
+              type: "ship_exit",
+              timestamp: currentTime,
+              data: {
+                shipId: ship.id,
+                position: currentPos,
+                score: ship.score,
+                miningScore: ship.score,
+                fuelBonus: 0,
+                fuelRemaining: ship.fuel,
+              },
+            });
+          }
+        } else {
+          // Regular flying ship drifted off (shouldn't happen with smart targeting)
+          this.debugLog(`Flying ship ${ship.id} drifted off screen while targeting ${ship.targetAsteroidId}`);
+          
+          console.log(
+            `Ship ${ship.id} drifted off the map while flying (score: ${ship.score})`
+          );
+
+          this.broadcastEvent({
+            type: "ship_exit",
+            timestamp: currentTime,
+            data: {
+              shipId: ship.id,
+              position: currentPos,
+              score: ship.score,
+              miningScore: ship.score,
+              fuelBonus: 0,
+              fuelRemaining: ship.fuel,
+            },
+          });
         }
+
+        shipsToRemove.push(shipId);
+        this.debugLog(
+          `Marking ship ${ship.id} for removal (${ship.state} state)`
+        );
       }
       // Note: checkArrival() handles collision detection for flying ships
     }
@@ -802,8 +894,7 @@ export class Sector {
       // Find ships targeting this deleted asteroid and give them new targets
       for (const [shipId, ship] of this.ships) {
         if (ship.targetAsteroidId === asteroidId && ship.state === "flying") {
-          console.log(`Ship ${shipId} lost its target, finding new one...`);
-          this.retargetShip(ship);
+          this.assignTarget(ship, "target asteroid drifted off map", true);
         }
       }
     });
@@ -917,26 +1008,8 @@ export class Sector {
           ship,
           Date.now()
         );
-        const newBestTarget = this.findBestTargetAsteroid(
-          currentShipPos,
-          ship,
-          ship.targetAsteroidId
-        );
-
-        // The smart targeting logic is now built into findBestTargetAsteroid
-        // It will only return a different target if it's worth switching
-        if (newBestTarget && newBestTarget !== ship.targetAsteroidId) {
-          if (!ship.targetAsteroidId) {
-            this.debugLog(
-              `Waiting ship ${shipId} targeting new asteroid ${newBestTarget}`
-            );
-          } else {
-            this.debugLog(
-              `Ship ${shipId} switching from ${ship.targetAsteroidId} to better target ${newBestTarget}`
-            );
-          }
-          this.retargetShip(ship);
-        }
+        // Check if ship should switch to a better target
+        this.assignTarget(ship, "checking for better targets", false);
       }
     }
   }
