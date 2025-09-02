@@ -461,7 +461,7 @@ const SectorPage = () => {
 
       return hasUpdates ? newData : prev;
     });
-  }, [sectorData]);
+  }, [sectorData, sectorId]);
 
   const createExplosionParticles = (asteroidPos: Vector2D, asteroidSize: number): Particle[] => {
     const particleCount = Math.floor(asteroidSize / 4) + 5; // More particles for bigger asteroids
@@ -757,7 +757,7 @@ const SectorPage = () => {
     }, 100); // Check every 100ms for responsive vector matching
 
     return () => clearInterval(interval);
-  }, [checkAndHandleVectorMatching]);
+  }, [checkAndHandleVectorMatching, sectorData]);
 
   // Animation loop
   useEffect(() => {
