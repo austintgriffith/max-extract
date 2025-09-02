@@ -5,7 +5,7 @@ export class AsteroidUtils {
   static calculateTimeToMapEdge(asteroid: Asteroid): number {
     const currentTime = Date.now();
     const currentPos = PositionUtils.calculatePosition(asteroid, currentTime);
-    const buffer = 100;
+    const buffer = SECTOR_CONFIG.ASTEROID_EDGE_BUFFER;
     let minTime = Infinity;
 
     const edgeCalculations = [

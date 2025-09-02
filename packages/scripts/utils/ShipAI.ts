@@ -9,10 +9,73 @@ export class ShipAI {
    */
   static getShipSpeed(ship: Ship): number {
     if (ship.fullCargo) {
-      return SECTOR_CONFIG.SHIP_SPEED * 0.25; // 25% speed when carrying cargo
+      return SECTOR_CONFIG.SHIP_SPEED * SECTOR_CONFIG.CARGO_SPEED_MULTIPLIER; // Reduced speed when carrying cargo
     }
 
     return SECTOR_CONFIG.SHIP_SPEED; // Full speed when no cargo
+  }
+
+  /**
+   * Calculate intercept course for ship-to-ship targeting
+   * @param attackerPos Position of the attacking ship
+   * @param targetShip The target ship to intercept
+   * @param attackerShip The attacking ship
+   * @returns Velocity and intercept time for the attacking ship
+   */
+  static calculateShipInterceptCourse(
+    attackerPos: Vector2D,
+    targetShip: Ship,
+    attackerShip: Ship
+  ): { velocity: Vector2D; interceptTime: number | null } {
+    const currentTime = Date.now();
+    const targetPos = PositionUtils.calculatePosition(targetShip, currentTime);
+    const d = {
+      x: targetPos.x - attackerPos.x,
+      y: targetPos.y - attackerPos.y,
+    };
+    const dv = targetShip.velocity;
+    const attackerSpeed = this.getShipSpeed(attackerShip);
+
+    // Quadratic formula for intercept calculation (same as asteroid intercept)
+    const a = dv.x * dv.x + dv.y * dv.y - attackerSpeed * attackerSpeed;
+    const b = 2 * (d.x * dv.x + d.y * dv.y);
+    const c = d.x * d.x + d.y * d.y;
+
+    const discriminant = b * b - 4 * a * c;
+    if (discriminant < 0) {
+      // No intercept possible, aim directly at current position
+      const dist = Math.sqrt(d.x * d.x + d.y * d.y);
+      return {
+        velocity: {
+          x: (d.x / dist) * attackerSpeed,
+          y: (d.y / dist) * attackerSpeed,
+        },
+        interceptTime: null,
+      };
+    }
+
+    const sqrtDisc = Math.sqrt(discriminant);
+    const t1 = (-b - sqrtDisc) / (2 * a);
+    const t2 = (-b + sqrtDisc) / (2 * a);
+    const interceptTime =
+      Math.min(t1, t2) > 0 ? Math.min(t1, t2) : Math.max(t1, t2);
+
+    const intercept = {
+      x: targetPos.x + dv.x * interceptTime,
+      y: targetPos.y + dv.y * interceptTime,
+    };
+
+    const dx = intercept.x - attackerPos.x;
+    const dy = intercept.y - attackerPos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    return {
+      velocity: {
+        x: (dx / dist) * attackerSpeed,
+        y: (dy / dist) * attackerSpeed,
+      },
+      interceptTime: currentTime + interceptTime * 1000,
+    };
   }
   static calculateInterceptCourse(
     shipPos: Vector2D,
@@ -71,7 +134,7 @@ export class ShipAI {
     };
 
     const minDist = Math.min(...Object.values(distances));
-    const exitBuffer = 200;
+    const exitBuffer = SECTOR_CONFIG.EXIT_TARGET_BUFFER;
 
     let target: Vector2D;
     if (minDist === distances.left) {

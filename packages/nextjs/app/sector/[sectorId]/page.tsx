@@ -26,6 +26,7 @@ interface Ship {
   position: Vector2D;
   velocity: Vector2D;
   targetAsteroidId: string | null;
+  targetShipId: string | null; // New field for ship-to-ship targeting
   state: "flying" | "mining" | "exiting";
   spawnTime: number;
   spawnAngle: number;
@@ -34,6 +35,7 @@ interface Ship {
   maxFuel: number; // Starting fuel amount
   isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
   vectorMatchTime: number | null; // When the vector matching started
+  fullCargo: boolean; // Flag to indicate if ship has mined cargo and should move slower
 }
 
 interface SectorSnapshot {
@@ -52,7 +54,9 @@ interface SectorEvent {
     | "ship_exit"
     | "ship_retarget"
     | "ship_fuel_update"
-    | "ship_vector_matched";
+    | "ship_vector_matched"
+    | "ship_combat"
+    | "ship_destroyed";
   timestamp: number;
   data: any;
 }
@@ -70,7 +74,10 @@ interface Particle {
 const SECTOR_CONFIG = {
   WIDTH: 1000,
   HEIGHT: 1000,
-  CANVAS_SCALE: 0.6, // Scale down for display
+  CANVAS_SCALE: 1, // Scale down more to fit larger area
+  SHIP_COMBAT_RANGE: 10, // Tighter range for ship-to-ship vector matching and combat
+  PADDING: 5, // Huge padding to see ships exiting way beyond boundaries
+  EXIT_REMOVAL_BUFFER: 5, // Buffer for when entities are actually removed from the game
 };
 
 const SectorPage = () => {
@@ -186,6 +193,8 @@ const SectorPage = () => {
                       ...sectorEvent.data,
                       isVectorMatched: false, // Ensure new ships start without vector matching
                       vectorMatchTime: null,
+                      targetShipId: sectorEvent.data.targetShipId || null, // Handle ship targeting
+                      fullCargo: sectorEvent.data.fullCargo || false, // Handle cargo status
                     };
                     break;
                   case "asteroid_depleted":
@@ -198,6 +207,16 @@ const SectorPage = () => {
                     }
                     delete newData.asteroids[sectorEvent.data.asteroidId];
                     break;
+                  case "ship_destroyed":
+                    // Create explosion particles at victim ship position before deleting
+                    if (newData.ships[sectorEvent.data.victimId]) {
+                      const victimShip = newData.ships[sectorEvent.data.victimId];
+                      const shipPos = sectorEvent.data.victimPosition || calculatePosition(victimShip, Date.now());
+                      const explosionParticles = createShipExplosionParticles(shipPos);
+                      setParticles(prev => [...prev, ...explosionParticles]);
+                    }
+                    delete newData.ships[sectorEvent.data.victimId];
+                    break;
                   case "asteroid_exit":
                     // Asteroid drifted off the map → remove it from local state
                     delete newData.asteroids[sectorEvent.data.asteroidId];
@@ -208,6 +227,7 @@ const SectorPage = () => {
                       newData.ships[sectorEvent.data.shipId].position = sectorEvent.data.position;
                       newData.ships[sectorEvent.data.shipId].velocity = sectorEvent.data.velocity;
                       newData.ships[sectorEvent.data.shipId].targetAsteroidId = sectorEvent.data.targetAsteroidId;
+                      newData.ships[sectorEvent.data.shipId].targetShipId = sectorEvent.data.targetShipId;
                       newData.ships[sectorEvent.data.shipId].state = sectorEvent.data.state;
                       newData.ships[sectorEvent.data.shipId].spawnTime = sectorEvent.timestamp;
                       if (sectorEvent.data.fuel !== undefined) {
@@ -335,16 +355,63 @@ const SectorPage = () => {
           return;
         }
 
-        if (ship.state !== "flying" || !ship.targetAsteroidId || ship.isVectorMatched) {
-          return; // Skip non-flying, non-targeted, or already vector-matched ships
+        if (ship.state !== "flying" || ship.isVectorMatched) {
+          return; // Skip non-flying or already vector-matched ships
         }
+
+        const shipPos = calculatePosition(ship, currentTime);
+
+        // Priority 1: Handle ship-to-ship vector matching (combat)
+        if (ship.targetShipId) {
+          const targetShip = newData.ships[ship.targetShipId];
+          if (!targetShip) return; // Target ship doesn't exist
+
+          const targetPos = calculatePosition(targetShip, currentTime);
+          const distance = Math.sqrt(Math.pow(targetPos.x - shipPos.x, 2) + Math.pow(targetPos.y - shipPos.y, 2));
+
+          const combatRange = SECTOR_CONFIG.SHIP_COMBAT_RANGE;
+
+          if (distance <= combatRange) {
+            console.log(
+              `Frontend: Ship ${ship.id} reached target ship ${ship.targetShipId}, matching vector for combat!`,
+            );
+
+            // Match the target ship's velocity for combat
+            newData.ships[ship.id] = {
+              ...ship,
+              velocity: { ...targetShip.velocity }, // Match target ship's exact velocity
+              position: shipPos, // Update position to current calculated position
+              spawnTime: currentTime, // Reset spawn time for new movement
+              isVectorMatched: true,
+              vectorMatchTime: currentTime,
+            };
+
+            // Notify backend about ship-to-ship vector matching
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(
+                JSON.stringify({
+                  type: "ship_vector_matched",
+                  sectorId: sectorId,
+                  shipId: ship.id,
+                  targetShipId: ship.targetShipId,
+                  position: shipPos,
+                  velocity: targetShip.velocity,
+                }),
+              );
+            }
+
+            hasUpdates = true;
+          }
+          return; // Skip asteroid targeting if targeting a ship
+        }
+
+        // Priority 2: Handle asteroid targeting
+        if (!ship.targetAsteroidId) return;
 
         const asteroid = newData.asteroids[ship.targetAsteroidId];
         if (!asteroid) return; // Target asteroid doesn't exist
 
-        const shipPos = calculatePosition(ship, currentTime);
         const asteroidPos = calculatePosition(asteroid, currentTime);
-
         const distance = Math.sqrt(Math.pow(asteroidPos.x - shipPos.x, 2) + Math.pow(asteroidPos.y - shipPos.y, 2));
 
         // Check if ship has reached the asteroid (close enough to ensure mining but not too early)
@@ -374,7 +441,7 @@ const SectorPage = () => {
             vectorMatchTime: currentTime,
           };
 
-          // Notify backend about vector matching
+          // Notify backend about asteroid vector matching
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(
               JSON.stringify({
@@ -421,6 +488,50 @@ const SectorPage = () => {
     return newParticles;
   };
 
+  const createShipExplosionParticles = (shipPos: Vector2D): Particle[] => {
+    const particleCount = 12; // Fixed number for ship explosions
+    const newParticles: Particle[] = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.8;
+      const speed = 30 + Math.random() * 50; // Faster particles for ship explosions
+
+      newParticles.push({
+        id: `ship_particle_${Date.now()}_${i}`,
+        position: { ...shipPos },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        size: 3 + Math.random() * 5, // Larger particles for ships
+        color: `hsl(${0 + Math.random() * 60}, 80%, ${60 + Math.random() * 30}%)`, // Red/orange/yellow shades
+        spawnTime: Date.now(),
+        lifetime: 2000 + Math.random() * 1000, // 2-3 seconds (longer than asteroids)
+      });
+    }
+
+    // Add some sparks/debris
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 15 + Math.random() * 25;
+
+      newParticles.push({
+        id: `ship_spark_${Date.now()}_${i}`,
+        position: { ...shipPos },
+        velocity: {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+        },
+        size: 1 + Math.random() * 2, // Small sparks
+        color: `hsl(${50 + Math.random() * 20}, 90%, 80%)`, // Bright yellow sparks
+        spawnTime: Date.now(),
+        lifetime: 1000 + Math.random() * 500, // Shorter lived sparks
+      });
+    }
+
+    return newParticles;
+  };
+
   const drawSector = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !sectorData) return;
@@ -429,17 +540,62 @@ const SectorPage = () => {
     if (!ctx) return;
 
     const scale = SECTOR_CONFIG.CANVAS_SCALE;
-    const width = SECTOR_CONFIG.WIDTH * scale;
-    const height = SECTOR_CONFIG.HEIGHT * scale;
+    const padding = SECTOR_CONFIG.PADDING * scale;
+    const sectorWidth = SECTOR_CONFIG.WIDTH * scale;
+    const sectorHeight = SECTOR_CONFIG.HEIGHT * scale;
+    const canvasWidth = sectorWidth + 2 * padding;
+    const canvasHeight = sectorHeight + 2 * padding;
 
-    // Clear canvas
+    // Clear entire canvas
     ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Draw border
-    ctx.strokeStyle = "#333";
+    // Draw 10x10 grid to show boundaries
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 1;
+    const gridSize = 10;
+    const cellWidth = sectorWidth / gridSize;
+    const cellHeight = sectorHeight / gridSize;
+
+    // Draw vertical grid lines
+    for (let i = 0; i <= gridSize; i++) {
+      const x = padding + i * cellWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, padding + sectorHeight);
+      ctx.stroke();
+    }
+
+    // Draw horizontal grid lines
+    for (let i = 0; i <= gridSize; i++) {
+      const y = padding + i * cellHeight;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(padding + sectorWidth, y);
+      ctx.stroke();
+    }
+
+    // Draw sector border (thicker than grid)
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(padding, padding, sectorWidth, sectorHeight);
+
+    // Draw exit boundaries (where ships actually get removed)
+    const exitBuffer = SECTOR_CONFIG.EXIT_REMOVAL_BUFFER * scale;
+    ctx.strokeStyle = "#ff4444";
     ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, width, height);
+    ctx.setLineDash([5, 5]); // Dashed line
+    ctx.strokeRect(
+      padding - exitBuffer,
+      padding - exitBuffer,
+      sectorWidth + 2 * exitBuffer,
+      sectorHeight + 2 * exitBuffer,
+    );
+    ctx.setLineDash([]); // Reset to solid lines
+
+    // Save context for entity drawing (we'll translate by padding)
+    ctx.save();
+    ctx.translate(padding, padding);
 
     const currentTime = Date.now();
 
@@ -447,8 +603,8 @@ const SectorPage = () => {
     Object.values(sectorData.asteroids).forEach(asteroid => {
       const pos = calculatePosition(asteroid, currentTime);
 
-      // Only draw if within bounds
-      if (pos.x >= -100 && pos.x <= SECTOR_CONFIG.WIDTH + 100 && pos.y >= -100 && pos.y <= SECTOR_CONFIG.HEIGHT + 100) {
+      // Only draw if within expanded bounds (way beyond sector for exit visibility)
+      if (pos.x >= -500 && pos.x <= SECTOR_CONFIG.WIDTH + 500 && pos.y >= -500 && pos.y <= SECTOR_CONFIG.HEIGHT + 500) {
         ctx.save();
         ctx.translate(pos.x * scale, pos.y * scale);
 
@@ -476,8 +632,8 @@ const SectorPage = () => {
     Object.values(sectorData.ships).forEach(ship => {
       const pos = calculatePosition(ship, currentTime);
 
-      // Only draw if within reasonable bounds (tighter than backend cleanup bounds)
-      if (pos.x >= -50 && pos.x <= SECTOR_CONFIG.WIDTH + 50 && pos.y >= -50 && pos.y <= SECTOR_CONFIG.HEIGHT + 50) {
+      // Only draw if within very expanded bounds to see full exit journey
+      if (pos.x >= -500 && pos.x <= SECTOR_CONFIG.WIDTH + 500 && pos.y >= -500 && pos.y <= SECTOR_CONFIG.HEIGHT + 500) {
         ctx.save();
         ctx.translate(pos.x * scale, pos.y * scale);
 
@@ -558,10 +714,10 @@ const SectorPage = () => {
       // Only draw if within bounds and still alive
       if (
         ageRatio < 1 &&
-        pos.x >= -100 &&
-        pos.x <= SECTOR_CONFIG.WIDTH + 100 &&
-        pos.y >= -100 &&
-        pos.y <= SECTOR_CONFIG.HEIGHT + 100
+        pos.x >= -500 &&
+        pos.x <= SECTOR_CONFIG.WIDTH + 500 &&
+        pos.y >= -500 &&
+        pos.y <= SECTOR_CONFIG.HEIGHT + 500
       ) {
         ctx.save();
         ctx.translate(pos.x * scale, pos.y * scale);
@@ -580,12 +736,16 @@ const SectorPage = () => {
       }
     });
 
-    // Draw stats
+    // Restore context after drawing entities
+    ctx.restore();
+
+    // Draw stats (outside the translated context)
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "14px monospace";
     ctx.fillText(`Asteroids: ${Object.keys(sectorData.asteroids).length}`, 10, 25);
     ctx.fillText(`Ships: ${Object.keys(sectorData.ships).length}`, 10, 45);
     ctx.fillText(`Last Update: ${new Date(sectorData.lastUpdate).toLocaleTimeString()}`, 10, 65);
+    ctx.fillText(`Grid: 10x10 (100x100 units per cell)`, 10, 85);
   }, [sectorData, particles]);
 
   // Vector matching check - runs frequently to catch ships reaching asteroids
@@ -708,14 +868,22 @@ const SectorPage = () => {
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <h2 className="card-title">Sector View</h2>
-              <canvas
-                ref={canvasRef}
-                width={SECTOR_CONFIG.WIDTH * SECTOR_CONFIG.CANVAS_SCALE}
-                height={SECTOR_CONFIG.HEIGHT * SECTOR_CONFIG.CANVAS_SCALE}
-                className="border border-base-300 rounded-lg bg-black"
-              />
+              <div className="flex justify-center">
+                <canvas
+                  ref={canvasRef}
+                  width={
+                    SECTOR_CONFIG.WIDTH * SECTOR_CONFIG.CANVAS_SCALE +
+                    2 * SECTOR_CONFIG.PADDING * SECTOR_CONFIG.CANVAS_SCALE
+                  }
+                  height={
+                    SECTOR_CONFIG.HEIGHT * SECTOR_CONFIG.CANVAS_SCALE +
+                    2 * SECTOR_CONFIG.PADDING * SECTOR_CONFIG.CANVAS_SCALE
+                  }
+                  className="border border-base-300 rounded-lg bg-black max-w-full"
+                />
+              </div>
               <div className="text-sm text-base-content/70 mt-2">
-                <div className="flex gap-4 flex-wrap">
+                <div className="flex gap-4 flex-wrap mb-2">
                   <span className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
                     Asteroids
@@ -732,6 +900,9 @@ const SectorPage = () => {
                     <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
                     Exiting Ships
                   </span>
+                </div>
+                <div className="text-xs text-base-content/50">
+                  🌌 Sector boundaries: 1000×1000 units | Grid: 10×10 cells (100×100 units each)
                 </div>
               </div>
             </div>
@@ -812,7 +983,12 @@ const SectorPage = () => {
                           {event.type === "ship_exit" &&
                             `Ship exited (total: ${event.data.score}${event.data.fuelBonus ? `, fuel bonus: ${event.data.fuelBonus}` : ""})`}
                           {event.type === "ship_retarget" && `Ship changed course (${event.data.state})`}
-                          {event.type === "ship_vector_matched" && `Ship matched asteroid vector (mining)`}
+                          {event.type === "ship_vector_matched" &&
+                            (event.data.targetShipId
+                              ? `Ship matched target ship vector (combat)`
+                              : `Ship matched asteroid vector (mining)`)}
+                          {event.type === "ship_destroyed" &&
+                            `Ship destroyed! Attacker gained ${event.data.stolenScore} points + ${event.data.stolenFuel} fuel`}
                         </div>
                       </div>
                     ))

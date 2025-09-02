@@ -132,14 +132,18 @@ export class GameServer {
             data.sectorId &&
             data.shipId
           ) {
-            // Handle frontend notification that a ship has matched vector with asteroid
+            // Handle frontend notification that a ship has matched vector with target (asteroid or ship)
             const sector = this.sectors.get(data.sectorId);
             if (sector) {
+              const targetType = data.targetShipId ? "ship" : "asteroid";
+              const targetId = data.targetShipId || data.asteroidId;
+
               sector.handleVectorMatching(
                 data.shipId,
-                data.asteroidId,
+                targetId,
                 data.position,
-                data.velocity
+                data.velocity,
+                targetType
               );
             }
           }

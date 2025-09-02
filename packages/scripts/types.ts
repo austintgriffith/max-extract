@@ -21,6 +21,7 @@ export interface Ship {
   position: Vector2D;
   velocity: Vector2D;
   targetAsteroidId: string | null;
+  targetShipId: string | null; // New field for targeting other ships
   state: "flying" | "mining" | "exiting";
   spawnTime: number;
   spawnAngle: number;
@@ -32,6 +33,7 @@ export interface Ship {
   isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
   vectorMatchTime: number | null; // When the vector matching started
   fullCargo: boolean; // Flag to indicate if ship has mined cargo and should move slower
+  lastCourseUpdate: number; // Track which game loop cycle the course was last updated
 }
 
 export interface SectorEvent {
@@ -44,7 +46,9 @@ export interface SectorEvent {
     | "ship_exit"
     | "ship_retarget"
     | "ship_fuel_update"
-    | "ship_vector_matched"; // New event for when ship matches asteroid vector
+    | "ship_vector_matched" // Event for when ship matches asteroid vector
+    | "ship_combat" // New event for ship-to-ship combat
+    | "ship_destroyed"; // New event for when a ship is destroyed by another ship
   timestamp: number;
   data: any;
 }
@@ -62,11 +66,18 @@ export const SECTOR_CONFIG = {
   MAX_ASTEROID_SIZE: 80,
   MIN_ASTEROID_RESOURCES: 100,
   MAX_ASTEROID_RESOURCES: 500,
-  ASTEROID_SPEED: 40,
+  ASTEROID_SPEED: 20,
   SHIP_SPEED: 80,
   UPDATE_INTERVAL: parseInt(process.env.UPDATE_INTERVAL || "1000"), // Configurable via env var
   ASTEROID_SPAWN_CHANCE: 0.4,
   SHIP_SPAWN_CHANCE: 0.2,
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
+  COURSE_RECALC_CYCLES: 3, // Recalculate course every N game loops (performance optimization)
+  SHIP_COMBAT_RANGE: 15, // Tighter range for ship-to-ship vector matching and combat
+  CARGO_SPEED_MULTIPLIER: 0.5, // Speed multiplier when ship has full cargo (50% of original speed)
+  // Buffer constants
+  EXIT_REMOVAL_BUFFER: 5, // Buffer for when entities are actually removed from the game (used in isOutOfBounds)
+  EXIT_TARGET_BUFFER: 200, // Buffer for where ships aim when exiting (used in calculateExitVelocity)
+  ASTEROID_EDGE_BUFFER: 100, // Buffer for asteroid edge calculations
 };

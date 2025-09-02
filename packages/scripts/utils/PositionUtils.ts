@@ -1,4 +1,4 @@
-import { Vector2D, Asteroid, Ship } from "../types";
+import { Vector2D, Asteroid, Ship, SECTOR_CONFIG } from "../types";
 
 export class PositionUtils {
   static calculatePosition(
@@ -17,7 +17,7 @@ export class PositionUtils {
     width: number,
     height: number
   ): boolean {
-    const buffer = 100;
+    const buffer = SECTOR_CONFIG.EXIT_REMOVAL_BUFFER;
     return (
       position.x < -buffer ||
       position.x > width + buffer ||
