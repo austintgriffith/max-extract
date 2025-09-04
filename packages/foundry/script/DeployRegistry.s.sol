@@ -25,6 +25,8 @@ contract DeployRegistry is ScaffoldETHDeploy {
      * Uses the already deployed MaxExtract and Credits contracts
      */
     function run() external ScaffoldEthDeployerRunner {
+        console.log("Deployer address:", deployer);
+        
         // Deploy the core contracts first if not already deployed
         Universe universe = new Universe(deployer);
         Credits credits = new Credits(deployer);

@@ -1,16 +1,42 @@
 import express from "express";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { createPublicClient, http } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  formatEther,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { Sector } from "./Sector";
 import { SECTOR_CONFIG } from "./types";
 import deployedContracts from "../nextjs/contracts/deployedContracts";
+import { RevealManager } from "./utils/RevealManager";
+import { createSectorDice } from "./utils/DeterministicDice";
+import * as dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 // Create a public client for reading from the local foundry chain
 const publicClient = createPublicClient({
   chain: foundry,
   transport: http("http://127.0.0.1:8545"), // Default foundry RPC URL
+});
+
+// Setup GOD account from environment variable or default to Anvil account #9
+const godPrivateKey =
+  process.env.GODPRIVATEKEY ||
+  "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6";
+
+const godAccount = privateKeyToAccount(godPrivateKey as `0x${string}`);
+
+// Create a wallet client for GOD transactions
+const walletClient = createWalletClient({
+  account: godAccount,
+  chain: foundry,
+  transport: http("http://127.0.0.1:8545"),
 });
 
 export class GameServer {
@@ -20,9 +46,16 @@ export class GameServer {
   private sectors: Map<string, Sector> = new Map();
   private simulationInterval: NodeJS.Timeout | null = null;
   private debugMode: boolean;
+  private revealManager: RevealManager;
+  private nextRevealNumber: string | null = null;
+  private nextCommitHash: string | null = null;
+  private currentRollingEntropy: string | null = null;
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
+    // Initialize RevealManager without contract address initially
+    // Will be updated once we know the Universe contract address
+    this.revealManager = new RevealManager();
     this.app = express();
     this.server = createServer(this.app);
     this.wss = new WebSocketServer({
@@ -97,11 +130,62 @@ export class GameServer {
       }));
       res.json(sectorList);
     });
+
+    // Get rolling commit-reveal status
+    this.app.get("/api/entropy", (req, res) => {
+      const allReveals = this.revealManager.getAllReveals();
+      const latestRound = this.revealManager.getLatestRound();
+      res.json({
+        latestRound,
+        revealsCount: Object.keys(allReveals).length,
+        reveals: allReveals,
+        currentRollingEntropy: this.currentRollingEntropy,
+      });
+    });
+
+    // Get sector-specific entropy for testing
+    this.app.get("/api/entropy/sector/:sectorId", (req, res) => {
+      const { sectorId } = req.params;
+
+      if (!this.currentRollingEntropy) {
+        return res
+          .status(400)
+          .json({ error: "No rolling entropy available yet" });
+      }
+
+      try {
+        const sectorDice = createSectorDice(
+          this.currentRollingEntropy,
+          sectorId
+        );
+
+        // Generate some sample rolls for demonstration
+        const samples = {
+          sectorId,
+          rollingEntropy: this.currentRollingEntropy,
+          sampleRolls: {
+            single: sectorDice.roll(1),
+            double: sectorDice.roll(2),
+            quad: sectorDice.roll(4),
+            percentage: sectorDice.rollPercent(),
+            range1to10: sectorDice.rollBetween(1, 10),
+            range1to100: sectorDice.rollBetween(1, 100),
+            coinFlip: sectorDice.rollBool(),
+          },
+          dicePosition: sectorDice.getPosition(),
+          remainingEntropy: sectorDice.getRemainingEntropy(),
+        };
+
+        res.json(samples);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
   }
 
   private setupWebSocket(): void {
     this.wss.on("connection", (ws, req) => {
-      console.log("WebSocket connection established");
+      this.debugLog("WebSocket connection established");
 
       ws.on("message", (message) => {
         try {
@@ -157,7 +241,7 @@ export class GameServer {
         for (const sector of this.sectors.values()) {
           sector.removeSubscriber(ws);
         }
-        console.log("WebSocket connection closed");
+        this.debugLog("WebSocket connection closed");
       });
     });
   }
@@ -169,10 +253,7 @@ export class GameServer {
       // Check if MaxExtract contract is deployed
       const contracts = deployedContracts[31337];
       if (!contracts || !contracts.MaxExtract) {
-        console.error(
-          "⚠️  MaxExtract contract not found in deployedContracts. Make sure to deploy all contracts first."
-        );
-        console.log("💡 Run: yarn deploy");
+        console.error("⚠️  MaxExtract contract not found. Run: yarn deploy");
         this.debugLog("MaxExtract contract not found");
         return;
       }
@@ -206,7 +287,6 @@ export class GameServer {
             sectorIdStr,
             new Sector(sectorIdStr, undefined, this.debugMode)
           );
-          console.log(`  ✅ New Sector ${sectorIdStr} initialized`);
           this.debugLog(`Created new sector: ${sectorIdStr}`);
           newSectorsAdded = true;
         }
@@ -214,13 +294,153 @@ export class GameServer {
 
       // Only log if we found new sectors
       if (newSectorsAdded) {
-        console.log(`📡 Loaded ${activeSectors.length} sectors from contract`);
+        console.log(`📡 Loaded ${activeSectors.length} sectors`);
       }
 
       this.debugLog(`Total sectors managed: ${this.sectors.size}`);
-    } catch (error) {
-      console.error("Error loading sectors from contract:", error);
-      this.debugLog("Failed to load sectors from contract", error);
+    } catch (error: any) {
+      console.error(
+        `❌ Contract Error: ${
+          error.shortMessage || error.message || "Unknown error"
+        }`
+      );
+      // Only show full debug error if it's not the common "no data" error
+      if (!error.shortMessage?.includes("returned no data")) {
+        this.debugLog("Failed to load sectors from contract", error);
+      }
+    }
+  }
+
+  private async performRollingCommitReveal(): Promise<void> {
+    try {
+      // Check if Universe contract is deployed
+      const contracts = deployedContracts[31337];
+      if (!contracts || !contracts.Universe) {
+        this.debugLog(
+          "Universe contract not found, skipping rolling commit-reveal"
+        );
+        return;
+      }
+
+      const universeContract = contracts.Universe;
+      if (!universeContract.address) {
+        this.debugLog("Universe contract address is undefined");
+        return;
+      }
+
+      // Get current rolling state from contract
+      const rollingState = (await publicClient.readContract({
+        address: universeContract.address,
+        abi: universeContract.abi,
+        functionName: "getRollingState",
+      })) as [string, bigint, string]; // [rollingEntropy, roundNumber, lastCommit]
+
+      const currentRoundNumber = Number(rollingState[1]);
+      this.debugLog(`Current contract round number: ${currentRoundNumber}`);
+
+      // Determine what reveal to use
+      let revealToUse: string;
+
+      if (currentRoundNumber === 0) {
+        // First round - use 0x0 as reveal
+        revealToUse =
+          "0x0000000000000000000000000000000000000000000000000000000000000000";
+        this.debugLog("Using 0x0 reveal for round 0");
+      } else {
+        // Get the reveal for the previous round
+        const previousRoundReveal = this.revealManager.getReveal(
+          currentRoundNumber - 1
+        );
+        if (!previousRoundReveal) {
+          console.error(
+            `❌ Missing reveal for round ${currentRoundNumber - 1}`
+          );
+          return;
+        }
+        revealToUse = previousRoundReveal;
+        this.debugLog(
+          `Using stored reveal for round ${
+            currentRoundNumber - 1
+          }: ${revealToUse}`
+        );
+      }
+
+      // Generate commitment for next round
+      const { revealNumber: nextReveal, commitHash: nextCommit } =
+        this.revealManager.generateCommitment();
+
+      // Save the reveal for the next round
+      this.revealManager.saveReveal(currentRoundNumber, nextReveal, nextCommit);
+      this.debugLog(
+        `Generated and saved reveal for round ${currentRoundNumber}: ${nextReveal}`
+      );
+
+      // Convert reveal to uint256 (remove 0x prefix and convert to bigint)
+      const revealAsUint256 = BigInt(revealToUse);
+
+      this.debugLog(`Calling rollingCommitReveal with:`);
+      this.debugLog(`  Contract: ${universeContract.address}`);
+      this.debugLog(`  nextCommit: ${nextCommit}`);
+      this.debugLog(`  reveal: ${revealToUse} (${revealAsUint256})`);
+      this.debugLog(`  Current round: ${currentRoundNumber}`);
+
+      // Try to simulate the call first to get better error info
+      try {
+        await publicClient.simulateContract({
+          address: universeContract.address,
+          abi: universeContract.abi,
+          functionName: "rollingCommitReveal",
+          args: [nextCommit, revealAsUint256],
+          account: godAccount.address,
+        });
+        this.debugLog("✅ Simulation successful, proceeding with actual call");
+      } catch (simError: any) {
+        console.error(
+          `❌ Simulation failed: ${simError.shortMessage || simError.message}`
+        );
+        this.debugLog("Simulation error details:", simError);
+        return;
+      }
+
+      // Call the rolling commit-reveal function
+      const hash = await walletClient.writeContract({
+        address: universeContract.address,
+        abi: universeContract.abi,
+        functionName: "rollingCommitReveal",
+        args: [nextCommit, revealAsUint256],
+      });
+
+      this.debugLog(`Rolling commit-reveal transaction sent: ${hash}`);
+
+      // Wait for transaction to be mined
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      this.debugLog(
+        `Rolling commit-reveal transaction mined in block ${receipt.blockNumber}`
+      );
+
+      // Read and display the new rolling entropy
+      try {
+        const newRollingEntropy = (await publicClient.readContract({
+          address: universeContract.address,
+          abi: universeContract.abi,
+          functionName: "rollingEntropy",
+        })) as string;
+
+        console.log(`🎲 New Rolling Entropy: ${newRollingEntropy}`);
+        this.debugLog(`Rolling entropy updated to: ${newRollingEntropy}`);
+
+        // Store the current rolling entropy for sectors to use
+        this.currentRollingEntropy = newRollingEntropy;
+      } catch (entropyError: any) {
+        this.debugLog("Failed to read rolling entropy", entropyError);
+      }
+    } catch (error: any) {
+      console.error(
+        `❌ Rolling Commit-Reveal Error: ${
+          error.shortMessage || error.message || "Unknown error"
+        }`
+      );
+      this.debugLog("Rolling commit-reveal failed", error);
     }
   }
 
@@ -228,7 +448,21 @@ export class GameServer {
     this.debugLog("Starting simulation loop");
 
     const simulate = async () => {
-      this.debugLog("Simulation tick starting...");
+      // Get and print GOD account balance
+      try {
+        const godBalance = await publicClient.getBalance({
+          address: godAccount.address,
+        });
+        const formattedBalance = formatEther(godBalance);
+        console.log(`👑 ${formattedBalance} ETH - ${godAccount.address}`);
+      } catch (error: any) {
+        console.error(
+          `❌ GOD Balance Error: ${error.message || "Unknown error"}`
+        );
+      }
+
+      // Perform rolling commit-reveal for entropy generation
+      await this.performRollingCommitReveal();
 
       // Reload sectors from contract periodically
       await this.loadSectorsFromContract();
@@ -263,7 +497,121 @@ export class GameServer {
     simulate();
   }
 
+  private async initializeRollingCommitReveal(): Promise<void> {
+    try {
+      this.debugLog("Initializing rolling commit-reveal system...");
+
+      // Check if Universe contract is deployed
+      const contracts = deployedContracts[31337];
+      if (!contracts || !contracts.Universe) {
+        console.log(
+          "⚠️  Universe contract not found. Rolling commit-reveal disabled."
+        );
+        return;
+      }
+
+      const universeContract = contracts.Universe;
+      if (!universeContract.address) {
+        console.log(
+          "⚠️  Universe contract address is undefined. Rolling commit-reveal disabled."
+        );
+        return;
+      }
+
+      // Compare GOD addresses
+      const contractGodAddress = (await publicClient.readContract({
+        address: universeContract.address,
+        abi: universeContract.abi,
+        functionName: "GOD",
+      })) as string;
+
+      console.log(`🔍 Contract GOD address: ${contractGodAddress}`);
+      console.log(`🔍 Our GOD address: ${godAccount.address}`);
+
+      if (
+        contractGodAddress.toLowerCase() !== godAccount.address.toLowerCase()
+      ) {
+        console.error(`❌ GOD address mismatch!`);
+        console.error(`   Contract expects: ${contractGodAddress}`);
+        console.error(`   We are using: ${godAccount.address}`);
+        return;
+      } else {
+        console.log(`✅ GOD addresses match!`);
+      }
+
+      // Initialize contract-specific RevealManager now that we have the address
+      this.revealManager = new RevealManager(universeContract.address);
+      this.debugLog(
+        `Using reveals file for contract: ${universeContract.address}`
+      );
+
+      // Get current rolling state from contract
+      const rollingState = (await publicClient.readContract({
+        address: universeContract.address,
+        abi: universeContract.abi,
+        functionName: "getRollingState",
+      })) as [string, bigint, string]; // [rollingEntropy, roundNumber, lastCommit]
+
+      const currentRoundNumber = Number(rollingState[1]);
+      const lastCommit = rollingState[2];
+
+      this.debugLog(
+        `Contract state - Round: ${currentRoundNumber}, LastCommit: ${lastCommit}`
+      );
+
+      // Check if we have the reveal for the current round
+      if (
+        currentRoundNumber > 0 &&
+        !this.revealManager.hasReveal(currentRoundNumber - 1)
+      ) {
+        console.log(
+          `⚠️  Missing reveal for round ${
+            currentRoundNumber - 1
+          }. Cannot continue rolling commit-reveal.`
+        );
+        console.log(
+          `⚠️  You may need to reset the contract or manually add the missing reveal.`
+        );
+        return;
+      }
+
+      // If we're starting fresh (round 0), generate the first commitment
+      if (currentRoundNumber === 0) {
+        const { revealNumber, commitHash } =
+          this.revealManager.generateCommitment();
+        this.revealManager.saveReveal(0, revealNumber, commitHash);
+        this.debugLog(
+          `Generated initial commitment for round 0: ${commitHash}`
+        );
+      }
+
+      // Get initial rolling entropy
+      const initialRollingState = (await publicClient.readContract({
+        address: universeContract.address,
+        abi: universeContract.abi,
+        functionName: "getRollingState",
+      })) as [string, bigint, string];
+
+      this.currentRollingEntropy = initialRollingState[0];
+      this.debugLog(`Initial rolling entropy: ${this.currentRollingEntropy}`);
+
+      console.log(
+        `🎲 Rolling commit-reveal initialized - Round ${currentRoundNumber}`
+      );
+    } catch (error: any) {
+      console.error(
+        `❌ Rolling commit-reveal initialization failed: ${
+          error.shortMessage || error.message || "Unknown error"
+        }`
+      );
+      this.debugLog("Rolling commit-reveal initialization error", error);
+    }
+  }
+
   public async start(port: number = 8000): Promise<void> {
+    // Initialize rolling commit-reveal system
+    await this.initializeRollingCommitReveal();
+
     // Load initial sectors
     await this.loadSectorsFromContract();
 
@@ -271,11 +619,33 @@ export class GameServer {
     this.startSimulation();
 
     this.server.listen(port, () => {
-      console.log(`🚀 Max Extract Game Server running on port ${port}`);
-      console.log(`📡 WebSocket server ready for connections`);
-      console.log(`🌌 Simulating ${this.sectors.size} sectors`);
-      console.log(`⏱️  Update interval: ${SECTOR_CONFIG.UPDATE_INTERVAL}ms`);
+      console.log(
+        `🚀 Game Server: port ${port} | ${this.sectors.size} sectors | ${SECTOR_CONFIG.UPDATE_INTERVAL}ms intervals`
+      );
     });
+  }
+
+  /**
+   * Get the current rolling entropy for sectors to use
+   * @returns Current rolling entropy or null if not available
+   */
+  public getCurrentRollingEntropy(): string | null {
+    return this.currentRollingEntropy;
+  }
+
+  /**
+   * Create a sector-specific deterministic dice
+   * @param sectorId The sector ID
+   * @returns DeterministicDice instance or null if no entropy available
+   */
+  public createSectorDice(sectorId: string) {
+    if (!this.currentRollingEntropy) {
+      this.debugLog(`No rolling entropy available for sector ${sectorId}`);
+      return null;
+    }
+
+    this.debugLog(`Creating sector dice for sector ${sectorId}`);
+    return createSectorDice(this.currentRollingEntropy, sectorId);
   }
 
   public stop(): void {

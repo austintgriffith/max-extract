@@ -21,9 +21,15 @@ contract Universe {
     uint256 public commitBlock;
     bool public commitmentMade;
     
+    // Rolling commit-reveal state for ongoing entropy generation
+    bytes32 public rollingEntropy;
+    bytes32 public lastCommit;
+    uint256 public roundNumber;
+    
     // Events
     event CommitmentMade(bytes32 indexed commitmentHash, uint256 indexed blockNumber);
     event EntropyRevealed(bytes32 indexed entropy, bytes32 reveal, uint256 commitBlockHash);
+    event RollingCommitReveal(uint256 indexed roundNumber, bytes32 indexed newCommit, bytes32 reveal, bytes32 newRollingEntropy);
     
     // Errors
     error OnlyGod();
@@ -124,5 +130,57 @@ contract Universe {
         entropySet = true;
         
         emit EntropyRevealed(_entropy, bytes32(0), 0);
+    }
+
+    /**
+     * Rolling commit-reveal function for ongoing entropy generation
+     * Commits to next round while revealing current round in same transaction
+     * @param nextCommit Commitment hash for the next round (keccak256(randomNumber))
+     * @param revealNumber The random number being revealed for current round (0x0 for round 0)
+     */
+    function rollingCommitReveal(bytes32 nextCommit, uint256 revealNumber) external onlyGod {
+        // For round 0, allow reveal to be 0 and initialize rolling entropy
+        if (roundNumber == 0) {
+            // For the first round, we accept any reveal (including 0) and initialize rolling entropy
+            // Use a combination of reveal, block hash, and block timestamp for initial entropy
+            bytes32 currentBlockHash = blockhash(block.number - 1);
+            rollingEntropy = keccak256(abi.encodePacked(revealNumber, currentBlockHash, block.timestamp, block.difficulty));
+            lastCommit = nextCommit;
+            roundNumber = 1;
+            
+            emit RollingCommitReveal(0, nextCommit, bytes32(revealNumber), rollingEntropy);
+            return;
+        }
+        
+        // For subsequent rounds, verify the reveal matches the last commit
+        bytes32 expectedCommit = keccak256(abi.encodePacked(revealNumber));
+        if (expectedCommit != lastCommit) revert InvalidReveal();
+        
+        // Get the block hash from when the last commit was made
+        // Note: We use the current block hash as the source of additional entropy
+        bytes32 blockHash = blockhash(block.number - 1);
+        
+        // Generate new rolling entropy by combining reveal with block hash
+        rollingEntropy = keccak256(abi.encodePacked(revealNumber, blockHash, rollingEntropy));
+        
+        // Store the new commit for next round
+        lastCommit = nextCommit;
+        roundNumber++;
+        
+        emit RollingCommitReveal(roundNumber - 1, nextCommit, bytes32(revealNumber), rollingEntropy);
+    }
+
+    /**
+     * Get the current rolling entropy and round information
+     * @return _rollingEntropy Current rolling entropy
+     * @return _roundNumber Current round number
+     * @return _lastCommit Last commitment hash
+     */
+    function getRollingState() external view returns (
+        bytes32 _rollingEntropy,
+        uint256 _roundNumber,
+        bytes32 _lastCommit
+    ) {
+        return (rollingEntropy, roundNumber, lastCommit);
     }
 }

@@ -815,6 +815,9 @@ export class Sector {
         `Ship ${attackerShip.id} finished combat, now exiting by shortest path`
       );
 
+      // Notify all ships about new cargo ship target (highest priority)
+      this.notifyShipsAboutCargoTarget();
+
       // Broadcast ship direction change
       this.broadcastEvent({
         type: "ship_retarget",
@@ -927,6 +930,9 @@ export class Sector {
       console.log(
         `Ship ${ship.id} finished mining, now exiting by shortest path`
       );
+
+      // Notify all ships about new cargo ship target (highest priority)
+      this.notifyShipsAboutCargoTarget();
 
       // Broadcast ship direction change
       this.broadcastEvent({
@@ -1488,6 +1494,21 @@ export class Sector {
         );
         // Check if ship should switch to a better target
         this.assignTarget(ship, "checking for better targets", false);
+      }
+    }
+  }
+
+  private notifyShipsAboutCargoTarget(): void {
+    // Check ALL flying ships to see if they should switch to attack cargo ships
+    // This includes vector-matched ships because cargo ships have higher priority
+    for (const [shipId, ship] of this.ships) {
+      if (ship.state === "flying") {
+        const currentShipPos = PositionUtils.calculatePosition(
+          ship,
+          Date.now()
+        );
+        // Force retarget to check for cargo ships (highest priority)
+        this.assignTarget(ship, "new cargo ship available", true);
       }
     }
   }

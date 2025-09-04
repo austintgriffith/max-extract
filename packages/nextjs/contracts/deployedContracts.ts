@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
+      address: "0x1769b0c5b1a765e377471803a5c646a226d1fc47",
       abi: [
         {
           type: "constructor",
@@ -149,6 +149,29 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getRollingState",
+          inputs: [],
+          outputs: [
+            {
+              name: "_rollingEntropy",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "_roundNumber",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_lastCommit",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isEntropySet",
           inputs: [],
           outputs: [
@@ -156,6 +179,19 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "lastCommit",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
             },
           ],
           stateMutability: "view",
@@ -172,6 +208,50 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "rollingCommitReveal",
+          inputs: [
+            {
+              name: "nextCommit",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "revealNumber",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "rollingEntropy",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundNumber",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -231,6 +311,37 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "RollingCommitReveal",
+          inputs: [
+            {
+              name: "roundNumber",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "newCommit",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "reveal",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+            {
+              name: "newRollingEntropy",
+              type: "bytes32",
+              indexed: false,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "CommitmentAlreadyMade",
           inputs: [],
@@ -262,10 +373,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1,
+      deployedOnBlock: 47414,
     },
     Credits: {
-      address: "0xa15bb66138824a1c7167f5e85b957d04dd34e468",
+      address: "0xb64cfd5b0efcbb8284bae51a67eb6103df94a2b1",
       abi: [
         {
           type: "constructor",
@@ -747,10 +858,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2,
+      deployedOnBlock: 47415,
     },
     MaxExtract: {
-      address: "0xb19b36b1456e65e3a6d514d3f715f204bd59f431",
+      address: "0x9ee903720a141bc5d5244903871f5208acb75788",
       abi: [
         {
           type: "constructor",
@@ -1009,10 +1120,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2,
+      deployedOnBlock: 47416,
     },
     Chapter1Registry: {
-      address: "0xe1aa25618fa0c7a1cfdab5d6b456af611873b629",
+      address: "0xf1b913fd89b151c8d2c8fba9ea71c7f3832af341",
       abi: [
         {
           type: "constructor",
@@ -1427,7 +1538,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3,
+      deployedOnBlock: 47416,
     },
   },
 } as const;

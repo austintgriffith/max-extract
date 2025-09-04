@@ -1,3 +1,5 @@
+packages/scripts/.env
+packages/scripts/data
 # dependencies
 node_modules
 

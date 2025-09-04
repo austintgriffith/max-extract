@@ -27,6 +27,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
      *      - Export contract addresses & ABIs to `nextjs` packages
      */
     function run() external ScaffoldEthDeployerRunner {
+
+        console.log("Deployer:", deployer);
         // Deploy the three core contracts of the Max Extract Protocol
         Universe universe = new Universe(deployer);
         Credits credits = new Credits(deployer);
