@@ -283,10 +283,14 @@ export class GameServer {
       for (const sectorId of activeSectors) {
         const sectorIdStr = sectorId.toString();
         if (!this.sectors.has(sectorIdStr)) {
-          this.sectors.set(
-            sectorIdStr,
-            new Sector(sectorIdStr, undefined, this.debugMode)
-          );
+          const newSector = new Sector(sectorIdStr, undefined, this.debugMode);
+          
+          // Update sector with current rolling entropy if available
+          if (this.currentRollingEntropy) {
+            newSector.updateRollingEntropy(this.currentRollingEntropy);
+          }
+          
+          this.sectors.set(sectorIdStr, newSector);
           this.debugLog(`Created new sector: ${sectorIdStr}`);
           newSectorsAdded = true;
         }
@@ -431,6 +435,12 @@ export class GameServer {
 
         // Store the current rolling entropy for sectors to use
         this.currentRollingEntropy = newRollingEntropy;
+        
+        // Update all existing sectors with new rolling entropy
+        for (const sector of this.sectors.values()) {
+          sector.updateRollingEntropy(newRollingEntropy);
+        }
+        this.debugLog(`Updated ${this.sectors.size} sectors with new rolling entropy`);
       } catch (entropyError: any) {
         this.debugLog("Failed to read rolling entropy", entropyError);
       }

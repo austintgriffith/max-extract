@@ -16,6 +16,7 @@ import {
 import { PositionUtils } from "./utils/PositionUtils";
 import { ShipAI } from "./utils/ShipAI";
 import { AsteroidUtils } from "./utils/AsteroidUtils";
+import { DeterministicDice, createSectorDice } from "./utils/DeterministicDice";
 
 export class Sector {
   public id: string;
@@ -24,6 +25,7 @@ export class Sector {
   public events: SectorEvent[] = [];
   public subscribers: Set<WebSocket> = new Set();
   private rng: () => number;
+  private deterministicDice: DeterministicDice | null = null;
   private lastUpdate: number = Date.now();
   private debugMode: boolean;
   private gameLoopCounter: number = 0; // Track game loop cycles for performance optimization
@@ -61,39 +63,64 @@ export class Sector {
     );
   }
 
+  /**
+   * Update the sector's deterministic dice with new rolling entropy
+   * @param rollingEntropy The current rolling entropy from the Universe contract
+   */
+  public updateRollingEntropy(rollingEntropy: string): void {
+    this.deterministicDice = createSectorDice(rollingEntropy, this.id);
+    this.debugLog(`Updated deterministic dice with new rolling entropy`);
+  }
+
+  /**
+   * Get a random number between 0 and 1 using deterministic dice
+   * Falls back to legacy RNG if no deterministic dice available
+   */
+  private getRandom(): number {
+    if (this.deterministicDice) {
+      // Use deterministic dice - roll 4 hex chars for good resolution
+      const roll = this.deterministicDice.roll(4);
+      // Convert to 0-1 range (4 hex chars = 0-65535)
+      return roll / 65535;
+    }
+
+    // Fallback to legacy RNG
+    return this.getRandom();
+  }
+
   private generateId(): string {
     return randomBytes(8).toString("hex");
   }
 
   private getRandomEdgePosition(): { position: Vector2D; velocity: Vector2D } {
-    const side = Math.floor(this.rng() * 4); // 0: top, 1: right, 2: bottom, 3: left
-    const speed = SECTOR_CONFIG.ASTEROID_SPEED + (this.rng() - 0.5) * 10;
+    const side = Math.floor(this.getRandom() * 4); // 0: top, 1: right, 2: bottom, 3: left
+    const speed = SECTOR_CONFIG.ASTEROID_SPEED + (this.getRandom() - 0.5) * 10;
 
     let position: Vector2D;
     let velocity: Vector2D;
 
     switch (side) {
       case 0: // top
-        position = { x: this.rng() * SECTOR_CONFIG.WIDTH, y: 0 };
-        velocity = { x: (this.rng() - 0.5) * speed, y: speed };
+        position = { x: this.getRandom() * SECTOR_CONFIG.WIDTH, y: 0 };
+        velocity = { x: (this.getRandom() - 0.5) * speed, y: speed };
         break;
       case 1: // right
         position = {
           x: SECTOR_CONFIG.WIDTH,
-          y: this.rng() * SECTOR_CONFIG.HEIGHT,
+          y: this.getRandom() * SECTOR_CONFIG.HEIGHT,
         };
-        velocity = { x: -speed, y: (this.rng() - 0.5) * speed };
+        velocity = { x: -speed, y: (this.getRandom() - 0.5) * speed };
         break;
       case 2: // bottom
         position = {
-          x: this.rng() * SECTOR_CONFIG.WIDTH,
+          x: this.getRandom() * SECTOR_CONFIG.WIDTH,
           y: SECTOR_CONFIG.HEIGHT,
         };
-        velocity = { x: (this.rng() - 0.5) * speed, y: -speed };
+        velocity = { x: (this.getRandom() - 0.5) * speed, y: -speed };
         break;
       case 3: // left
-        position = { x: 0, y: this.rng() * SECTOR_CONFIG.HEIGHT };
-        velocity = { x: speed, y: (this.rng() - 0.5) * speed };
+        position = { x: 0, y: this.getRandom() * SECTOR_CONFIG.HEIGHT };
+        velocity = { x: speed, y: (this.getRandom() - 0.5) * speed };
         break;
       default:
         position = { x: 0, y: 0 };
@@ -116,20 +143,20 @@ export class Sector {
       // right edge
       position = {
         x: SECTOR_CONFIG.WIDTH,
-        y: this.rng() * SECTOR_CONFIG.HEIGHT,
+        y: this.getRandom() * SECTOR_CONFIG.HEIGHT,
       };
     } else if (angle >= 45 && angle < 135) {
       // bottom edge
       position = {
-        x: this.rng() * SECTOR_CONFIG.WIDTH,
+        x: this.getRandom() * SECTOR_CONFIG.WIDTH,
         y: SECTOR_CONFIG.HEIGHT,
       };
     } else if (angle >= 135 && angle < 225) {
       // left edge
-      position = { x: 0, y: this.rng() * SECTOR_CONFIG.HEIGHT };
+      position = { x: 0, y: this.getRandom() * SECTOR_CONFIG.HEIGHT };
     } else {
       // top edge
-      position = { x: this.rng() * SECTOR_CONFIG.WIDTH, y: 0 };
+      position = { x: this.getRandom() * SECTOR_CONFIG.WIDTH, y: 0 };
     }
 
     const velocity = {
@@ -873,7 +900,7 @@ export class Sector {
 
       // Ship immediately mines the asteroid - bounty based on asteroid size
       const baseBounty = Math.floor(asteroid.size * 2); // Bigger asteroids = more bounty
-      const randomBonus = Math.floor(this.rng() * asteroid.size); // Random bonus based on size
+      const randomBonus = Math.floor(this.getRandom() * asteroid.size); // Random bonus based on size
       ship.score = baseBounty + randomBonus;
       ship.fullCargo = true; // Ship now has cargo and moves slower
 
@@ -959,11 +986,11 @@ export class Sector {
       velocity,
       size:
         SECTOR_CONFIG.MIN_ASTEROID_SIZE +
-        this.rng() *
+        this.getRandom() *
           (SECTOR_CONFIG.MAX_ASTEROID_SIZE - SECTOR_CONFIG.MIN_ASTEROID_SIZE),
       resources:
         SECTOR_CONFIG.MIN_ASTEROID_RESOURCES +
-        this.rng() *
+        this.getRandom() *
           (SECTOR_CONFIG.MAX_ASTEROID_RESOURCES -
             SECTOR_CONFIG.MIN_ASTEROID_RESOURCES),
       spawnTime: Date.now(),
@@ -991,10 +1018,10 @@ export class Sector {
 
     const privateKey = generatePrivateKey();
     const account: PrivateKeyAccount = privateKeyToAccount(privateKey);
-    const angle = this.rng() * 360;
+    const angle = this.getRandom() * 360;
     const { position } = this.getShipSpawnPosition(angle);
 
-    const startingFuel = 50 + this.rng() * 40; // 50-90% fuel
+    const startingFuel = 50 + this.getRandom() * 40; // 50-90% fuel
     const ship: Ship = {
       id: this.generateId(),
       address: account.address,
@@ -1194,7 +1221,7 @@ export class Sector {
 
             // Ship successfully mines the asteroid even though off-screen
             const baseBounty = Math.floor(asteroid.size * 2);
-            const randomBonus = Math.floor(this.rng() * asteroid.size);
+            const randomBonus = Math.floor(this.getRandom() * asteroid.size);
             ship.score = baseBounty + randomBonus;
             ship.fullCargo = true;
 
@@ -1348,7 +1375,7 @@ export class Sector {
     this.gameLoopCounter++;
 
     // Roll dice for spawning
-    const roll = this.rng();
+    const roll = this.getRandom();
     if (roll < SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE) {
       this.spawnAsteroid();
     } else if (
