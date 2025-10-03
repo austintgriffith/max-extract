@@ -4,11 +4,14 @@ export interface Vector2D {
   y: number;
 }
 
+export type AsteroidSize = "small" | "medium" | "large";
+
 export interface Asteroid {
   id: string;
   position: Vector2D;
   velocity: Vector2D;
   size: number;
+  sizeCategory: AsteroidSize;
   resources: number;
   spawnTime: number;
 }
@@ -54,19 +57,22 @@ export interface SectorEvent {
   data: any;
 }
 
+export type ScrapType = "scrap1" | "scrap2" | "scrap3" | "scrap4";
+
 export interface Particle {
   id: string;
   position: Vector2D;
   velocity: Vector2D;
   size: number;
-  color: string;
+  color: string; // Keep for backward compatibility
+  scrapType?: ScrapType; // New field for scrap particles
   spawnTime: number;
   lifetime: number; // milliseconds
 }
 
 export const SECTOR_CONFIG = {
-  WIDTH: 1000,
-  HEIGHT: 1000,
+  WIDTH: 2000,
+  HEIGHT: 2000,
   CANVAS_SCALE: 1, // Scale down more to fit larger area
   SHIP_COMBAT_RANGE: 10, // Tighter range for ship-to-ship vector matching and combat
   PADDING: 5, // Huge padding to see ships exiting way beyond boundaries

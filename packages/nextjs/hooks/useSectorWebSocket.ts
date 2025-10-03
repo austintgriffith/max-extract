@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ConnectionStatus, Particle, SectorEvent, SectorSnapshot, Vector2D } from "~~/types/sector";
+import { ConnectionStatus, Particle, ScrapType, SectorEvent, SectorSnapshot, Vector2D } from "~~/types/sector";
 
 interface UseSectorWebSocketProps {
   sectorId: string;
@@ -15,24 +15,29 @@ interface UseSectorWebSocketReturn {
 
 // Utility functions for particle creation
 const createExplosionParticles = (asteroidPos: Vector2D, asteroidSize: number): Particle[] => {
-  const particleCount = Math.floor(asteroidSize / 4) + 5; // More particles for bigger asteroids
+  const particleCount = Math.floor(asteroidSize / 6) + 4; // Fewer particles but they're scraps now
   const newParticles: Particle[] = [];
+  const scrapTypes: ScrapType[] = ["scrap1", "scrap2", "scrap3", "scrap4"];
 
   for (let i = 0; i < particleCount; i++) {
-    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
-    const speed = 20 + Math.random() * 40;
+    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.8;
+    const speed = 15 + Math.random() * 30; // Slightly slower for more realistic scraps
+
+    // Randomly select a scrap type
+    const scrapType = scrapTypes[Math.floor(Math.random() * scrapTypes.length)];
 
     newParticles.push({
-      id: `particle_${Date.now()}_${i}`,
+      id: `scrap_${Date.now()}_${i}`,
       position: { ...asteroidPos },
       velocity: {
         x: Math.cos(angle) * speed,
         y: Math.sin(angle) * speed,
       },
-      size: 2 + Math.random() * 4,
-      color: `hsl(${25 + Math.random() * 30}, 70%, ${50 + Math.random() * 30}%)`, // Brown/orange shades
+      size: 8 + Math.random() * 12, // Larger scraps (8-20 pixels)
+      color: "#8B4513", // Keep for fallback, but won't be used with scrap images
+      scrapType: scrapType,
       spawnTime: Date.now(),
-      lifetime: 1500 + Math.random() * 1000, // 1.5-2.5 seconds
+      lifetime: 2000 + Math.random() * 1500, // 2-3.5 seconds (longer to see the scraps)
     });
   }
 

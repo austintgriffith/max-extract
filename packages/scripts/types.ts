@@ -5,11 +5,14 @@ export interface Vector2D {
   y: number;
 }
 
+export type AsteroidSize = "small" | "medium" | "large";
+
 export interface Asteroid {
   id: string;
   position: Vector2D;
   velocity: Vector2D;
   size: number;
+  sizeCategory: AsteroidSize;
   resources: number;
   spawnTime: number;
 }
@@ -60,10 +63,17 @@ export interface SectorSnapshot {
 }
 
 export const SECTOR_CONFIG = {
-  WIDTH: 1000,
-  HEIGHT: 1000,
-  MIN_ASTEROID_SIZE: 20,
-  MAX_ASTEROID_SIZE: 80,
+  WIDTH: 2000,
+  HEIGHT: 2000,
+  // Asteroid size categories
+  ASTEROID_SIZES: {
+    small: { size: 45, minResources: 100, maxResources: 200 },
+    medium: { size: 75, minResources: 200, maxResources: 350 },
+    large: { size: 120, minResources: 350, maxResources: 500 },
+  },
+  // Legacy size ranges (for backward compatibility if needed)
+  MIN_ASTEROID_SIZE: 30,
+  MAX_ASTEROID_SIZE: 120,
   MIN_ASTEROID_RESOURCES: 100,
   MAX_ASTEROID_RESOURCES: 500,
   ASTEROID_SPEED: 20,

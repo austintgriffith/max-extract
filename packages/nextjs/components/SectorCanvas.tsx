@@ -30,8 +30,80 @@ const calculateParticlePosition = (particle: Particle, currentTime: number): Vec
 
 export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
+  const baseCanvasRef = useRef<HTMLCanvasElement>(null);
   const foregroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
+  const shipImageRef = useRef<HTMLImageElement | null>(null);
+  const baseImageRef = useRef<HTMLImageElement | null>(null);
+  const asteroidImagesRef = useRef<{
+    small: HTMLImageElement | null;
+    medium: HTMLImageElement | null;
+    large: HTMLImageElement | null;
+  }>({
+    small: null,
+    medium: null,
+    large: null,
+  });
+  const scrapImagesRef = useRef<{
+    scrap1: HTMLImageElement | null;
+    scrap2: HTMLImageElement | null;
+    scrap3: HTMLImageElement | null;
+    scrap4: HTMLImageElement | null;
+  }>({
+    scrap1: null,
+    scrap2: null,
+    scrap3: null,
+    scrap4: null,
+  });
+
+  // Load ship image
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/ships/ship1.png";
+    img.onload = () => {
+      shipImageRef.current = img;
+    };
+  }, []);
+
+  // Load base image
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/bases/base1.png";
+    img.onload = () => {
+      baseImageRef.current = img;
+    };
+  }, []);
+
+  // Load asteroid images
+  useEffect(() => {
+    const loadAsteroidImage = (size: "small" | "medium" | "large") => {
+      const img = new Image();
+      img.src = `/asteroids/asteroid_${size}_1.png`;
+      img.onload = () => {
+        asteroidImagesRef.current[size] = img;
+      };
+    };
+
+    loadAsteroidImage("small");
+    loadAsteroidImage("medium");
+    loadAsteroidImage("large");
+  }, []);
+
+  // Load scrap images
+  useEffect(() => {
+    const loadScrapImage = (scrapType: "scrap1" | "scrap2" | "scrap3" | "scrap4") => {
+      const img = new Image();
+      img.src = `/asteroids/${scrapType}.png`;
+      img.onload = () => {
+        scrapImagesRef.current[scrapType] = img;
+      };
+    };
+
+    loadScrapImage("scrap1");
+    loadScrapImage("scrap2");
+    loadScrapImage("scrap3");
+    loadScrapImage("scrap4");
+  }, []);
 
   const drawBackground = useCallback(() => {
     const canvas = backgroundCanvasRef.current;
@@ -101,6 +173,48 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
     ctx.fillText(`Ships: ${Object.keys(sectorData.ships).length}`, 10, 45);
   }, [sectorData]);
 
+  const drawBase = useCallback(() => {
+    const canvas = baseCanvasRef.current;
+    if (!canvas || !sectorData || !baseImageRef.current) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const scale = SECTOR_CONFIG.CANVAS_SCALE;
+    const padding = SECTOR_CONFIG.PADDING * scale;
+    const sectorWidth = SECTOR_CONFIG.WIDTH * scale;
+    const sectorHeight = SECTOR_CONFIG.HEIGHT * scale;
+    const canvasWidth = sectorWidth + 2 * padding;
+    const canvasHeight = sectorHeight + 2 * padding;
+
+    // Clear entire canvas (transparent background)
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // Save context and translate by padding
+    ctx.save();
+    ctx.translate(padding, padding);
+
+    // Calculate center position (1000, 1000 in sector coordinates)
+    const centerX = SECTOR_CONFIG.WIDTH / 2;
+    const centerY = SECTOR_CONFIG.HEIGHT / 2;
+
+    // Convert to canvas coordinates
+    const canvasCenterX = centerX * scale;
+    const canvasCenterY = centerY * scale;
+
+    // Draw base image centered at the middle of the sector
+    const baseSize = 128 * scale; // Adjust size as needed
+    ctx.drawImage(
+      baseImageRef.current,
+      canvasCenterX - baseSize / 2, // Center horizontally
+      canvasCenterY - baseSize / 2, // Center vertically
+      baseSize,
+      baseSize,
+    );
+
+    ctx.restore();
+  }, [sectorData]);
+
   const drawForeground = useCallback(() => {
     const canvas = foregroundCanvasRef.current;
     if (!canvas || !sectorData) return;
@@ -133,21 +247,99 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         ctx.save();
         ctx.translate(pos.x * scale, pos.y * scale);
 
-        // Draw asteroid
-        ctx.fillStyle = "#8B4513";
-        ctx.strokeStyle = "#D2691E";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(0, 0, (asteroid.size * scale) / 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        // Get the appropriate asteroid image based on size category
+        const sizeCategory = asteroid.sizeCategory || "medium"; // fallback for old asteroids
+        const asteroidImage = asteroidImagesRef.current[sizeCategory];
 
-        // Draw resource indicator
-        const resourceRatio = asteroid.resources / 500; // Max resources
-        ctx.fillStyle = `rgb(${255 - resourceRatio * 100}, ${100 + resourceRatio * 155}, 100)`;
-        ctx.beginPath();
-        ctx.arc(0, 0, ((asteroid.size * scale) / 2) * 0.6, 0, Math.PI * 2);
-        ctx.fill();
+        if (asteroidImage) {
+          // Calculate rotation based on time since spawn (very slow rotation)
+          const rotationSpeed = 0.00025; // radians per millisecond (very slow - 2x slower)
+          const elapsed = currentTime - asteroid.spawnTime;
+          const rotation = elapsed * rotationSpeed;
+
+          // Apply rotation
+          ctx.rotate(rotation);
+
+          // Draw asteroid PNG image (centered) - make visually larger
+          const asteroidSize = asteroid.size * scale * 1.35; // 35% bigger visually
+          ctx.drawImage(
+            asteroidImage,
+            -asteroidSize / 2, // Center horizontally
+            -asteroidSize / 2, // Center vertically
+            asteroidSize,
+            asteroidSize,
+          );
+        } else {
+          // Fallback to circle if image not loaded yet
+          ctx.fillStyle = "#8B4513";
+          ctx.strokeStyle = "#D2691E";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, (asteroid.size * scale * 1.35) / 2, 0, Math.PI * 2); // 35% bigger visually
+          ctx.fill();
+          ctx.stroke();
+
+          // Draw resource indicator
+          const resourceRatio = asteroid.resources / 500; // Max resources
+          ctx.fillStyle = `rgb(${255 - resourceRatio * 100}, ${100 + resourceRatio * 155}, 100)`;
+          ctx.beginPath();
+          ctx.arc(0, 0, ((asteroid.size * scale * 1.35) / 2) * 0.6, 0, Math.PI * 2); // Match larger visual size
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    });
+
+    // Draw explosion particles (scraps) - after asteroids, before ships
+    particles.forEach(particle => {
+      const pos = calculateParticlePosition(particle, currentTime);
+      const age = currentTime - particle.spawnTime;
+      const ageRatio = age / particle.lifetime;
+
+      // Only draw if within bounds and still alive
+      if (
+        ageRatio < 1 &&
+        pos.x >= -500 &&
+        pos.x <= SECTOR_CONFIG.WIDTH + 500 &&
+        pos.y >= -500 &&
+        pos.y <= SECTOR_CONFIG.HEIGHT + 500
+      ) {
+        ctx.save();
+        ctx.translate(pos.x * scale, pos.y * scale);
+
+        // Fade out over time
+        const alpha = 1 - ageRatio;
+        ctx.globalAlpha = alpha;
+
+        // Check if this is a scrap particle
+        if (particle.scrapType && scrapImagesRef.current[particle.scrapType]) {
+          // Draw scrap PNG image - make visually larger
+          const scrapImage = scrapImagesRef.current[particle.scrapType];
+          const scrapSize = particle.size * scale * 2.0; // Double the size for better visibility
+
+          // Only draw if image is loaded
+          if (scrapImage) {
+            // Add slight rotation for more dynamic look
+            const rotationSpeed = 0.002; // Faster rotation for scraps
+            const rotation = (currentTime - particle.spawnTime) * rotationSpeed;
+            ctx.rotate(rotation);
+
+            ctx.drawImage(
+              scrapImage,
+              -scrapSize / 2, // Center horizontally
+              -scrapSize / 2, // Center vertically
+              scrapSize,
+              scrapSize,
+            );
+          }
+        } else {
+          // Fallback to circle for old particles or if image not loaded
+          ctx.fillStyle = particle.color;
+          ctx.beginPath();
+          ctx.arc(0, 0, particle.size * scale * 2.0, 0, Math.PI * 2); // Double size for visibility
+          ctx.fill();
+        }
 
         ctx.restore();
       }
@@ -182,8 +374,11 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         }
 
         // NOW rotate canvas for ship drawing
+        // Since the ship PNG points up (north), we need to adjust the rotation
+        // Math.atan2 gives us the angle where 0 is pointing right (east)
+        // But our ship image points up (north), so we add π/2 (90 degrees)
         if (ship.velocity.x !== 0 || ship.velocity.y !== 0) {
-          const angle = Math.atan2(ship.velocity.y, ship.velocity.x);
+          const angle = Math.atan2(ship.velocity.y, ship.velocity.x) + Math.PI / 2;
           ctx.rotate(angle);
         }
 
@@ -217,45 +412,27 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         ctx.strokeStyle = "#FFFFFF";
         ctx.lineWidth = 1;
 
-        // Draw triangle ship (centered)
-        ctx.beginPath();
-        ctx.moveTo(6 * scale, 0); // tip 6 units forward
-        ctx.lineTo(-6 * scale, 4 * scale); // back left 6 units back, 4 up
-        ctx.lineTo(-6 * scale, -4 * scale); // back right 6 units back, 4 down
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        // Draw ship PNG image (centered)
+        if (shipImageRef.current) {
+          const shipSize = 72 * scale; // Size of the ship image (50% bigger than doubled: 48 * 1.5)
 
-        ctx.restore();
-      }
-    });
-
-    // Draw explosion particles
-    particles.forEach(particle => {
-      const pos = calculateParticlePosition(particle, currentTime);
-      const age = currentTime - particle.spawnTime;
-      const ageRatio = age / particle.lifetime;
-
-      // Only draw if within bounds and still alive
-      if (
-        ageRatio < 1 &&
-        pos.x >= -500 &&
-        pos.x <= SECTOR_CONFIG.WIDTH + 500 &&
-        pos.y >= -500 &&
-        pos.y <= SECTOR_CONFIG.HEIGHT + 500
-      ) {
-        ctx.save();
-        ctx.translate(pos.x * scale, pos.y * scale);
-
-        // Fade out over time
-        const alpha = 1 - ageRatio;
-        ctx.globalAlpha = alpha;
-
-        // Draw particle
-        ctx.fillStyle = particle.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, particle.size * scale, 0, Math.PI * 2);
-        ctx.fill();
+          ctx.drawImage(
+            shipImageRef.current,
+            -shipSize / 2, // Center horizontally
+            -shipSize / 2, // Center vertically
+            shipSize,
+            shipSize,
+          );
+        } else {
+          // Fallback to triangle if image not loaded yet
+          ctx.beginPath();
+          ctx.moveTo(6 * scale, 0); // tip 6 units forward
+          ctx.lineTo(-6 * scale, 4 * scale); // back left 6 units back, 4 up
+          ctx.lineTo(-6 * scale, -4 * scale); // back right 6 units back, 4 down
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
 
         ctx.restore();
       }
@@ -271,6 +448,7 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
 
     const animate = () => {
       drawBackground();
+      drawBase();
       drawForeground();
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -282,7 +460,7 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [sectorData, drawBackground, drawForeground]);
+  }, [sectorData, drawBackground, drawBase, drawForeground]);
 
   const canvasWidth =
     SECTOR_CONFIG.WIDTH * SECTOR_CONFIG.CANVAS_SCALE + 2 * SECTOR_CONFIG.PADDING * SECTOR_CONFIG.CANVAS_SCALE;
@@ -297,6 +475,15 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         width={canvasWidth}
         height={canvasHeight}
         className="border border-base-300 rounded-lg bg-black max-w-full relative z-0"
+      />
+
+      {/* Base canvas for base structures - middle z-index */}
+      <canvas
+        ref={baseCanvasRef}
+        width={canvasWidth}
+        height={canvasHeight}
+        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none"
+        style={{ background: "transparent" }}
       />
 
       {/* Foreground canvas for ships and asteroids - highest z-index */}

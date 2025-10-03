@@ -980,26 +980,33 @@ export class Sector {
 
   private spawnAsteroid(): void {
     const { position, velocity } = this.getRandomEdgePosition();
+
+    // Randomly select asteroid size category
+    const sizeCategories: (keyof typeof SECTOR_CONFIG.ASTEROID_SIZES)[] = [
+      "small",
+      "medium",
+      "large",
+    ];
+    const randomIndex = Math.floor(this.getRandom() * sizeCategories.length);
+    const sizeCategory = sizeCategories[randomIndex];
+    const sizeConfig = SECTOR_CONFIG.ASTEROID_SIZES[sizeCategory];
+
     const asteroid: Asteroid = {
       id: this.generateId(),
       position,
       velocity,
-      size:
-        SECTOR_CONFIG.MIN_ASTEROID_SIZE +
-        this.getRandom() *
-          (SECTOR_CONFIG.MAX_ASTEROID_SIZE - SECTOR_CONFIG.MIN_ASTEROID_SIZE),
+      size: sizeConfig.size,
+      sizeCategory: sizeCategory,
       resources:
-        SECTOR_CONFIG.MIN_ASTEROID_RESOURCES +
-        this.getRandom() *
-          (SECTOR_CONFIG.MAX_ASTEROID_RESOURCES -
-            SECTOR_CONFIG.MIN_ASTEROID_RESOURCES),
+        sizeConfig.minResources +
+        this.getRandom() * (sizeConfig.maxResources - sizeConfig.minResources),
       spawnTime: Date.now(),
     };
 
     this.debugLog(
       `Spawning asteroid ${asteroid.id} at (${Math.round(
         position.x
-      )}, ${Math.round(position.y)}) size: ${Math.round(asteroid.size)}`
+      )}, ${Math.round(position.y)}) size: ${sizeCategory} (${asteroid.size})`
     );
 
     this.asteroids.set(asteroid.id, asteroid);
