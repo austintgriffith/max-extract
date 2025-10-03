@@ -19,14 +19,23 @@ async function fetchByteCodeAndAssembly(buildInfoDirectory: string, contractPath
   for (let i = 0; i < buildInfoFiles.length; i++) {
     const filePath = path.join(buildInfoDirectory, buildInfoFiles[i]);
 
-    const buildInfo = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    try {
+      const buildInfo = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
-    if (buildInfo.output.contracts[contractPath]) {
-      for (const contract in buildInfo.output.contracts[contractPath]) {
-        bytecode = buildInfo.output.contracts[contractPath][contract].evm.bytecode.object;
-        assembly = buildInfo.output.contracts[contractPath][contract].evm.bytecode.opcodes;
-        break;
+      // Check if the expected structure exists
+      if (buildInfo.output?.contracts?.[contractPath]) {
+        for (const contract in buildInfo.output.contracts[contractPath]) {
+          const contractData = buildInfo.output.contracts[contractPath][contract];
+          if (contractData?.evm?.bytecode) {
+            bytecode = contractData.evm.bytecode.object || "";
+            assembly = contractData.evm.bytecode.opcodes || "";
+            break;
+          }
+        }
       }
+    } catch (error) {
+      console.warn(`Failed to parse build info file ${filePath}:`, error);
+      continue;
     }
 
     if (bytecode && assembly) {
@@ -38,49 +47,57 @@ async function fetchByteCodeAndAssembly(buildInfoDirectory: string, contractPath
 }
 
 const getContractData = async (address: Address) => {
-  const contracts = deployedContracts as GenericContractsDeclaration | null;
-  const chainId = foundry.id;
+  try {
+    const contracts = deployedContracts as GenericContractsDeclaration | null;
+    const chainId = foundry.id;
 
-  if (!contracts || !contracts[chainId] || Object.keys(contracts[chainId]).length === 0) {
-    return null;
-  }
-
-  let contractPath = "";
-
-  const buildInfoDirectory = path.join(
-    __dirname,
-    "..",
-    "..",
-    "..",
-    "..",
-    "..",
-    "..",
-    "..",
-    "foundry",
-    "out",
-    "build-info",
-  );
-
-  if (!fs.existsSync(buildInfoDirectory)) {
-    throw new Error(`Directory ${buildInfoDirectory} not found.`);
-  }
-
-  const deployedContractsOnChain = contracts[chainId];
-  for (const [contractName, contractInfo] of Object.entries(deployedContractsOnChain)) {
-    if (contractInfo.address.toLowerCase() === address.toLowerCase()) {
-      contractPath = `contracts/${contractName}.sol`;
-      break;
+    if (!contracts || !contracts[chainId] || Object.keys(contracts[chainId]).length === 0) {
+      return null;
     }
-  }
 
-  if (!contractPath) {
-    // No contract found at this address
+    let contractPath = "";
+
+    const buildInfoDirectory = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "..",
+      "..",
+      "..",
+      "..",
+      "foundry",
+      "out",
+      "build-info",
+    );
+
+    if (!fs.existsSync(buildInfoDirectory)) {
+      console.warn(
+        `Build info directory ${buildInfoDirectory} not found. Bytecode and assembly will not be available.`,
+      );
+      return null;
+    }
+
+    const deployedContractsOnChain = contracts[chainId];
+    for (const [contractName, contractInfo] of Object.entries(deployedContractsOnChain)) {
+      if (contractInfo.address.toLowerCase() === address.toLowerCase()) {
+        contractPath = `contracts/${contractName}.sol`;
+        break;
+      }
+    }
+
+    if (!contractPath) {
+      // No contract found at this address
+      return null;
+    }
+
+    const { bytecode, assembly } = await fetchByteCodeAndAssembly(buildInfoDirectory, contractPath);
+
+    return { bytecode, assembly };
+  } catch (error) {
+    console.error("Error getting contract data:", error);
     return null;
   }
-
-  const { bytecode, assembly } = await fetchByteCodeAndAssembly(buildInfoDirectory, contractPath);
-
-  return { bytecode, assembly };
 };
 
 export function generateStaticParams() {
