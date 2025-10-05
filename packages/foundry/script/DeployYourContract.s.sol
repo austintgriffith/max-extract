@@ -5,6 +5,7 @@ import "./DeployHelpers.s.sol";
 import "../contracts/Universe.sol";
 import "../contracts/Credits.sol";
 import "../contracts/MaxExtract.sol";
+import "../contracts/Game.sol";
 
 /**
  * @notice Deploy script for Max Extract Protocol contracts
@@ -17,6 +18,8 @@ import "../contracts/MaxExtract.sol";
  * yarn deploy --file DeployYourContract.s.sol --network optimism # live network (requires keystore)
  */
 contract DeployYourContract is ScaffoldETHDeploy {
+    // Game configuration
+    uint256 public constant GAME_BUYIN_PRICE = 0.001 ether;
     /**
      * @dev Deployer setup based on `ETH_KEYSTORE_ACCOUNT` in `.env`:
      *      - "scaffold-eth-default": Uses Anvil's account #9 (0xa0Ee7A142d267C1f36714E4a8F75612F20a79720), no password prompt
@@ -29,15 +32,21 @@ contract DeployYourContract is ScaffoldETHDeploy {
     function run() external ScaffoldEthDeployerRunner {
 
         console.log("Deployer:", deployer);
-        // Deploy the three core contracts of the Max Extract Protocol
+        // Deploy the core contracts of the Max Extract Protocol
         Universe universe = new Universe(deployer);
         Credits credits = new Credits(deployer);
-        MaxExtract maxExtract = new MaxExtract(address(universe));
+        
+        // Deploy Game contract with configured buy-in price
+        Game game = new Game(address(universe), GAME_BUYIN_PRICE);
+        
+        // Deploy MaxExtract with both Universe and Game contract addresses
+        MaxExtract maxExtract = new MaxExtract(address(universe), address(game));
         
         // Log deployed contract addresses for verification
         console.log("Universe deployed at:", address(universe));
         console.log("Credits deployed at:", address(credits));
         console.log("MaxExtract deployed at:", address(maxExtract));
+        console.log("Game deployed at:", address(game));
         
         // DEVELOPMENT MODE: Auto-setup entropy
         // For production, comment out the line below and manually run commit-reveal

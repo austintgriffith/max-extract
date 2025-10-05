@@ -7,6 +7,13 @@ interface IUniverse {
     function isEntropySet() external view returns (bool);
 }
 
+// Interface for the Game contract to check player status and chapters
+interface IGame {
+    function isPlayer(address player) external view returns (bool);
+    function getVisibleChapters() external view returns (uint8[] memory);
+    function state() external view returns (uint8); // 0 = Open, 1 = Active
+}
+
 /**
  * MaxExtract Contract - The canonical Extract Protocol
  * 
@@ -31,6 +38,9 @@ contract MaxExtract {
     // Universe contract for entropy access
     IUniverse public immutable universe;
     
+    // Game contract for player and chapter validation
+    IGame public immutable game;
+    
     // Nonce for unique sector ID generation
     uint256 private nonce;
     
@@ -42,6 +52,9 @@ contract MaxExtract {
     uint256[] public activeSectors;
     mapping(uint256 => bool) public sectorExists;
     
+    // Track which players have already broadcast a sector (one player, one sector)
+    mapping(address => bool) public playerHasBroadcast;
+    
     // Events
     event SectorBroadcast(
         uint256 indexed sectorId, 
@@ -50,17 +63,21 @@ contract MaxExtract {
     );
 
     // Constructor - Max's final act
-    constructor(address _universe) {
+    constructor(address _universe, address _game) {
         // The Extract Protocol is now live - Max's legacy etched into the blockchain
         universe = IUniverse(_universe);
+        game = IGame(_game);
     }
 
     /**
      * The broadcast function - how pirates register their sectors in Max's ledger
      * 
-     * Note: tx.origin != msg.sender requirement means you can't call this directly
-     * with an EOA. You must call it from another contract (your Registry Contract).
-     * This ensures proper sector setup through contract infrastructure.
+     * Requirements:
+     * 1. Chapter 1 must be visible in the game
+     * 2. tx.origin must be a player who has bought into the game
+     * 3. Player can only broadcast one sector (one player, one sector rule)
+     * 4. Game must not be in open mode (must be active)
+     * 5. Must be called from a contract (Registry Contract), not directly from EOA
      * 
      * Sector ID is automatically generated using universe entropy, tx.origin, 
      * msg.sender, contract address, and a nonce for uniqueness.
@@ -71,6 +88,26 @@ contract MaxExtract {
     function broadcast(address registry) external returns (uint256 sectorId) {
         // Contract-only access: must be called from a contract, not directly from EOA
         require(tx.origin != msg.sender, "Cannot broadcast directly from EOA - use your Registry Contract");
+        
+        // Game must not be in open mode (0 = Open, 1 = Active)
+        require(game.state() != 0, "Game is in open mode - broadcasting not allowed");
+        
+        // Player must have bought into the game
+        require(game.isPlayer(tx.origin), "Player has not bought into the game");
+        
+        // Player can only broadcast one sector
+        require(!playerHasBroadcast[tx.origin], "Player has already broadcast a sector");
+        
+        // Chapter 1 must be visible
+        uint8[] memory visibleChapters = game.getVisibleChapters();
+        bool chapter1Visible = false;
+        for (uint256 i = 0; i < visibleChapters.length; i++) {
+            if (visibleChapters[i] == 1) {
+                chapter1Visible = true;
+                break;
+            }
+        }
+        require(chapter1Visible, "Chapter 1 is not visible");
         
         // Universe entropy must be set for sector generation
         require(universe.isEntropySet(), "Universe entropy not yet set");
@@ -97,6 +134,9 @@ contract MaxExtract {
             activeSectors.push(sectorId);
             sectorExists[sectorId] = true;
         }
+        
+        // Mark that this player has broadcast a sector
+        playerHasBroadcast[tx.origin] = true;
         
         emit SectorBroadcast(sectorId, registry, tx.origin);
     }
@@ -133,6 +173,15 @@ contract MaxExtract {
      */
     function isSectorClaimed(uint256 sectorId) external view returns (bool) {
         return sectors[sectorId] != address(0);
+    }
+
+    /**
+     * Check if a player has already broadcast a sector
+     * @param player The player address to check
+     * @return True if the player has already broadcast a sector
+     */
+    function hasPlayerBroadcast(address player) external view returns (bool) {
+        return playerHasBroadcast[player];
     }
 
     /**

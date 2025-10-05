@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xa66c5467336f6d0634042549e330dee17efd5ca9",
+      address: "0x33b1b5aa9aa4da83a332f0bc5cac6a903fde5d92",
       abi: [
         {
           type: "constructor",
@@ -373,10 +373,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 16831,
+      deployedOnBlock: 16,
     },
     Credits: {
-      address: "0x7e726d6ad18585b473d33e9b69321e02bd033254",
+      address: "0x19a1c09fe3399c4daaa2c98b936a8e460fc5eaa4",
       abi: [
         {
           type: "constructor",
@@ -858,16 +858,404 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 16832,
+      deployedOnBlock: 17,
     },
-    MaxExtract: {
-      address: "0x2d0893c4adb661a8a1a6ae30b0aad1569704b68c",
+    Game: {
+      address: "0x49b8e3b089d4ebf9f37b1da9b839ec013c2cd8c9",
       abi: [
         {
           type: "constructor",
           inputs: [
             {
               name: "_universe",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_buyInPrice",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "buyIn",
+          inputs: [],
+          outputs: [],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "buyInPrice",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getBalance",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getGameInfo",
+          inputs: [],
+          outputs: [
+            {
+              name: "_state",
+              type: "uint8",
+              internalType: "enum Game.GameState",
+            },
+            {
+              name: "_playerCount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_buyInPrice",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPlayerCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPlayers",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getVisibleChapters",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint8[]",
+              internalType: "uint8[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPlayer",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "payoutPot",
+          inputs: [
+            {
+              name: "recipients",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "percentages",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "players",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "setBuyInPrice",
+          inputs: [
+            {
+              name: "_newPrice",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setState",
+          inputs: [
+            {
+              name: "_newState",
+              type: "uint8",
+              internalType: "enum Game.GameState",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "showChapters",
+          inputs: [
+            {
+              name: "_chapters",
+              type: "uint8[]",
+              internalType: "uint8[]",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "state",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "enum Game.GameState",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "universe",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract Universe",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "visibleChapters",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "withdraw",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "BuyInPriceUpdated",
+          inputs: [
+            {
+              name: "newPrice",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ChaptersUpdated",
+          inputs: [
+            {
+              name: "newVisibleChapters",
+              type: "uint8[]",
+              indexed: false,
+              internalType: "uint8[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GameStateChanged",
+          inputs: [
+            {
+              name: "newState",
+              type: "uint8",
+              indexed: false,
+              internalType: "enum Game.GameState",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PlayerBoughtIn",
+          inputs: [
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PotPaidOut",
+          inputs: [
+            {
+              name: "recipients",
+              type: "address[]",
+              indexed: false,
+              internalType: "address[]",
+            },
+            {
+              name: "percentages",
+              type: "uint256[]",
+              indexed: false,
+              internalType: "uint256[]",
+            },
+            {
+              name: "totalAmount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "GameNotOpen",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InsufficientPayment",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidArrayLengths",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidPercentages",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyGod",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PayoutFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PlayerAlreadyJoined",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 17,
+    },
+    MaxExtract: {
+      address: "0x067c804bb006836469379d4a2a69a81803bd1f45",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_universe",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_game",
               type: "address",
               internalType: "address",
             },
@@ -957,6 +1345,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "game",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IGame",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getActiveSectorCount",
           inputs: [],
           outputs: [
@@ -1025,12 +1426,50 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "hasPlayerBroadcast",
+          inputs: [
+            {
+              name: "player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isSectorClaimed",
           inputs: [
             {
               name: "sectorId",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "playerHasBroadcast",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           outputs: [
@@ -1120,7 +1559,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 16832,
+      deployedOnBlock: 18,
     },
   },
 } as const;

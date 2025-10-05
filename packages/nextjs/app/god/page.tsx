@@ -7,15 +7,19 @@ import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
-const GOD_ADDRESS = "0x159d7e6AbEd4146520Bfc8849aA1AB4cAD3923f9";
-
 export default function GodPage() {
   const { address } = useAccount();
   const [randomNumber, setRandomNumber] = useState<string>("");
   const [commitmentHash, setCommitmentHash] = useState<string>("");
 
+  // Read the god address from the Universe contract
+  const { data: godAddress } = useScaffoldReadContract({
+    contractName: "Universe",
+    functionName: "GOD",
+  });
+
   // Check if current user is god
-  const isGod = address?.toLowerCase() === GOD_ADDRESS.toLowerCase();
+  const isGod = address && godAddress && address.toLowerCase() === godAddress.toLowerCase();
 
   // Read contract state
   const { data: commitRevealState } = useScaffoldReadContract({
@@ -103,7 +107,7 @@ export default function GodPage() {
             <p className="mb-4">Only the God address can access this panel.</p>
             <div className="mb-4">
               <span className="font-bold">God Address: </span>
-              <Address address={GOD_ADDRESS} />
+              {godAddress ? <Address address={godAddress} /> : "Loading..."}
             </div>
             <div>
               <span className="font-bold">Your Address: </span>
