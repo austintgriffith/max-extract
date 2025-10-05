@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
@@ -40,34 +41,62 @@ const Home: NextPage = () => {
 
   return (
     <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">🌌 Max Extract</span>
-          </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address address={connectedAddress} />
+      <div className="flex items-center flex-col grow">
+        {/* Hero Image - Full Width with Bleed */}
+        <div className="w-full mb-8 -mx-10">
+          <Image
+            src="/maxwider.jpg"
+            alt="Max Extract"
+            width={1200}
+            height={800}
+            className="w-[calc(100%+80px)] rounded-lg shadow-2xl"
+            priority
+          />
+        </div>
+
+        <div className="px-5 max-w-6xl mx-auto">
+          {/* Story Text */}
+          <div className="prose prose-lg max-w-none text-base-content mb-8 px-8 py-6">
+            <p className="text-lg leading-relaxed mb-8 px-4">
+              Max Extract wasn&apos;t a captain or a warlord. Just another code monkey in the asteroid belt, known for
+              keeping his head down and drill spinning. Out here, among scattered wrecks and drifting cargo, the real
+              battles weren&apos;t fought with lasers—they were waged in silence, when one crew mined a rock for hours
+              only to have another swoop in and take everything. No treaties held. Anarchy ruled, but it squandered more
+              than it gave. No one trusted anyone, and every mission risked ending in blood or bankruptcy. Max
+              didn&apos;t try to stop the violence, only the inefficiency.
+            </p>
+            <p className="text-lg leading-relaxed px-4">
+              From a forgotten outpost barely clinging to gravity, Max deployed the first shared record—an immutable
+              contract that let pirates stake exclusive claims on asteroids, earn daily fuel credits, and register their
+              word with something stronger than talk. To dock in the garage, you needed a credential: proof that you
+              bought in, agreed not to fire first, and played by the rules. Every deal made or broken left a trace in
+              the record. Build a good rep, and you could refuel in peace. Break too many promises, and the record made
+              you open season. Over time, the chaos thinned. Crews stopped clashing over the same rocks. Refueling
+              stations stayed intact. Loot got bigger, not bloodier.
+            </p>
           </div>
 
-          <div className="text-center mb-6">
-            <div
-              className={`badge ${
-                gameServerStatus === "online"
-                  ? "badge-success"
-                  : gameServerStatus === "checking"
-                    ? "badge-warning"
-                    : "badge-error"
-              }`}
-            >
-              Game Server: {gameServerStatus}
+          {/* Connection Status */}
+          <div className="bg-base-200 rounded-lg p-6 mb-6">
+            <div className="flex justify-center items-center space-x-2 flex-col mb-4">
+              <p className="font-medium">Connected Address:</p>
+              <Address address={connectedAddress} />
+            </div>
+
+            <div className="text-center">
+              <div
+                className={`badge ${
+                  gameServerStatus === "online"
+                    ? "badge-success"
+                    : gameServerStatus === "checking"
+                      ? "badge-warning"
+                      : "badge-error"
+                }`}
+              >
+                Game Server: {gameServerStatus}
+              </div>
             </div>
           </div>
-
-          <p className="text-center text-lg mb-4">
-            Explore the simulated space sectors where asteroids drift and ships mine resources in real-time.
-          </p>
 
           {/* Active Sectors */}
           {activeSectors && activeSectors.length > 0 && (

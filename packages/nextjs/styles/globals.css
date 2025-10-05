@@ -43,22 +43,22 @@
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #212638;
-  --color-primary-content: #f9fbff;
-  --color-secondary: #323f61;
-  --color-secondary-content: #f9fbff;
-  --color-accent: #4969a6;
-  --color-accent-content: #f9fbff;
-  --color-neutral: #f9fbff;
-  --color-neutral-content: #385183;
-  --color-base-100: #385183;
-  --color-base-200: #2a3655;
-  --color-base-300: #212638;
-  --color-base-content: #f9fbff;
-  --color-info: #385183;
-  --color-success: #34eeb6;
-  --color-warning: #ffcf72;
-  --color-error: #ff8863;
+  --color-primary: #d4af37;
+  --color-primary-content: #0a0f1c;
+  --color-secondary: #2e8b8b;
+  --color-secondary-content: #f5f5dc;
+  --color-accent: #cd853f;
+  --color-accent-content: #0a0f1c;
+  --color-neutral: #f5f5dc;
+  --color-neutral-content: #1a2332;
+  --color-base-100: #1a2332;
+  --color-base-200: #0f1419;
+  --color-base-300: #0a0f1c;
+  --color-base-content: #f5f5dc;
+  --color-info: #2e8b8b;
+  --color-success: #228b22;
+  --color-warning: #daa520;
+  --color-error: #dc143c;
 
   --radius-field: 9999rem;
   --radius-box: 1rem;
@@ -120,4 +120,33 @@
 
 .link:hover {
   opacity: 80%;
+}
+
+/* Max Extract custom styles */
+.prose {
+  color: var(--color-base-content);
+}
+
+.prose p {
+  color: var(--color-base-content);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Space-themed background gradient */
+body {
+  background: linear-gradient(135deg, #0a0f1c 0%, #1a2332 50%, #0f1419 100%);
+  background-attachment: fixed;
+}
+
+/* Enhanced card styling for space theme */
+.bg-base-200 {
+  background: rgba(15, 20, 25, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(46, 139, 139, 0.2);
+}
+
+.bg-base-100 {
+  background: rgba(26, 35, 50, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
 }
