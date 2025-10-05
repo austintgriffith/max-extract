@@ -16,7 +16,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Share+Tech+Mono&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Share+Tech+Mono&family=Tektur:wght@400..900&display=swap"
           rel="stylesheet"
         />
       </head>

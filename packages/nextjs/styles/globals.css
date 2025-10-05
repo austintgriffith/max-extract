@@ -84,9 +84,9 @@
     border-color: var(--color-gray-200, currentColor);
   }
 
-  /* Apply Share Tech Mono font globally */
+  /* Apply Tektur font globally */
   * {
-    font-family: "Share Tech Mono", monospace;
+    font-family: "Tektur", "Share Tech Mono", monospace;
   }
 
   p {
@@ -95,7 +95,7 @@
 
   body {
     min-height: 100vh;
-    font-family: "Share Tech Mono", monospace;
+    font-family: "Tektur", "Share Tech Mono", monospace;
   }
 
   h1,
@@ -104,7 +104,7 @@
   h4 {
     margin-bottom: 0.5rem;
     line-height: 1;
-    font-family: "Share Tech Mono", monospace;
+    font-family: "Tektur", "Share Tech Mono", monospace;
   }
 }
 
@@ -165,4 +165,25 @@ body {
 
 .paper * {
   font-family: "Times New Roman", "STIX Two Text", "Georgia", serif !important;
+}
+
+/* Floating character animations for typewriter effect */
+@keyframes floatDown {
+  0% {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(1000px);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+  }
 }
