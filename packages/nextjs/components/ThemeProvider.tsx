@@ -5,5 +5,10 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { type ThemeProviderProps } from "next-themes/dist/types";
 
 export const ThemeProvider = ({ children, ...props }: ThemeProviderProps) => {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  // Force dark theme and disable system theme detection
+  return (
+    <NextThemesProvider {...props} defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
+      {children}
+    </NextThemesProvider>
+  );
 };
