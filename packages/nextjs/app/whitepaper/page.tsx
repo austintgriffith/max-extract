@@ -1,3 +1,5 @@
+"use client";
+
 import { MarkdownWithMath } from "~~/components/MarkdownWithMath";
 
 const WhitepaperPage = () => {
@@ -102,7 +104,7 @@ const WhitepaperPage = () => {
               </div>
               <div className="flex justify-between border-b border-dotted border-gray-300 pb-1">
                 <span>
-                  <span className="text-gray-500 mr-2">3.</span>The Problem of Asteroid Mining Anarchy
+                  <span className="text-gray-500 mr-2">3.</span>The Problem of Extraction Anarchy
                 </span>
                 <span>6</span>
               </div>

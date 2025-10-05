@@ -45,7 +45,7 @@ const Home: NextPage = () => {
         {/* Hero Image - Full Width with Bleed */}
         <div className="w-full mb-8 -mx-10">
           <Image
-            src="/maxwider.jpg"
+            src="/maxwidenotext.jpg"
             alt="Max Extract"
             width={1200}
             height={800}

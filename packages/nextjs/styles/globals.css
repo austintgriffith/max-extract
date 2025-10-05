@@ -84,12 +84,18 @@
     border-color: var(--color-gray-200, currentColor);
   }
 
+  /* Apply Share Tech Mono font globally */
+  * {
+    font-family: "Share Tech Mono", monospace;
+  }
+
   p {
     margin: 1rem 0;
   }
 
   body {
     min-height: 100vh;
+    font-family: "Share Tech Mono", monospace;
   }
 
   h1,
@@ -98,6 +104,7 @@
   h4 {
     margin-bottom: 0.5rem;
     line-height: 1;
+    font-family: "Share Tech Mono", monospace;
   }
 }
 
@@ -149,4 +156,13 @@ body {
   background: rgba(26, 35, 50, 0.9);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* Whitepaper specific styles - override global font */
+.paper {
+  font-family: "Times New Roman", "STIX Two Text", "Georgia", serif !important;
+}
+
+.paper * {
+  font-family: "Times New Roman", "STIX Two Text", "Georgia", serif !important;
 }
