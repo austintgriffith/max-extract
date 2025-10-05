@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xb79b34c5bedf0c77d1a7c16bb1c4c27b4fe13d1b",
+      address: "0x9a13fd06fdf48eb44ca3a9821c5f65b4680f6014",
       abi: [
         {
           type: "constructor",
@@ -373,10 +373,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 8687,
+      deployedOnBlock: 2492,
     },
     Credits: {
-      address: "0x59248bfd887105740f88dbafc31f38d50b09db1d",
+      address: "0xf8e7e62ad8c1ed8addd0f48301b5a4d1c47aa2e4",
       abi: [
         {
           type: "constructor",
@@ -858,10 +858,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 8688,
+      deployedOnBlock: 2493,
     },
     MaxExtract: {
-      address: "0x682eee47463e0c10fde30afc701fb57218ab7575",
+      address: "0xcfee66137fb1e271aff323c0d8acfe9369a56d71",
       abi: [
         {
           type: "constructor",
@@ -1120,7 +1120,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 8689,
+      deployedOnBlock: 2493,
     },
   },
 } as const;

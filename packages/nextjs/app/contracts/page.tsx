@@ -84,7 +84,14 @@ const ContractsPage = () => {
           <div className="bg-base-200 rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-2">API Access</h3>
             <p className="text-sm mb-2">Get contract data programmatically:</p>
-            <code className="text-xs bg-base-300 px-2 py-1 rounded">GET /api/contracts.json</code>
+            <a
+              href="/api/contracts.json"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-xs bg-base-300 hover:bg-base-100 px-2 py-1 rounded transition-colors cursor-pointer border border-transparent hover:border-primary"
+            >
+              GET /api/contracts.json
+            </a>
           </div>
         </div>
       </div>
