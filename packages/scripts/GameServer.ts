@@ -8,7 +8,7 @@ import {
   formatEther,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { foundry } from "viem/chains";
+import * as chains from "viem/chains";
 import { Sector } from "./Sector";
 import { SECTOR_CONFIG } from "./types";
 import deployedContracts from "../nextjs/contracts/deployedContracts";
@@ -19,24 +19,60 @@ import * as dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-// Create a public client for reading from the local foundry chain
+// Get chain configuration from environment
+const CHAIN_ID = process.env.CHAINID ? parseInt(process.env.CHAINID) : 31337;
+const CHAIN_NAME = process.env.CHAIN || "foundry";
+const RPC_URL = process.env.RPC || "http://127.0.0.1:8545";
+
+// Function to get chain by name
+function getChainByName(chainName: string) {
+  const chainMap: { [key: string]: any } = {
+    foundry: chains.foundry,
+    arbitrum: chains.arbitrum,
+    mainnet: chains.mainnet,
+    polygon: chains.polygon,
+    optimism: chains.optimism,
+    base: chains.base,
+    sepolia: chains.sepolia,
+    goerli: chains.goerli,
+    hardhat: chains.hardhat,
+    localhost: chains.localhost,
+  };
+
+  const selectedChain = chainMap[chainName.toLowerCase()];
+  if (!selectedChain) {
+    console.error(
+      `❌ Unknown chain: ${chainName}. Available chains: ${Object.keys(
+        chainMap
+      ).join(", ")}`
+    );
+    console.log(`🔗 Falling back to foundry chain`);
+    return chains.foundry;
+  }
+
+  return selectedChain;
+}
+
+const selectedChain = getChainByName(CHAIN_NAME);
+console.log(`🔗 Using Chain: ${selectedChain.name} (ID: ${CHAIN_ID})`);
+console.log(`🌐 Using RPC: ${RPC_URL}`);
+
+// Create a public client for reading from the blockchain
 const publicClient = createPublicClient({
-  chain: foundry,
-  transport: http("http://127.0.0.1:8545"), // Default foundry RPC URL
+  chain: selectedChain,
+  transport: http(RPC_URL),
 });
 
 // Setup GOD account from environment variable or default to Anvil account #9
-const godPrivateKey =
-  process.env.GODPRIVATEKEY ||
-  "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6";
+const godPrivateKey = process.env.GODPRIVATEKEY;
 
 const godAccount = privateKeyToAccount(godPrivateKey as `0x${string}`);
 
 // Create a wallet client for GOD transactions
 const walletClient = createWalletClient({
   account: godAccount,
-  chain: foundry,
-  transport: http("http://127.0.0.1:8545"),
+  chain: selectedChain,
+  transport: http(RPC_URL),
 });
 
 export class GameServer {
@@ -251,7 +287,8 @@ export class GameServer {
       this.debugLog("Loading sectors from contract...");
 
       // Check if MaxExtract contract is deployed
-      const contracts = deployedContracts[31337];
+      const contracts =
+        deployedContracts[CHAIN_ID as keyof typeof deployedContracts];
       if (!contracts || !contracts.MaxExtract) {
         console.error("⚠️  MaxExtract contract not found. Run: yarn deploy");
         this.debugLog("MaxExtract contract not found");
@@ -284,12 +321,12 @@ export class GameServer {
         const sectorIdStr = sectorId.toString();
         if (!this.sectors.has(sectorIdStr)) {
           const newSector = new Sector(sectorIdStr, undefined, this.debugMode);
-          
+
           // Update sector with current rolling entropy if available
           if (this.currentRollingEntropy) {
             newSector.updateRollingEntropy(this.currentRollingEntropy);
           }
-          
+
           this.sectors.set(sectorIdStr, newSector);
           this.debugLog(`Created new sector: ${sectorIdStr}`);
           newSectorsAdded = true;
@@ -318,7 +355,8 @@ export class GameServer {
   private async performRollingCommitReveal(): Promise<void> {
     try {
       // Check if Universe contract is deployed
-      const contracts = deployedContracts[31337];
+      const contracts =
+        deployedContracts[CHAIN_ID as keyof typeof deployedContracts];
       if (!contracts || !contracts.Universe) {
         this.debugLog(
           "Universe contract not found, skipping rolling commit-reveal"
@@ -435,12 +473,14 @@ export class GameServer {
 
         // Store the current rolling entropy for sectors to use
         this.currentRollingEntropy = newRollingEntropy;
-        
+
         // Update all existing sectors with new rolling entropy
         for (const sector of this.sectors.values()) {
           sector.updateRollingEntropy(newRollingEntropy);
         }
-        this.debugLog(`Updated ${this.sectors.size} sectors with new rolling entropy`);
+        this.debugLog(
+          `Updated ${this.sectors.size} sectors with new rolling entropy`
+        );
       } catch (entropyError: any) {
         this.debugLog("Failed to read rolling entropy", entropyError);
       }
@@ -512,7 +552,8 @@ export class GameServer {
       this.debugLog("Initializing rolling commit-reveal system...");
 
       // Check if Universe contract is deployed
-      const contracts = deployedContracts[31337];
+      const contracts =
+        deployedContracts[CHAIN_ID as keyof typeof deployedContracts];
       if (!contracts || !contracts.Universe) {
         console.log(
           "⚠️  Universe contract not found. Rolling commit-reveal disabled."

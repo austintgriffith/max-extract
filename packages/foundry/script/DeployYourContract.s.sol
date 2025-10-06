@@ -33,8 +33,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
 
         console.log("Deployer:", deployer);
         // Deploy the core contracts of the Max Extract Protocol
-        Universe universe = new Universe(deployer);
-        Credits credits = new Credits(deployer);
+        Universe universe = new Universe();
+        Credits credits = new Credits(universe.GOD());
         
         // Deploy Game contract with configured buy-in price
         Game game = new Game(address(universe), GAME_BUYIN_PRICE);
@@ -50,13 +50,14 @@ contract DeployYourContract is ScaffoldETHDeploy {
         
         // DEVELOPMENT MODE: Auto-setup entropy
         // For production, comment out the line below and manually run commit-reveal
-        setupUniverseEntropyDev(universe);
+        //setupUniverseEntropyDev(universe);
     }
     
     /**
      * DEVELOPMENT ONLY: Automatically sets entropy using direct method
      * For production, use the manual commit-reveal process instead
      */
+     /*
     function setupUniverseEntropyDev(Universe universe) internal {
         // Generate entropy directly for development ease
         bytes32 entropy = keccak256(abi.encodePacked(
@@ -68,8 +69,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
         ));
         
         // Set entropy directly (development function)
-        universe.setEntropyDirect(entropy);
-    }
+        //universe.setEntropyDirect(entropy);
+    }*/
     
     /**
      * PRODUCTION: Manual commit-reveal process

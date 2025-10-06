@@ -9,8 +9,21 @@ pragma solidity >=0.8.0 <0.9.0;
  */
 contract Universe {
     // The god address - only this address can set the universe entropy
-    // address public constant GOD = 0x159d7e6AbEd4146520Bfc8849aA1AB4cAD3923f9;
-    address public immutable GOD;
+    address public constant GOD = 0x0647603E7711D9686BdB9fDB1fe0b04162b73dD7;
+    //address public immutable GOD;
+
+     /**
+     * DEV FUNCTION COMMENT OUT to set entropy directly (bypasses commit-reveal)
+     * Only available to GOD for easier testing/development
+     */
+     /*
+    function setEntropyDirect(bytes32 _entropy) external onlyGod entropyNotSet {
+        entropy = _entropy;
+        entropySet = true;
+        
+        emit EntropyRevealed(_entropy, bytes32(0), 0);
+    }*/
+
     
     // The universe entropy - immutable once set via commit-reveal
     bytes32 public entropy;
@@ -49,9 +62,7 @@ contract Universe {
         _;
     }
 
-    constructor(address _god) {
-        // Universe awaits the god's entropy
-        GOD = _god;
+    constructor() {
     }
 
     /**
@@ -121,16 +132,6 @@ contract Universe {
         return (commitmentMade, commitBlock, entropySet);
     }
 
-    /**
-     * Development function to set entropy directly (bypasses commit-reveal)
-     * Only available to GOD for easier testing/development
-     */
-    function setEntropyDirect(bytes32 _entropy) external onlyGod entropyNotSet {
-        entropy = _entropy;
-        entropySet = true;
-        
-        emit EntropyRevealed(_entropy, bytes32(0), 0);
-    }
 
     /**
      * Rolling commit-reveal function for ongoing entropy generation

@@ -1,16 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { keccak256, toBytes } from "viem";
+import { formatEther, keccak256, toBytes } from "viem";
 import { useAccount } from "wagmi";
-import { Address } from "~~/components/scaffold-eth";
+import { Address, AddressInput } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
+
+interface PayoutRecipient {
+  address: string;
+  percentage: string;
+}
 
 export default function GodPage() {
   const { address } = useAccount();
   const [randomNumber, setRandomNumber] = useState<string>("");
   const [commitmentHash, setCommitmentHash] = useState<string>("");
+
+  // Payout state
+  const [recipients, setRecipients] = useState<PayoutRecipient[]>([{ address: "", percentage: "" }]);
 
   // Read the god address from the Universe contract
   const { data: godAddress } = useScaffoldReadContract({
@@ -32,9 +40,19 @@ export default function GodPage() {
     functionName: "getEntropy",
   });
 
+  // Read Game contract balance
+  const { data: gameBalance } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "getBalance",
+  });
+
   // Write functions
   const { writeContractAsync: writeUniverseAsync } = useScaffoldWriteContract({
     contractName: "Universe",
+  });
+
+  const { writeContractAsync: writeGameAsync } = useScaffoldWriteContract({
+    contractName: "Game",
   });
 
   // Generate initial entropy (large random number)
@@ -92,6 +110,57 @@ export default function GodPage() {
       notification.success("Entropy revealed successfully!");
     } catch {
       notification.error("Error revealing entropy");
+    }
+  };
+
+  // Payout helper functions
+  const addRecipient = () => {
+    setRecipients([...recipients, { address: "", percentage: "" }]);
+  };
+
+  const removeRecipient = (index: number) => {
+    if (recipients.length > 1) {
+      setRecipients(recipients.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateRecipient = (index: number, field: keyof PayoutRecipient, value: string) => {
+    const updated = [...recipients];
+    updated[index][field] = value;
+    setRecipients(updated);
+  };
+
+  const getTotalPercentage = () => {
+    return recipients.reduce((total, recipient) => {
+      const percentage = parseFloat(recipient.percentage) || 0;
+      return total + percentage;
+    }, 0);
+  };
+
+  const isPayoutValid = () => {
+    const totalPercentage = getTotalPercentage();
+    const hasValidRecipients = recipients.every(r => r.address && r.percentage);
+    return totalPercentage === 1000 && hasValidRecipients && gameBalance && gameBalance > 0n;
+  };
+
+  const handlePayout = async () => {
+    if (!isPayoutValid()) return;
+
+    try {
+      const addresses = recipients.map(r => r.address);
+      const percentages = recipients.map(r => BigInt(Math.round(parseFloat(r.percentage))));
+
+      await writeGameAsync({
+        functionName: "payoutPot",
+        args: [addresses, percentages],
+      });
+
+      notification.success("Payout executed successfully!");
+      // Reset form
+      setRecipients([{ address: "", percentage: "" }]);
+    } catch (error) {
+      console.error("Payout error:", error);
+      notification.error("Error executing payout");
     }
   };
 
@@ -262,6 +331,138 @@ export default function GodPage() {
             )}
           </div>
         )}
+
+        {/* Payout Section */}
+        <div className="bg-base-300 rounded-3xl p-6 mt-6">
+          <h2 className="text-2xl font-bold mb-6">💰 Game Pot Payout</h2>
+
+          {/* Current Balance */}
+          <div className="bg-primary/10 border border-primary rounded-lg p-4 mb-6">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold">Current Game Pot:</span>
+              <span className="text-2xl font-bold text-primary">
+                {gameBalance ? `${formatEther(gameBalance)} ETH` : "0 ETH"}
+              </span>
+            </div>
+          </div>
+
+          {gameBalance && gameBalance > 0n ? (
+            <div className="space-y-6">
+              {/* Recipients List */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Recipients & Percentages</h3>
+
+                {recipients.map((recipient, index) => (
+                  <div key={index} className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="label">
+                        <span className="label-text">Address {index + 1}</span>
+                      </label>
+                      <AddressInput
+                        value={recipient.address}
+                        onChange={value => updateRecipient(index, "address", value)}
+                        placeholder="0x..."
+                      />
+                    </div>
+
+                    <div className="w-32">
+                      <label className="label">
+                        <span className="label-text">Percentage</span>
+                      </label>
+                      <input
+                        type="number"
+                        className="input input-bordered w-full"
+                        placeholder="0"
+                        value={recipient.percentage}
+                        onChange={e => updateRecipient(index, "percentage", e.target.value)}
+                        min="0"
+                        max="1000"
+                        step="0.1"
+                      />
+                    </div>
+
+                    <button
+                      className="btn btn-error btn-sm mb-1"
+                      onClick={() => removeRecipient(index)}
+                      disabled={recipients.length === 1}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                <button className="btn btn-secondary btn-sm" onClick={addRecipient}>
+                  + Add Recipient
+                </button>
+              </div>
+
+              {/* Percentage Calculator */}
+              <div className="bg-base-200 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Total Percentage:</span>
+                  <span
+                    className={`text-lg font-bold ${
+                      getTotalPercentage() === 1000
+                        ? "text-success"
+                        : getTotalPercentage() > 1000
+                          ? "text-error"
+                          : "text-warning"
+                    }`}
+                  >
+                    {getTotalPercentage().toFixed(1)} / 1000
+                  </span>
+                </div>
+                <div className="text-sm opacity-70">Must equal exactly 1000 (100.0%) to execute payout</div>
+
+                {/* Percentage breakdown */}
+                {recipients.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {recipients.map((recipient, index) => {
+                      const percentage = parseFloat(recipient.percentage) || 0;
+                      const ethAmount = gameBalance ? (BigInt(Math.round(percentage)) * gameBalance) / 1000n : 0n;
+
+                      return (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span>
+                            {recipient.address
+                              ? `${recipient.address.slice(0, 6)}...${recipient.address.slice(-4)}`
+                              : `Recipient ${index + 1}`}
+                            :
+                          </span>
+                          <span>
+                            {percentage.toFixed(1)}% = {formatEther(ethAmount)} ETH
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Payout Button */}
+              <button
+                className={`btn btn-lg w-full ${isPayoutValid() ? "btn-success" : "btn-disabled"}`}
+                onClick={handlePayout}
+                disabled={!isPayoutValid()}
+              >
+                {isPayoutValid()
+                  ? "💸 Execute Payout"
+                  : `Cannot Execute: ${
+                      getTotalPercentage() !== 1000
+                        ? "Percentages must equal 1000"
+                        : !recipients.every(r => r.address && r.percentage)
+                          ? "Fill all fields"
+                          : "No balance to payout"
+                    }`}
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-8 opacity-70">
+              <p className="text-lg">No funds available for payout</p>
+              <p className="text-sm">The game pot is currently empty</p>
+            </div>
+          )}
+        </div>
 
         {/* Instructions */}
         <div className="bg-base-200 rounded-3xl p-6 mt-6">
