@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+// Useful for debugging. Remove when deploying to a live network.
+import "forge-std/console.sol";
+
 /**
  * Universe Contract - Manages the game world state
  * Handles asteroid lifecycle, ship tracking, mining actions, and verification
@@ -144,9 +147,9 @@ contract Universe {
         // For round 0, allow reveal to be 0 and initialize rolling entropy
         if (roundNumber == 0) {
             // For the first round, we accept any reveal (including 0) and initialize rolling entropy
-            // Use a combination of reveal, block hash, and block timestamp for initial entropy
+            // Use a combination of reveal and block hash for initial entropy
             bytes32 currentBlockHash = blockhash(block.number - 1);
-            rollingEntropy = keccak256(abi.encodePacked(revealNumber, currentBlockHash, block.timestamp, block.difficulty));
+            rollingEntropy = keccak256(abi.encodePacked(revealNumber, currentBlockHash));
             lastCommit = nextCommit;
             roundNumber = 1;
             

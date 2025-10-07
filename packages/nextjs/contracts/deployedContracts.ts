@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x19a1c09fe3399c4daaa2c98b936a8e460fc5eaa4",
+      address: "0xed28d2f9e7281a63254e6ea4894a5460e24d0450",
       abi: [
         {
           type: "constructor",
@@ -354,10 +354,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 34,
+      deployedOnBlock: 100,
     },
     Credits: {
-      address: "0x49b8e3b089d4ebf9f37b1da9b839ec013c2cd8c9",
+      address: "0xa7328deaa1b585a494f055fc9bd99ea56d52cd3d",
       abi: [
         {
           type: "constructor",
@@ -839,10 +839,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 35,
+      deployedOnBlock: 101,
     },
     Game: {
-      address: "0x067c804bb006836469379d4a2a69a81803bd1f45",
+      address: "0x867bfafda54b592392c550b538f77f9f2101551e",
       abi: [
         {
           type: "constructor",
@@ -1222,10 +1222,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 36,
+      deployedOnBlock: 102,
     },
     MaxExtract: {
-      address: "0x45009dd3abbe29db54fc5d893ceaa98a624882df",
+      address: "0x2f634917cc00a9897621cd3490327721198fa369",
       abi: [
         {
           type: "constructor",
@@ -1242,10 +1242,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "receive",
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -1365,48 +1361,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getRules",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "getSectorRegistry",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "hasPlayerBroadcast",
           inputs: [
             {
@@ -1426,50 +1380,12 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isSectorClaimed",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "playerHasBroadcast",
           inputs: [
             {
               name: "",
               type: "address",
               internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "sectorExists",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           outputs: [
@@ -1540,7 +1456,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 37,
+      deployedOnBlock: 102,
     },
   },
   42161: {
@@ -2782,10 +2698,6 @@ const deployedContracts = {
           stateMutability: "nonpayable",
         },
         {
-          type: "receive",
-          stateMutability: "payable",
-        },
-        {
           type: "function",
           name: "RULE_ONE",
           inputs: [],
@@ -2903,48 +2815,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getRules",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "getSectorRegistry",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "hasPlayerBroadcast",
           inputs: [
             {
@@ -2964,50 +2834,12 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isSectorClaimed",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "playerHasBroadcast",
           inputs: [
             {
               name: "",
               type: "address",
               internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "sectorExists",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           outputs: [

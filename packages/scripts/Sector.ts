@@ -74,18 +74,19 @@ export class Sector {
 
   /**
    * Get a random number between 0 and 1 using deterministic dice
-   * Falls back to legacy RNG if no deterministic dice available
+   * Throws error if no deterministic dice available - sectors should not operate without entropy
    */
   private getRandom(): number {
-    if (this.deterministicDice) {
-      // Use deterministic dice - roll 4 hex chars for good resolution
-      const roll = this.deterministicDice.roll(4);
-      // Convert to 0-1 range (4 hex chars = 0-65535)
-      return roll / 65535;
+    if (!this.deterministicDice) {
+      throw new Error(
+        `Sector ${this.id}: Cannot generate random numbers without deterministic dice - rolling entropy not set`
+      );
     }
 
-    // Fallback to legacy RNG
-    return this.getRandom();
+    // Use deterministic dice - roll 4 hex chars for good resolution
+    const roll = this.deterministicDice.roll(4);
+    // Convert to 0-1 range (4 hex chars = 0-65535)
+    return roll / 65535;
   }
 
   private generateId(): string {
