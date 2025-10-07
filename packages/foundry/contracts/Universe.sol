@@ -9,7 +9,8 @@ pragma solidity >=0.8.0 <0.9.0;
  */
 contract Universe {
     // The god address - only this address can set the universe entropy
-    address public constant GOD = 0x0647603E7711D9686BdB9fDB1fe0b04162b73dD7;
+    //address public constant GOD = 0x0647603E7711D9686BdB9fDB1fe0b04162b73dD7;
+    address public constant GOD = 0x43D9B634006B4fCe2523a710990a397AC3d18D7a;
     //address public immutable GOD;
 
      /**

@@ -46,6 +46,12 @@ export default function GodPage() {
     functionName: "getBalance",
   });
 
+  // Read Game state
+  const { data: gameState } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "state",
+  });
+
   // Write functions
   const { writeContractAsync: writeUniverseAsync } = useScaffoldWriteContract({
     contractName: "Universe",
@@ -164,6 +170,33 @@ export default function GodPage() {
     }
   };
 
+  // Game state handlers
+  const handleOpenBuyIns = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "setState",
+        args: [0], // 0 = Open
+      });
+      notification.success("Buy-ins opened!");
+    } catch (error) {
+      console.error("Error opening buy-ins:", error);
+      notification.error("Error opening buy-ins");
+    }
+  };
+
+  const handleCloseBuyIns = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "setState",
+        args: [1], // 1 = Active
+      });
+      notification.success("Buy-ins closed!");
+    } catch (error) {
+      console.error("Error closing buy-ins:", error);
+      notification.error("Error closing buy-ins");
+    }
+  };
+
   if (!isGod) {
     return (
       <div className="flex items-center flex-col flex-grow pt-8">
@@ -222,6 +255,49 @@ export default function GodPage() {
                 Live
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Game State Control */}
+        <div className="bg-base-300 rounded-3xl p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">🎮 Game State Control</h2>
+
+          {/* Current Game State Display */}
+          <div className="bg-base-200 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold">Current Game State:</span>
+              <span className={`text-2xl font-bold ${gameState === 0 ? "text-success" : "text-warning"}`}>
+                {gameState === 0 ? "🟢 Open (Buy-ins Allowed)" : "🔴 Active (Buy-ins Closed)"}
+              </span>
+            </div>
+          </div>
+
+          {/* State Control Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              className={`btn btn-lg ${gameState === 0 ? "btn-disabled" : "btn-success"}`}
+              onClick={handleOpenBuyIns}
+              disabled={gameState === 0}
+            >
+              🟢 Open Buy-Ins (State 0)
+            </button>
+            <button
+              className={`btn btn-lg ${gameState === 1 ? "btn-disabled" : "btn-warning"}`}
+              onClick={handleCloseBuyIns}
+              disabled={gameState === 1}
+            >
+              🔴 Close Buy-Ins (State 1)
+            </button>
+          </div>
+
+          {/* Info */}
+          <div className="mt-4 text-sm opacity-70">
+            <p>
+              <strong>Open (State 0):</strong> Players can buy into the game
+            </p>
+            <p>
+              <strong>Active (State 1):</strong> Game is active, no more buy-ins allowed
+            </p>
           </div>
         </div>
 

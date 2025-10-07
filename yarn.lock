@@ -3111,6 +3111,7 @@ __metadata:
     "@trivago/prettier-plugin-sort-imports": ~4.3.0
     "@types/node": ~18.19.50
     "@types/react": ~19.0.7
+    "@types/react-dom": ^19.2.1
     "@types/ws": ^8.18.1
     "@uniswap/sdk-core": ~5.8.2
     "@uniswap/v2-sdk": ~4.6.1
@@ -3743,6 +3744,15 @@ __metadata:
   version: 1.2.7
   resolution: "@types/range-parser@npm:1.2.7"
   checksum: 95640233b689dfbd85b8c6ee268812a732cf36d5affead89e806fe30da9a430767af8ef2cd661024fd97e19d61f3dec75af2df5e80ec3bea000019ab7028629a
+  languageName: node
+  linkType: hard
+
+"@types/react-dom@npm:^19.2.1":
+  version: 19.2.1
+  resolution: "@types/react-dom@npm:19.2.1"
+  peerDependencies:
+    "@types/react": ^19.2.0
+  checksum: bf159c2f141d9968810b4f67f48a4cf0013d7186ceb9c5be8946c08c4e5fcc0c479feee2ab003c0c35d4e1767ad358dcf9319261102ed680e5be473291486dbf
   languageName: node
   linkType: hard
 

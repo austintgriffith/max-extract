@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+// Useful for debugging. Remove when deploying to a live network.
+import "forge-std/console.sol";
+
 // Interface for the Universe contract to access entropy
 interface IUniverse {
     function getEntropy() external view returns (bytes32);
@@ -86,15 +89,19 @@ contract MaxExtract {
      * @return sectorId The generated sector ID that was claimed
      */
     function broadcast(address registry) external returns (uint256 sectorId) {
+        console.log("broadcast", tx.origin, msg.sender, registry);
         // Contract-only access: must be called from a contract, not directly from EOA
         require(tx.origin != msg.sender, "Cannot broadcast directly from EOA - use your Registry Contract");
         
+        console.log("game.state()", game.state());
         // Game must not be in open mode (0 = Open, 1 = Active)
         require(game.state() != 0, "Game is in open mode - broadcasting not allowed");
         
+        console.log("game.isPlayer(tx.origin)", game.isPlayer(tx.origin));
         // Player must have bought into the game
         require(game.isPlayer(tx.origin), "Player has not bought into the game");
         
+        console.log("playerHasBroadcast[tx.origin]", playerHasBroadcast[tx.origin]);
         // Player can only broadcast one sector
         require(!playerHasBroadcast[tx.origin], "Player has already broadcast a sector");
         
@@ -107,12 +114,16 @@ contract MaxExtract {
                 break;
             }
         }
+        console.log("chapter1Visible", chapter1Visible);
         require(chapter1Visible, "Chapter 1 is not visible");
         
         // Universe entropy must be set for sector generation
+        console.log("universe.isEntropySet()", universe.isEntropySet());
         require(universe.isEntropySet(), "Universe entropy not yet set");
         
         // Registry must be a valid contract address
+        console.log("registry", registry);
+        console.log("registry.code.length", registry.code.length);
         require(registry != address(0), "Registry cannot be zero address");
         require(registry.code.length > 0, "Registry must be a contract");
         

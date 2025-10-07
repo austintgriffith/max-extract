@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Address as AddressType, createWalletClient, http, parseEther } from "viem";
 import { hardhat } from "viem/chains";
 import { useAccount } from "wagmi";
@@ -79,12 +80,8 @@ export const Faucet = () => {
     return null;
   }
 
-  return (
+  const modalContent = (
     <div>
-      <label htmlFor="faucet-modal" className="btn btn-primary btn-sm font-normal gap-1">
-        <BanknotesIcon className="h-4 w-4" />
-        <span>Faucet</span>
-      </label>
       <input type="checkbox" id="faucet-modal" className="modal-toggle" />
       <label htmlFor="faucet-modal" className="modal cursor-pointer">
         <label className="modal-box relative">
@@ -125,5 +122,15 @@ export const Faucet = () => {
         </label>
       </label>
     </div>
+  );
+
+  return (
+    <>
+      <label htmlFor="faucet-modal" className="btn btn-primary btn-sm font-normal gap-1">
+        <BanknotesIcon className="h-4 w-4" />
+        <span>Faucet</span>
+      </label>
+      {typeof document !== "undefined" ? createPortal(modalContent, document.body) : null}
+    </>
   );
 };
