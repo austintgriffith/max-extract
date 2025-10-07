@@ -1,0 +1,4 @@
+## Deployment Rules
+
+- NEVER run `yarn deploy` automatically. Always tell the user when contracts are ready to deploy and let them run the deployment command manually to provide feedback.
+- NEVER run `yarn chain` or `yarn start` automatically. Let the user manage the local blockchain and frontend server.

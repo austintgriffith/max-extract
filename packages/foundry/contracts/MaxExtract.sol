@@ -53,7 +53,6 @@ contract MaxExtract {
     
     // Track which sectors are active
     uint256[] public activeSectors;
-    mapping(uint256 => bool) public sectorExists;
     
     // Track which players have already broadcast a sector (one player, one sector)
     mapping(address => bool) public playerHasBroadcast;
@@ -141,10 +140,7 @@ contract MaxExtract {
         sectors[sectorId] = registry;
         
         // Track active sectors
-        if (!sectorExists[sectorId]) {
-            activeSectors.push(sectorId);
-            sectorExists[sectorId] = true;
-        }
+        activeSectors.push(sectorId);
         
         // Mark that this player has broadcast a sector
         playerHasBroadcast[tx.origin] = true;
@@ -152,14 +148,6 @@ contract MaxExtract {
         emit SectorBroadcast(sectorId, registry, tx.origin);
     }
 
-    /**
-     * Get the Registry Contract for a sector
-     * @param sectorId The sector to query
-     * @return The Registry Contract address, or address(0) if unclaimed
-     */
-    function getSectorRegistry(uint256 sectorId) external view returns (address) {
-        return sectors[sectorId];
-    }
 
     /**
      * Get all active sector IDs
@@ -177,14 +165,6 @@ contract MaxExtract {
         return activeSectors.length;
     }
 
-    /**
-     * Check if a sector has been claimed
-     * @param sectorId The sector to check
-     * @return True if the sector has been claimed
-     */
-    function isSectorClaimed(uint256 sectorId) external view returns (bool) {
-        return sectors[sectorId] != address(0);
-    }
 
     /**
      * Check if a player has already broadcast a sector
@@ -194,20 +174,5 @@ contract MaxExtract {
     function hasPlayerBroadcast(address player) external view returns (bool) {
         return playerHasBroadcast[player];
     }
-
-    /**
-     * Get the three eternal rules of the Extract Protocol
-     * @return The three rules as strings
-     */
-    function getRules() external pure returns (string memory, string memory, string memory) {
-        return (RULE_ONE, RULE_TWO, RULE_THREE);
-    }
-
-    /**
-     * Function that allows the contract to receive ETH
-     * Pirates may send tribute to Max's memory
-     */
-    receive() external payable {
-        // Tribute received for Max Extract
-    }
+    
 }

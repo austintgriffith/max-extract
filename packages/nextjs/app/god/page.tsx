@@ -52,6 +52,12 @@ export default function GodPage() {
     functionName: "state",
   });
 
+  // Read visible chapters
+  const { data: visibleChapters } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "getVisibleChapters",
+  });
+
   // Write functions
   const { writeContractAsync: writeUniverseAsync } = useScaffoldWriteContract({
     contractName: "Universe",
@@ -197,6 +203,20 @@ export default function GodPage() {
     }
   };
 
+  // Chapter management handlers
+  const handleMakeChapter1Visible = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "showChapters",
+        args: [[1]], // Array containing chapter 1
+      });
+      notification.success("Chapter 1 is now visible!");
+    } catch (error) {
+      console.error("Error making chapter 1 visible:", error);
+      notification.error("Error making chapter 1 visible");
+    }
+  };
+
   if (!isGod) {
     return (
       <div className="flex items-center flex-col flex-grow pt-8">
@@ -297,6 +317,45 @@ export default function GodPage() {
             </p>
             <p>
               <strong>Active (State 1):</strong> Game is active, no more buy-ins allowed
+            </p>
+          </div>
+        </div>
+
+        {/* Chapter Management */}
+        <div className="bg-base-300 rounded-3xl p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">📖 Chapter Management</h2>
+
+          {/* Current Visible Chapters Display */}
+          <div className="bg-base-200 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold">Currently Visible Chapters:</span>
+              <span className="text-xl font-bold text-info">
+                {visibleChapters && visibleChapters.length > 0 ? `[${visibleChapters.join(", ")}]` : "None"}
+              </span>
+            </div>
+          </div>
+
+          {/* Chapter Control Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              className={`btn btn-lg ${visibleChapters && visibleChapters.includes(1) ? "btn-disabled" : "btn-primary"}`}
+              onClick={handleMakeChapter1Visible}
+              disabled={visibleChapters && visibleChapters.includes(1)}
+            >
+              📖 Make Chapter 1 Visible
+            </button>
+            <div className="flex items-center justify-center text-sm opacity-70">
+              More chapter controls coming soon...
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="mt-4 text-sm opacity-70">
+            <p>
+              <strong>Chapter 1:</strong> Required for players to broadcast sectors via MaxExtract protocol
+            </p>
+            <p>
+              <strong>Note:</strong> Only visible chapters can be accessed by players in the game
             </p>
           </div>
         </div>
