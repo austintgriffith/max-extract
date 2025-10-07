@@ -84,16 +84,22 @@ export const AnimatedSubtitle = () => {
         };
 
         // Add floating character before removing from animated chars
+        const floatingId = `${charKey}-${Date.now()}`;
         setFloatingChars(prev => [
           ...prev,
           {
-            id: `${charKey}-${Date.now()}`,
+            id: floatingId,
             char: hexChar,
             x: containerRect.left,
             y: containerRect.top,
             lineType,
           },
         ]);
+
+        // Remove this specific floating character after animation completes
+        setTimeout(() => {
+          setFloatingChars(prev => prev.filter(char => char.id !== floatingId));
+        }, 8000); // 8s animation duration
 
         // Remove from animated characters
         setAnimatedChars(prev => {
@@ -109,16 +115,7 @@ export const AnimatedSubtitle = () => {
     return () => clearInterval(interval);
   }, [fullLine, extractionCounter, startPos]);
 
-  // Clean up floating characters after animation completes
-  useEffect(() => {
-    if (floatingChars.length === 0) return;
-
-    const cleanup = setTimeout(() => {
-      setFloatingChars([]);
-    }, 8200); // 200ms display + 8000ms animation
-
-    return () => clearTimeout(cleanup);
-  }, [floatingChars]);
+  // No longer need this cleanup effect - characters are now cleaned up individually
 
   return (
     <div className="relative flex justify-center -mt-6 mb-8 z-10">
