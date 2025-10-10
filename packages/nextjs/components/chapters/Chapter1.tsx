@@ -16,7 +16,7 @@ export const Chapter1 = () => {
           <p className="mb-4">
             To participate in the Max Extract Protocol, you need to deploy a <strong>Registry Contract</strong> that
             calls the <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast</code> function on the
-            MaxExtract contract.
+            MaxExtract contract [TODO: link to contract].
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Your Registry Contract</h3>
@@ -54,6 +54,7 @@ export const Chapter1 = () => {
               <span className="text-primary mr-2">•</span>
               <span>
                 <strong>Account Verification:</strong> Must be triggered by the same account that bought into the game
+                [TODO: link to tx.origin line of contract in block explorer]
               </span>
             </li>
           </ul>
@@ -68,6 +69,14 @@ export const Chapter1 = () => {
               🚀 Pilots that enter this space will interact with your registry to discover what contracts are available
               for interaction.
             </p>
+          </div>
+
+          <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">Registry Updates</h3>
+          <p className="mb-2">Update your registry contract at any time:</p>
+          <div className="bg-base-100 rounded-lg p-4 border">
+            <pre className="text-sm overflow-x-auto">
+              <code className="text-accent">{`function updateRegistry(address newRegistry, uint256 sectorId) external`}</code>
+            </pre>
           </div>
         </div>
       </div>

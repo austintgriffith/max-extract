@@ -82,18 +82,16 @@ const SectorPage = () => {
         </div>
       </div>
 
-      {/* Sector Visualization with floating events */}
-      <div className="relative">
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <h2 className="card-title">Sector View</h2>
-            <SectorCanvas sectorData={sectorData} particles={particles} />
-          </div>
+      {/* Sector Visualization */}
+      <div className="card bg-base-100 shadow-xl mb-6">
+        <div className="card-body">
+          <h2 className="card-title">Sector View</h2>
+          <SectorCanvas sectorData={sectorData} particles={particles} />
         </div>
-
-        {/* Floating Events UI */}
-        <SectorEvents events={events} />
       </div>
+
+      {/* Recent Events */}
+      <SectorEvents events={events} />
     </div>
   );
 };

@@ -8,8 +8,8 @@ interface SectorEventsProps {
 
 export const SectorEvents = ({ events }: SectorEventsProps) => {
   return (
-    <div className="absolute top-4 right-4 w-80 max-h-96 z-10">
-      <div className="card bg-base-100/80 backdrop-blur-sm shadow-xl">
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="card bg-base-100 shadow-xl">
         <div className="card-body p-4">
           <h3 className="card-title text-sm">Recent Events</h3>
           <div className="max-h-64 overflow-y-auto space-y-2">

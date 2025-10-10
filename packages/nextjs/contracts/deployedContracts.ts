@@ -1235,7 +1235,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2,
+      deployedOnBlock: 3,
     },
     MaxExtract: {
       address: "0x8ce361602b935680e8dec218b820ff5056beb7af",
@@ -1544,7 +1544,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2,
+      deployedOnBlock: 3,
     },
   },
   42161: {

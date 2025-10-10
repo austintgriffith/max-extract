@@ -70,6 +70,13 @@ contract MaxExtract {
         address indexed registry, 
         address indexed broadcaster
     );
+    
+    event RegistryUpdated(
+        uint256 indexed sectorId,
+        address indexed oldRegistry,
+        address indexed newRegistry,
+        address player
+    );
 
     // Constructor - Max's final act
     constructor(address _universe, address _game) {
@@ -153,6 +160,44 @@ contract MaxExtract {
         emit SectorBroadcast(sectorId, registry, tx.origin);
     }
 
+    /**
+     * Update the registry contract for an existing sector
+     * 
+     * Requirements:
+     * 1. Must be called from a contract (tx.origin != msg.sender)
+     * 2. Sector must already exist (sectors[sectorId] != address(0))
+     * 3. Player must own the sector (playerToSector[tx.origin] == sectorId)
+     * 4. Sector must belong to the player (sectorToOwner[sectorId] == tx.origin)
+     * 5. New registry must be a valid contract address
+     * 
+     * @param newRegistry The new Registry Contract address for this sector
+     * @param sectorId The sector ID to update
+     */
+    function updateRegistry(address newRegistry, uint256 sectorId) external {
+        // Contract-only access: must be called from a contract, not directly from EOA
+        require(tx.origin != msg.sender, "Cannot update registry directly from EOA - use your Registry Contract");
+        
+        // Sector must already exist
+        require(sectors[sectorId] != address(0), "Sector does not exist");
+        
+        // Player must own this sector
+        require(playerToSector[tx.origin] == sectorId, "Player does not own this sector");
+        
+        // Sector must belong to this player
+        require(sectorToOwner[sectorId] == tx.origin, "Sector does not belong to this player");
+        
+        // New registry must be a valid contract address
+        require(newRegistry != address(0), "New registry cannot be zero address");
+        require(newRegistry.code.length > 0, "New registry must be a contract");
+        
+        // Tmep store the old registry for the event
+        address oldRegistry = sectors[sectorId];
+        
+        // Update the sector registry
+        sectors[sectorId] = newRegistry;
+        
+        emit RegistryUpdated(sectorId, oldRegistry, newRegistry, tx.origin);
+    }
 
     /**
      * Get all active sector IDs
