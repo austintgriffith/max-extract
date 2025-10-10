@@ -15,6 +15,7 @@ interface IGame {
     function isPlayer(address player) external view returns (bool);
     function getVisibleChapters() external view returns (uint8[] memory);
     function state() external view returns (uint8); // 0 = Open, 1 = Active
+    function getPlayers() external view returns (address[] memory);
 }
 
 /**
@@ -56,6 +57,12 @@ contract MaxExtract {
     
     // Track which players have already broadcast a sector (one player, one sector)
     mapping(address => bool) public playerHasBroadcast;
+    
+    // Track player to sector ID mapping (one player, one sector)
+    mapping(address => uint256) public playerToSector;
+    
+    // Track sector ID to owner mapping for efficient lookups
+    mapping(uint256 => address) public sectorToOwner;
     
     // Events
     event SectorBroadcast(
@@ -137,6 +144,12 @@ contract MaxExtract {
         // Mark that this player has broadcast a sector
         playerHasBroadcast[tx.origin] = true;
         
+        // Store the player-to-sector mapping
+        playerToSector[tx.origin] = sectorId;
+        
+        // Store the sector-to-owner mapping for efficient lookups
+        sectorToOwner[sectorId] = tx.origin;
+        
         emit SectorBroadcast(sectorId, registry, tx.origin);
     }
 
@@ -165,6 +178,34 @@ contract MaxExtract {
      */
     function hasPlayerBroadcast(address player) external view returns (bool) {
         return playerHasBroadcast[player];
+    }
+
+    /**
+     * Get the sector ID for a specific player
+     * @param player The player address to check
+     * @return sectorId The sector ID owned by the player (0 if no sector)
+     */
+    function getPlayerSector(address player) external view returns (uint256 sectorId) {
+        return playerToSector[player];
+    }
+
+    /**
+     * Get all active sectors with their owners
+     * @return sectorIds Array of all active sector IDs
+     * @return owners Array of owner addresses corresponding to each sector
+     */
+    function getSectorsWithOwners() external view returns (uint256[] memory sectorIds, address[] memory owners) {
+        uint256 sectorCount = activeSectors.length;
+        sectorIds = new uint256[](sectorCount);
+        owners = new address[](sectorCount);
+        
+        for (uint256 i = 0; i < sectorCount; i++) {
+            uint256 sectorId = activeSectors[i];
+            sectorIds[i] = sectorId;
+            owners[i] = sectorToOwner[sectorId];
+        }
+        
+        return (sectorIds, owners);
     }
     
 }

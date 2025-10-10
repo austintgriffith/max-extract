@@ -188,4 +188,12 @@ contract Universe {
     ) {
         return (rollingEntropy, roundNumber, lastCommit);
     }
+
+    /**
+     * Get the main commitment hash for display purposes
+     * @return The current commitment hash
+     */
+    function getCommitmentHash() external view returns (bytes32) {
+        return commitmentHash;
+    }
 }

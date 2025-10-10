@@ -1,7 +1,6 @@
 "use client";
 
 import type { NextPage } from "next";
-import { ActiveSectors } from "~~/components/ActiveSectors";
 import { AnimatedSubtitle } from "~~/components/AnimatedSubtitle";
 import { ChapterLoader } from "~~/components/ChapterLoader";
 import { ConnectionStatus } from "~~/components/ConnectionStatus";
@@ -25,8 +24,6 @@ const Home: NextPage = () => {
         {/* Background Image Section with Story */}
         <StorySection>
           <ChapterLoader />
-
-          <ActiveSectors />
         </StorySection>
 
         {/* Game Buy-in Section */}
