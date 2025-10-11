@@ -220,7 +220,9 @@ const Dashboard: NextPage = () => {
           <div className="card-body">
             {/* Compact Game Status */}
             <div className="flex flex-wrap items-center justify-center gap-4 mb-8 p-2 bg-base-200 rounded-lg">
-              <div className="badge badge-lg badge-primary">
+              <div
+                className={`badge badge-lg ${gameInfo && Number(gameInfo[0]) === 1 ? "badge-success" : "badge-primary"}`}
+              >
                 {gameInfo ? formatGameState(Number(gameInfo[0])) : "Loading..."}
               </div>
               <div className="flex items-center gap-2">
