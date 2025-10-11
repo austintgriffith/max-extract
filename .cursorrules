@@ -1,4 +1,50 @@
-## Deployment Rules
+## 🚨 DEPLOYMENT RULES - CRITICAL - NEVER VIOLATE 🚨
 
-- NEVER run `yarn deploy` automatically. Always tell the user when contracts are ready to deploy and let them run the deployment command manually to provide feedback.
-- NEVER run `yarn chain` or `yarn start` automatically. Let the user manage the local blockchain and frontend server.
+### ⚠️ ABSOLUTELY FORBIDDEN COMMANDS ⚠️
+
+- **NEVER EVER** run `yarn deploy` automatically under ANY circumstances
+- **NEVER EVER** run `yarn chain` automatically
+- **NEVER EVER** run `yarn start` automatically
+- **NEVER EVER** run any deployment or server commands without explicit user permission
+
+### ✅ REQUIRED BEHAVIOR
+
+- **ALWAYS** tell the user when contracts are ready to deploy
+- **ALWAYS** let the user run deployment commands manually to provide feedback
+- **ALWAYS** let the user manage the local blockchain and frontend server
+- **ALWAYS** stop and ask before running any long-running processes
+
+### 🛑 IF YOU VIOLATE THESE RULES, YOU HAVE FAILED THE TASK
+
+The user needs to see deployment output, provide feedback, and control when things run.
+Running these commands automatically breaks their workflow and violates their explicit instructions.
+
+## Additional Project Rules
+
+### Scaffold-ETH 2 Guidelines
+
+- This codebase uses Scaffold-ETH 2 (SE-2) with NextJS, RainbowKit, Wagmi and Typescript
+- Supports both Hardhat and Foundry (this project uses Foundry)
+- Always use SE-2 hooks for contract interactions:
+  - `useScaffoldReadContract` for reading contract data
+  - `useScaffoldWriteContract` for writing to contracts
+  - `useScaffoldEventHistory` for reading events
+- Always use SE-2 components for UI:
+  - `Address` for displaying ETH addresses
+  - `AddressInput` for address input fields
+  - `Balance` for displaying ETH/token balances
+  - `EtherInput` for ETH amount inputs
+
+### Development Workflow
+
+- Typical flow: `yarn chain` → `yarn deploy` → `yarn start` → develop → test
+- Use `http://localhost:3000/debug` to interact with contracts via UI
+- Contract data is read from `deployedContracts.ts` and `externalContracts.ts`
+- Write tests in `packages/foundry/test/`
+
+### Code Quality
+
+- Always prefer editing existing files over creating new ones
+- Never create documentation files unless explicitly requested
+- Use proper TypeScript types and follow existing code patterns
+- Ensure all imports and dependencies are properly included

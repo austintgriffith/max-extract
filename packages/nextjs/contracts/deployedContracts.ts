@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xd18e3f31bd50b5c6e4cc740cb9ca637f6ecc2944",
+      address: "0x4ee02c9411818ca5ad92b46a115560c56667bf09",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1083,
+      deployedOnBlock: 1983,
     },
     Credits: {
-      address: "0xe61a6e7442ce84072db14423ffbbe2609908ee38",
+      address: "0x52367cd230c7ea449827c72bc280000d1244403a",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1084,
+      deployedOnBlock: 1984,
     },
     Game: {
-      address: "0xdce79d5f359c7ab52e3d6b45be2d0d382696d323",
+      address: "0xb8807ea2829e17ff22f88916d3cf58e99a1410f0",
       abi: [
         {
           type: "constructor",
@@ -1235,10 +1235,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1085,
+      deployedOnBlock: 1984,
     },
     MaxExtract: {
-      address: "0x86b3e65cdd7f9321118d5d4901a9800200c11b8a",
+      address: "0x240b9632a58219ec6d7a550ab8354ac3e60ac128",
       abi: [
         {
           type: "constructor",
@@ -1368,26 +1368,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getPlayerSector",
-          inputs: [
-            {
-              name: "player",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSectorsWithOwnersAndRegistries",
+          name: "getPlayerData",
           inputs: [],
           outputs: [
             {
@@ -1404,6 +1385,35 @@ const deployedContracts = {
               name: "registries",
               type: "address[]",
               internalType: "address[]",
+            },
+            {
+              name: "names",
+              type: "string[]",
+              internalType: "string[]",
+            },
+            {
+              name: "socials",
+              type: "string[]",
+              internalType: "string[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPlayerSector",
+          inputs: [
+            {
+              name: "player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -1581,7 +1591,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1085,
+      deployedOnBlock: 1984,
     },
   },
   42161: {
@@ -2947,26 +2957,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getPlayerSector",
-          inputs: [
-            {
-              name: "player",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSectorsWithOwnersAndRegistries",
+          name: "getPlayerData",
           inputs: [],
           outputs: [
             {
@@ -2983,6 +2974,35 @@ const deployedContracts = {
               name: "registries",
               type: "address[]",
               internalType: "address[]",
+            },
+            {
+              name: "names",
+              type: "string[]",
+              internalType: "string[]",
+            },
+            {
+              name: "socials",
+              type: "string[]",
+              internalType: "string[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPlayerSector",
+          inputs: [
+            {
+              name: "player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",

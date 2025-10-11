@@ -10,6 +10,8 @@ interface PlayerData {
   address: string;
   sectorId?: number;
   registryAddress?: string;
+  name?: string;
+  social?: string;
   sectorStats?: {
     name: string;
     status: string;
@@ -19,9 +21,38 @@ interface PlayerData {
 }
 
 const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: number; sectorId?: string }) => {
+  // Only allow social links that start with https://
+  const isValidSocialUrl = player.social && player.social.startsWith("https://");
+
+  // Truncate name if it's longer than 22 characters (length of "Skycaptain Bussywrecker")
+  const truncateName = (name: string) => {
+    if (name.length > 22) {
+      return name.slice(0, 22) + "...";
+    }
+    return name;
+  };
+
   return (
     <tr>
       <td className="text-xs">{index + 1}</td>
+      <td>
+        {player.name ? (
+          isValidSocialUrl ? (
+            <a
+              href={player.social}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary text-sm hover:link-primary-focus font-medium"
+            >
+              {truncateName(player.name)}
+            </a>
+          ) : (
+            <span className="text-sm font-medium">{truncateName(player.name)}</span>
+          )
+        ) : (
+          <span className="text-xs opacity-50">-</span>
+        )}
+      </td>
       <td>
         <Address address={player.address} size="sm" />
       </td>
@@ -29,9 +60,11 @@ const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: num
         {sectorId ? (
           <Link
             href={`/sector/${sectorId}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="badge badge-primary badge-sm hover:badge-primary-focus cursor-pointer"
           >
-            Sector {sectorId.slice(0, 8)}...
+            s{sectorId.slice(0, 8)}...
           </Link>
         ) : (
           <span className="badge badge-ghost badge-sm">No Sector</span>
@@ -66,6 +99,8 @@ const Dashboard: NextPage = () => {
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [playerSectors, setPlayerSectors] = useState<Map<string, string>>(new Map());
   const [playerRegistries, setPlayerRegistries] = useState<Map<string, string>>(new Map());
+  const [playerNames, setPlayerNames] = useState<Map<string, string>>(new Map());
+  const [playerSocials, setPlayerSocials] = useState<Map<string, string>>(new Map());
 
   // Read players from the Game contract
   const { data: playersData } = useScaffoldReadContract({
@@ -76,7 +111,7 @@ const Dashboard: NextPage = () => {
   // Read all sectors with their owners and registries in one call
   const { data: sectorsWithOwnersAndRegistries } = useScaffoldReadContract({
     contractName: "MaxExtract",
-    functionName: "getSectorsWithOwnersAndRegistries" as any,
+    functionName: "getPlayerData" as any,
   });
   // Read game info
   const { data: gameInfo } = useScaffoldReadContract({
@@ -124,31 +159,46 @@ const Dashboard: NextPage = () => {
     if (
       sectorsWithOwnersAndRegistries &&
       Array.isArray(sectorsWithOwnersAndRegistries) &&
-      sectorsWithOwnersAndRegistries.length >= 3
+      sectorsWithOwnersAndRegistries.length >= 5
     ) {
-      // Build maps of player addresses to their sector IDs and registry addresses
-      const [sectorIds, owners, registries] = sectorsWithOwnersAndRegistries as unknown as [
+      // Build maps of player addresses to their sector IDs, registry addresses, names, and socials
+      const [sectorIds, owners, registries, names, socials] = sectorsWithOwnersAndRegistries as unknown as [
         bigint[],
+        string[],
+        string[],
         string[],
         string[],
       ];
       const sectorMap = new Map<string, string>();
       const registryMap = new Map<string, string>();
+      const nameMap = new Map<string, string>();
+      const socialMap = new Map<string, string>();
 
       for (let i = 0; i < sectorIds.length; i++) {
         const sectorId = sectorIds[i].toString();
         const owner = owners[i];
         const registry = registries[i];
+        const name = names[i];
+        const social = socials[i];
+
         if (owner && sectorId !== "0") {
           sectorMap.set(owner.toLowerCase(), sectorId);
           if (registry && registry !== "0x0000000000000000000000000000000000000000") {
             registryMap.set(owner.toLowerCase(), registry);
+          }
+          if (name && name.trim() !== "") {
+            nameMap.set(owner.toLowerCase(), name);
+          }
+          if (social && social.trim() !== "") {
+            socialMap.set(owner.toLowerCase(), social);
           }
         }
       }
 
       setPlayerSectors(sectorMap);
       setPlayerRegistries(registryMap);
+      setPlayerNames(nameMap);
+      setPlayerSocials(socialMap);
     }
   }, [sectorsWithOwnersAndRegistries]);
 
@@ -240,6 +290,7 @@ const Dashboard: NextPage = () => {
                     <thead>
                       <tr>
                         <th>#</th>
+                        <th>Station Name</th>
                         <th>Address</th>
                         <th>Sector</th>
                         <th>Registry</th>
@@ -251,14 +302,11 @@ const Dashboard: NextPage = () => {
                       {players.map((player, index) => {
                         const sectorId = playerSectors.get(player.address.toLowerCase());
                         const registryAddress = playerRegistries.get(player.address.toLowerCase());
-                        const playerWithRegistry = { ...player, registryAddress };
+                        const name = playerNames.get(player.address.toLowerCase());
+                        const social = playerSocials.get(player.address.toLowerCase());
+                        const playerWithData = { ...player, registryAddress, name, social };
                         return (
-                          <PlayerRow
-                            key={player.address}
-                            player={playerWithRegistry}
-                            index={index}
-                            sectorId={sectorId}
-                          />
+                          <PlayerRow key={player.address} player={playerWithData} index={index} sectorId={sectorId} />
                         );
                       })}
                     </tbody>

@@ -511,6 +511,18 @@ export class GameServer {
         );
       }
 
+      // Check universe entropy status periodically
+      try {
+        const status = await this.checkUniverseEntropyStatus();
+        if (!status.isSet) {
+          console.log(
+            "⚠️  Universe entropy still not set - game functions limited"
+          );
+        }
+      } catch (error: any) {
+        this.debugLog("Failed to check universe entropy status", error);
+      }
+
       // Perform rolling commit-reveal for entropy generation
       await this.performRollingCommitReveal();
 
@@ -547,6 +559,163 @@ export class GameServer {
     simulate();
   }
 
+  private async checkUniverseEntropyStatus(): Promise<{
+    isSet: boolean;
+    commitmentMade: boolean;
+    canReveal: boolean;
+    universeContract: any;
+  }> {
+    // Check if Universe contract is deployed
+    const contracts =
+      deployedContracts[CHAIN_ID as keyof typeof deployedContracts];
+    if (!contracts || !contracts.Universe) {
+      throw new Error("Universe contract not found");
+    }
+
+    const universeContract = contracts.Universe;
+    if (!universeContract.address) {
+      throw new Error("Universe contract address is undefined");
+    }
+
+    // Check main universe entropy status
+    const isEntropySet = (await publicClient.readContract({
+      address: universeContract.address,
+      abi: universeContract.abi,
+      functionName: "isEntropySet",
+    })) as boolean;
+
+    // Get commit-reveal state
+    const commitRevealState = (await publicClient.readContract({
+      address: universeContract.address,
+      abi: universeContract.abi,
+      functionName: "getCommitRevealState",
+    })) as [boolean, bigint, boolean]; // [commitmentMade, commitBlock, entropySet]
+
+    const commitmentMade = commitRevealState[0];
+    const commitBlock = Number(commitRevealState[1]);
+    const canReveal =
+      commitmentMade && (await publicClient.getBlockNumber()) > commitBlock;
+
+    return {
+      isSet: isEntropySet,
+      commitmentMade,
+      canReveal,
+      universeContract,
+    };
+  }
+
+  private async waitForUniverseEntropy(): Promise<void> {
+    const ENTROPY_CHECK_INTERVAL = 10000; // 10 seconds
+    let checkCount = 0;
+
+    while (true) {
+      try {
+        checkCount++;
+        if (checkCount === 1) {
+          console.log("🔍 Checking universe entropy status...");
+        }
+
+        const status = await this.checkUniverseEntropyStatus();
+
+        if (status.isSet) {
+          console.log(
+            "✅ Universe entropy is set! Continuing with server startup..."
+          );
+          return;
+        }
+
+        // Compare GOD addresses (only on first check to avoid spam)
+        if (checkCount === 1) {
+          const contractGodAddress = (await publicClient.readContract({
+            address: status.universeContract.address,
+            abi: status.universeContract.abi,
+            functionName: "GOD",
+            args: [],
+          })) as string;
+
+          console.log(`🔍 Contract GOD address: ${contractGodAddress}`);
+          console.log(`🔍 Our GOD address: ${godAccount.address}`);
+
+          if (
+            contractGodAddress.toLowerCase() !==
+            godAccount.address.toLowerCase()
+          ) {
+            console.error(`❌ GOD address mismatch!`);
+            console.error(`   Contract expects: ${contractGodAddress}`);
+            console.error(`   We are using: ${godAccount.address}`);
+            console.error(`   Cannot set universe entropy automatically.`);
+            console.error(
+              `   Please set entropy manually or use correct GOD account.`
+            );
+            console.log(
+              `⏳ Will keep checking every ${
+                ENTROPY_CHECK_INTERVAL / 1000
+              } seconds...`
+            );
+          } else {
+            console.log(`✅ GOD addresses match!`);
+          }
+        }
+
+        // Provide status-specific messages
+        if (!status.commitmentMade) {
+          if (checkCount === 1) {
+            console.log(
+              "⚠️  No commitment made yet. Universe entropy must be set via commit-reveal process."
+            );
+            console.log("   Please run the entropy setup process:");
+            console.log("   1. Visit http://localhost:3000/entropy");
+            console.log(
+              "   2. Or use the GOD interface to commit and reveal entropy"
+            );
+            console.log(
+              `⏳ Waiting for entropy setup... (checking every ${
+                ENTROPY_CHECK_INTERVAL / 1000
+              }s)`
+            );
+          } else {
+            console.log("⏳ Still waiting for universe entropy commitment...");
+          }
+        } else if (status.commitmentMade && !status.canReveal) {
+          console.log(
+            "⏳ Commitment made, waiting for next block to allow reveal..."
+          );
+        } else if (status.commitmentMade && status.canReveal) {
+          if (checkCount === 1) {
+            console.log("⚠️  Commitment made but entropy not revealed yet.");
+            console.log("   Please complete the reveal process:");
+            console.log("   1. Visit http://localhost:3000/entropy");
+            console.log("   2. Or use the GOD interface to reveal entropy");
+            console.log(
+              `⏳ Waiting for entropy reveal... (checking every ${
+                ENTROPY_CHECK_INTERVAL / 1000
+              }s)`
+            );
+          } else {
+            console.log("⏳ Still waiting for entropy reveal...");
+          }
+        }
+
+        // Wait before checking again
+        await new Promise((resolve) =>
+          setTimeout(resolve, ENTROPY_CHECK_INTERVAL)
+        );
+      } catch (error: any) {
+        console.error(
+          `❌ Error checking universe entropy: ${
+            error.shortMessage || error.message
+          }`
+        );
+        console.log(
+          `⏳ Will retry in ${ENTROPY_CHECK_INTERVAL / 1000} seconds...`
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, ENTROPY_CHECK_INTERVAL)
+        );
+      }
+    }
+  }
+
   private async initializeRollingCommitReveal(): Promise<void> {
     try {
       this.debugLog("Initializing rolling commit-reveal system...");
@@ -567,27 +736,6 @@ export class GameServer {
           "⚠️  Universe contract address is undefined. Rolling commit-reveal disabled."
         );
         return;
-      }
-
-      // Compare GOD addresses
-      const contractGodAddress = (await publicClient.readContract({
-        address: universeContract.address,
-        abi: universeContract.abi,
-        functionName: "GOD",
-      })) as string;
-
-      console.log(`🔍 Contract GOD address: ${contractGodAddress}`);
-      console.log(`🔍 Our GOD address: ${godAccount.address}`);
-
-      if (
-        contractGodAddress.toLowerCase() !== godAccount.address.toLowerCase()
-      ) {
-        console.error(`❌ GOD address mismatch!`);
-        console.error(`   Contract expects: ${contractGodAddress}`);
-        console.error(`   We are using: ${godAccount.address}`);
-        return;
-      } else {
-        console.log(`✅ GOD addresses match!`);
       }
 
       // Initialize contract-specific RevealManager now that we have the address
@@ -660,6 +808,9 @@ export class GameServer {
   }
 
   public async start(port: number = 8000): Promise<void> {
+    // First, ensure universe entropy is set before starting any game operations
+    await this.waitForUniverseEntropy();
+
     // Initialize rolling commit-reveal system
     await this.initializeRollingCommitReveal();
 

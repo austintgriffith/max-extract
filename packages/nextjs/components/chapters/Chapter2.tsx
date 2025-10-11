@@ -42,8 +42,12 @@ export const Chapter2 = () => {
                 <strong>social:</strong> Your contact link (Twitter, Telegram, Signal, etc.)
               </div>
             </div>
+            <div className="mt-3 p-2 bg-error/10 rounded text-sm text-error">
+              Social URLs must start with <code className="bg-base-100 px-1 rounded">https://</code> to be displayed as
+              clickable links
+            </div>
             <div className="mt-3 p-2 bg-info/10 rounded text-sm text-info">
-              <strong>🔒 Constant:</strong> These values are hardcoded and cannot be changed after deployment
+              These values are hardcoded and cannot be changed after deployment
             </div>
             <div className="mt-2 p-2 bg-warning/10 rounded text-sm text-warning">
               <strong>TODO:</strong> More fields will be added as the game matures

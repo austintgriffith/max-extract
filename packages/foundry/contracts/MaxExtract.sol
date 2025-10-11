@@ -228,29 +228,86 @@ contract MaxExtract {
     }
 
     /**
-     * Get all active sectors with their owners and registry addresses
+     * Get all active sectors with their owners, registry addresses, and about contract info
      * @return sectorIds Array of all active sector IDs
      * @return owners Array of owner addresses corresponding to each sector
      * @return registries Array of registry contract addresses corresponding to each sector
+     * @return names Array of player names from about contracts (empty string if not available)
+     * @return socials Array of player social links from about contracts (empty string if not available)
      */
-    function getSectorsWithOwnersAndRegistries() external view returns (
+    function getPlayerData() external view returns (
         uint256[] memory sectorIds, 
         address[] memory owners, 
-        address[] memory registries
+        address[] memory registries,
+        string[] memory names,
+        string[] memory socials
     ) {
         uint256 sectorCount = activeSectors.length;
         sectorIds = new uint256[](sectorCount);
         owners = new address[](sectorCount);
         registries = new address[](sectorCount);
+        names = new string[](sectorCount);
+        socials = new string[](sectorCount);
         
         for (uint256 i = 0; i < sectorCount; i++) {
             uint256 sectorId = activeSectors[i];
             sectorIds[i] = sectorId;
             owners[i] = sectorToOwner[sectorId];
             registries[i] = sectors[sectorId];
+            
+            // Try to get name and social from about contract
+            (string memory playerName, string memory playerSocial) = _getAboutInfo(sectors[sectorId]);
+            names[i] = playerName;
+            socials[i] = playerSocial;
         }
         
-        return (sectorIds, owners, registries);
+        return (sectorIds, owners, registries, names, socials);
+    }
+    
+    /**
+     * Internal function to get name and social from a registry's about module
+     * @param registryAddress The registry contract address
+     * @return name The player name (empty string if not available)
+     * @return social The player social link (empty string if not available)
+     */
+    function _getAboutInfo(address registryAddress) internal view returns (string memory name, string memory social) {
+        // Default to empty strings
+        name = "";
+        social = "";
+        
+        if (registryAddress == address(0)) {
+            return (name, social);
+        }
+        
+        // Try to call modules("about") on the registry contract
+        (bool success, bytes memory data) = registryAddress.staticcall(
+            abi.encodeWithSignature("modules(string)", "about")
+        );
+        
+        if (success && data.length >= 32) {
+            address aboutAddress = abi.decode(data, (address));
+            
+            // Check if about address is set (not zero address)
+            if (aboutAddress != address(0)) {
+                // Try to read name from about contract
+                (bool nameSuccess, bytes memory nameData) = aboutAddress.staticcall(
+                    abi.encodeWithSignature("name()")
+                );
+                if (nameSuccess && nameData.length > 0) {
+                    name = abi.decode(nameData, (string));
+                }
+                
+                // Try to read social from about contract
+                (bool socialSuccess, bytes memory socialData) = aboutAddress.staticcall(
+                    abi.encodeWithSignature("social()")
+                );
+                if (socialSuccess && socialData.length > 0) {
+                    social = abi.decode(socialData, (string));
+                }
+            }
+        }
+        
+        return (name, social);
     }
     
 }
