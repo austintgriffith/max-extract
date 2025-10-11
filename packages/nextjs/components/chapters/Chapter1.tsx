@@ -75,8 +75,16 @@ export const Chapter1 = () => {
             space.
           </p>
           <p className="mb-3">
+            Your sector will start as <strong>&ldquo;class 0&rdquo; airspace</strong>, only the toughest bastards will
+            venture here.
+          </p>
+          <p className="mb-3">
             Pilots that enter this space will interact with your registry to discover what contracts are available for
             interaction.
+          </p>
+          <p className="mb-3">
+            Once your satellite is deployed, pilots who successfully score big asteroids and escape the sector will tip
+            your registry contract as a reward for providing valuable services!
           </p>
           <p className="mb-4">
             After successfully broadcasting, you can use the{" "}
@@ -93,6 +101,15 @@ export const Chapter1 = () => {
             <pre className="text-sm overflow-x-auto">
               <code className="text-accent">{`function updateRegistry() external`}</code>
             </pre>
+          </div>
+
+          {/* Factory Contract TODO */}
+          <div className="bg-warning/10 border border-warning rounded-lg p-4 mt-6">
+            <p className="text-warning font-semibold text-sm">
+              [TODO: make factory contract that will deploy a registry for anyone who sends eth to the factory (so noobs
+              can bet and setup a registry without knowing any solidity, but naming their player/station will mean
+              deploying their first contract)]
+            </p>
           </div>
         </div>
       </div>

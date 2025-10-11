@@ -217,6 +217,19 @@ export default function GodPage() {
     }
   };
 
+  const handleUnlockChapter2 = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "showChapters",
+        args: [[1, 2]], // Array containing chapters 1 and 2
+      });
+      notification.success("Chapter 2 unlocked! Both chapters 1 and 2 are now visible!");
+    } catch (error) {
+      console.error("Error unlocking chapter 2:", error);
+      notification.error("Error unlocking chapter 2");
+    }
+  };
+
   if (!isGod) {
     return (
       <div className="flex items-center flex-col flex-grow pt-8">
@@ -344,15 +357,22 @@ export default function GodPage() {
             >
               📖 Make Chapter 1 Visible
             </button>
-            <div className="flex items-center justify-center text-sm opacity-70">
-              More chapter controls coming soon...
-            </div>
+            <button
+              className={`btn btn-lg ${visibleChapters && visibleChapters.includes(2) ? "btn-disabled" : "btn-secondary"}`}
+              onClick={handleUnlockChapter2}
+              disabled={visibleChapters && visibleChapters.includes(2)}
+            >
+              🚀 Unlock Chapter 2: The Announcement
+            </button>
           </div>
 
           {/* Info */}
           <div className="mt-4 text-sm opacity-70">
             <p>
               <strong>Chapter 1:</strong> Required for players to broadcast sectors via MaxExtract protocol
+            </p>
+            <p>
+              <strong>Chapter 2:</strong> Players deploy About contracts with name/social info to increase tip potential
             </p>
             <p>
               <strong>Note:</strong> Only visible chapters can be accessed by players in the game
