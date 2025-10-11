@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { Starfield } from "./Starfield";
 import { Asteroid, Particle, SECTOR_CONFIG, SectorSnapshot, Ship, Vector2D } from "~~/types/sector";
 
 interface SectorCanvasProps {
   sectorData: SectorSnapshot | null;
   particles: Particle[];
+  sectorId: string;
 }
 
 // Utility functions
@@ -28,7 +30,7 @@ const calculateParticlePosition = (particle: Particle, currentTime: number): Vec
   };
 };
 
-export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
+export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasProps) => {
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const baseCanvasRef = useRef<HTMLCanvasElement>(null);
   const foregroundCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -119,12 +121,11 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
     const canvasWidth = sectorWidth + 2 * padding;
     const canvasHeight = sectorHeight + 2 * padding;
 
-    // Clear entire canvas
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // Clear entire canvas (transparent since starfield is underneath)
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     // Draw 10x10 grid to show boundaries
-    ctx.strokeStyle = "#222";
+    ctx.strokeStyle = "#444422"; // Lighter with yellow tint
     ctx.lineWidth = 1;
     const gridSize = 10;
     const cellWidth = sectorWidth / gridSize;
@@ -149,7 +150,7 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
     }
 
     // Draw sector border (thicker than grid)
-    ctx.strokeStyle = "#555";
+    ctx.strokeStyle = "#666633"; // Lighter with yellow tint to match grid
     ctx.lineWidth = 3;
     ctx.strokeRect(padding, padding, sectorWidth, sectorHeight);
 
@@ -469,12 +470,21 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
 
   return (
     <div className="flex justify-center relative">
-      {/* Background canvas for grid and field - lowest z-index */}
+      {/* Starfield canvas - bottom-most layer */}
+      <Starfield
+        sectorId={sectorId}
+        width={canvasWidth}
+        height={canvasHeight}
+        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-0 pointer-events-none"
+      />
+
+      {/* Background canvas for grid and field */}
       <canvas
         ref={backgroundCanvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="border border-base-300 rounded-lg bg-black max-w-full relative z-0"
+        className="border border-base-300 rounded-lg max-w-full relative z-10"
+        style={{ background: "transparent" }}
       />
 
       {/* Base canvas for base structures - middle z-index */}
@@ -482,7 +492,7 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         ref={baseCanvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none"
+        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none"
         style={{ background: "transparent" }}
       />
 
@@ -491,7 +501,7 @@ export const SectorCanvas = ({ sectorData, particles }: SectorCanvasProps) => {
         ref={foregroundCanvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none"
+        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none"
         style={{ background: "transparent" }}
       />
     </div>

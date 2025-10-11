@@ -86,7 +86,7 @@ const SectorPage = () => {
       <div className="card bg-base-100 shadow-xl mb-6">
         <div className="card-body">
           <h2 className="card-title">Sector View</h2>
-          <SectorCanvas sectorData={sectorData} particles={particles} />
+          <SectorCanvas sectorData={sectorData} particles={particles} sectorId={sectorId} />
         </div>
       </div>
 
