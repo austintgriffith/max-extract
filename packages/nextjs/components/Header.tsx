@@ -5,9 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import { Bars3Icon, BookOpenIcon, ChartBarIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, BookOpenIcon, ChartBarIcon, DocumentTextIcon, MapIcon } from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { usePlayerSector } from "~~/hooks/usePlayerSector";
 
 type HeaderMenuLink = {
   label: string;
@@ -35,6 +36,7 @@ export const menuLinks: HeaderMenuLink[] = [
 
 export const HeaderMenuLinks = () => {
   const pathname = usePathname();
+  const { sectorId, connectedAddress } = usePlayerSector();
 
   return (
     <>
@@ -55,6 +57,18 @@ export const HeaderMenuLinks = () => {
           </li>
         );
       })}
+      {connectedAddress && sectorId !== "0" && (
+        <li key="sector">
+          <Link
+            href={`/sector/${sectorId}`}
+            passHref
+            className="badge badge-primary badge-md hover:badge-primary-focus cursor-pointer gap-2 flex items-center mt-1"
+          >
+            <MapIcon className="h-4 w-4" />
+            <span>s{sectorId.slice(0, 8)}...</span>
+          </Link>
+        </li>
+      )}
     </>
   );
 };
