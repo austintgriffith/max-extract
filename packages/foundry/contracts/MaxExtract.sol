@@ -67,15 +67,15 @@ contract MaxExtract {
     // Events
     event SectorBroadcast(
         uint256 indexed sectorId, 
-        address indexed registry, 
-        address indexed broadcaster
+        address registry, 
+        address indexed player
     );
     
     event RegistryUpdated(
         uint256 indexed sectorId,
-        address indexed oldRegistry,
-        address indexed newRegistry,
-        address player
+        address oldRegistry,
+        address newRegistry,
+        address indexed player
     );
 
     // Constructor - Max's final act
@@ -98,10 +98,9 @@ contract MaxExtract {
      * Sector ID is automatically generated using universe entropy, tx.origin, 
      * msg.sender, contract address, and a nonce for uniqueness.
      * 
-     * @param registry The Registry Contract address for this sector
      * @return sectorId The generated sector ID that was claimed
      */
-    function broadcast(address registry) external returns (uint256 sectorId) {
+    function broadcast() external returns (uint256 sectorId) {
         // Contract-only access: must be called from a contract, not directly from EOA
         require(tx.origin != msg.sender, "Cannot broadcast directly from EOA - use your Registry Contract");
         
@@ -128,9 +127,9 @@ contract MaxExtract {
         // Universe entropy must be set for sector generation
         require(universe.isEntropySet(), "Universe entropy not yet set");
         
-        // Registry must be a valid contract address
-        require(registry != address(0), "Registry cannot be zero address");
-        require(registry.code.length > 0, "Registry must be a contract");
+        // msg.sender must be a valid contract address (already validated by tx.origin != msg.sender check)
+        require(msg.sender != address(0), "Registry cannot be zero address");
+        require(msg.sender.code.length > 0, "Registry must be a contract");
         
         // Generate unique sector ID using entropy, addresses, and nonce
         bytes32 universeEntropy = universe.getEntropy();
@@ -143,7 +142,7 @@ contract MaxExtract {
         )));
         
         // Register the sector in Max's ledger
-        sectors[sectorId] = registry;
+        sectors[sectorId] = msg.sender;
         
         // Track active sectors
         activeSectors.push(sectorId);
@@ -157,7 +156,7 @@ contract MaxExtract {
         // Store the sector-to-owner mapping for efficient lookups
         sectorToOwner[sectorId] = tx.origin;
         
-        emit SectorBroadcast(sectorId, registry, tx.origin);
+        emit SectorBroadcast(sectorId, msg.sender, tx.origin);
     }
 
     /**
@@ -165,38 +164,32 @@ contract MaxExtract {
      * 
      * Requirements:
      * 1. Must be called from a contract (tx.origin != msg.sender)
-     * 2. Sector must already exist (sectors[sectorId] != address(0))
-     * 3. Player must own the sector (playerToSector[tx.origin] == sectorId)
-     * 4. Sector must belong to the player (sectorToOwner[sectorId] == tx.origin)
-     * 5. New registry must be a valid contract address
-     * 
-     * @param newRegistry The new Registry Contract address for this sector
-     * @param sectorId The sector ID to update
+     * 2. Player must have a sector (playerToSector[tx.origin] != 0)
+     * 3. msg.sender must be a valid contract address
+     * 4. msg.sender must be different from the current registry address
      */
-    function updateRegistry(address newRegistry, uint256 sectorId) external {
+    function updateRegistry() external {
         // Contract-only access: must be called from a contract, not directly from EOA
         require(tx.origin != msg.sender, "Cannot update registry directly from EOA - use your Registry Contract");
         
-        // Sector must already exist
-        require(sectors[sectorId] != address(0), "Sector does not exist");
+        // Get the player's sector ID
+        uint256 sectorId = playerToSector[tx.origin];
+        require(sectorId != 0, "Player does not have a sector");
         
-        // Player must own this sector
-        require(playerToSector[tx.origin] == sectorId, "Player does not own this sector");
+        // msg.sender must be a valid contract address (already validated by tx.origin != msg.sender check)
+        require(msg.sender != address(0), "New registry cannot be zero address");
+        require(msg.sender.code.length > 0, "New registry must be a contract");
         
-        // Sector must belong to this player
-        require(sectorToOwner[sectorId] == tx.origin, "Sector does not belong to this player");
+        // Get the current registry for this sector
+        address currentRegistry = sectors[sectorId];
         
-        // New registry must be a valid contract address
-        require(newRegistry != address(0), "New registry cannot be zero address");
-        require(newRegistry.code.length > 0, "New registry must be a contract");
-        
-        // Tmep store the old registry for the event
-        address oldRegistry = sectors[sectorId];
+        // Ensure the new registry is different from the current one
+        require(msg.sender != currentRegistry, "Cannot update registry to the same contract - you are already using this registry address");
         
         // Update the sector registry
-        sectors[sectorId] = newRegistry;
+        sectors[sectorId] = msg.sender;
         
-        emit RegistryUpdated(sectorId, oldRegistry, newRegistry, tx.origin);
+        emit RegistryUpdated(sectorId, currentRegistry, msg.sender, tx.origin);
     }
 
     /**
@@ -235,22 +228,29 @@ contract MaxExtract {
     }
 
     /**
-     * Get all active sectors with their owners
+     * Get all active sectors with their owners and registry addresses
      * @return sectorIds Array of all active sector IDs
      * @return owners Array of owner addresses corresponding to each sector
+     * @return registries Array of registry contract addresses corresponding to each sector
      */
-    function getSectorsWithOwners() external view returns (uint256[] memory sectorIds, address[] memory owners) {
+    function getSectorsWithOwnersAndRegistries() external view returns (
+        uint256[] memory sectorIds, 
+        address[] memory owners, 
+        address[] memory registries
+    ) {
         uint256 sectorCount = activeSectors.length;
         sectorIds = new uint256[](sectorCount);
         owners = new address[](sectorCount);
+        registries = new address[](sectorCount);
         
         for (uint256 i = 0; i < sectorCount; i++) {
             uint256 sectorId = activeSectors[i];
             sectorIds[i] = sectorId;
             owners[i] = sectorToOwner[sectorId];
+            registries[i] = sectors[sectorId];
         }
         
-        return (sectorIds, owners);
+        return (sectorIds, owners, registries);
     }
     
 }

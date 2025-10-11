@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
+      address: "0xa7b987f505366630109de019862c183e690a040b",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1,
+      deployedOnBlock: 1070,
     },
     Credits: {
-      address: "0xa15bb66138824a1c7167f5e85b957d04dd34e468",
+      address: "0x3ebd66861c1d8f298c20ed56506b063206103227",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2,
+      deployedOnBlock: 1071,
     },
     Game: {
-      address: "0xb19b36b1456e65e3a6d514d3f715f204bd59f431",
+      address: "0xbf3cd410aa5a3e9da22fd9109add5d3655fcb1c5",
       abi: [
         {
           type: "constructor",
@@ -1235,10 +1235,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3,
+      deployedOnBlock: 1071,
     },
     MaxExtract: {
-      address: "0x8ce361602b935680e8dec218b820ff5056beb7af",
+      address: "0xc8c25aab3eea991e083d2d0240ee4d693c59bdac",
       abi: [
         {
           type: "constructor",
@@ -1317,13 +1317,7 @@ const deployedContracts = {
         {
           type: "function",
           name: "broadcast",
-          inputs: [
-            {
-              name: "registry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
+          inputs: [],
           outputs: [
             {
               name: "sectorId",
@@ -1393,7 +1387,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getSectorsWithOwners",
+          name: "getSectorsWithOwnersAndRegistries",
           inputs: [],
           outputs: [
             {
@@ -1403,6 +1397,11 @@ const deployedContracts = {
             },
             {
               name: "owners",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "registries",
               type: "address[]",
               internalType: "address[]",
             },
@@ -1518,6 +1517,44 @@ const deployedContracts = {
           stateMutability: "view",
         },
         {
+          type: "function",
+          name: "updateRegistry",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "RegistryUpdated",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "oldRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "newRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "event",
           name: "SectorBroadcast",
           inputs: [
@@ -1530,11 +1567,11 @@ const deployedContracts = {
             {
               name: "registry",
               type: "address",
-              indexed: true,
+              indexed: false,
               internalType: "address",
             },
             {
-              name: "broadcaster",
+              name: "player",
               type: "address",
               indexed: true,
               internalType: "address",
@@ -1544,7 +1581,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3,
+      deployedOnBlock: 1071,
     },
   },
   42161: {
@@ -2859,13 +2896,7 @@ const deployedContracts = {
         {
           type: "function",
           name: "broadcast",
-          inputs: [
-            {
-              name: "registry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
+          inputs: [],
           outputs: [
             {
               name: "sectorId",
@@ -2935,7 +2966,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getSectorsWithOwners",
+          name: "getSectorsWithOwnersAndRegistries",
           inputs: [],
           outputs: [
             {
@@ -2945,6 +2976,11 @@ const deployedContracts = {
             },
             {
               name: "owners",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "registries",
               type: "address[]",
               internalType: "address[]",
             },
@@ -3060,6 +3096,44 @@ const deployedContracts = {
           stateMutability: "view",
         },
         {
+          type: "function",
+          name: "updateRegistry",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "RegistryUpdated",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "oldRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "newRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "event",
           name: "SectorBroadcast",
           inputs: [
@@ -3072,11 +3146,11 @@ const deployedContracts = {
             {
               name: "registry",
               type: "address",
-              indexed: true,
+              indexed: false,
               internalType: "address",
             },
             {
-              name: "broadcaster",
+              name: "player",
               type: "address",
               indexed: true,
               internalType: "address",

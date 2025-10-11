@@ -9,6 +9,7 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 interface PlayerData {
   address: string;
   sectorId?: number;
+  registryAddress?: string;
   sectorStats?: {
     name: string;
     status: string;
@@ -37,6 +38,13 @@ const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: num
         )}
       </td>
       <td>
+        {player.registryAddress ? (
+          <Address address={player.registryAddress} size="sm" />
+        ) : (
+          <span className="badge badge-ghost badge-sm">No Registry</span>
+        )}
+      </td>
+      <td>
         {player.sectorStats ? (
           <span className="badge badge-success badge-sm">{player.sectorStats.status}</span>
         ) : (
@@ -57,6 +65,7 @@ const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: num
 const Dashboard: NextPage = () => {
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [playerSectors, setPlayerSectors] = useState<Map<string, string>>(new Map());
+  const [playerRegistries, setPlayerRegistries] = useState<Map<string, string>>(new Map());
 
   // Read players from the Game contract
   const { data: playersData } = useScaffoldReadContract({
@@ -64,11 +73,10 @@ const Dashboard: NextPage = () => {
     functionName: "getPlayers",
   });
 
-  // Read all sectors with their owners in one call
-  // Note: This function will be available after contract deployment
-  const { data: sectorsWithOwners } = useScaffoldReadContract({
+  // Read all sectors with their owners and registries in one call
+  const { data: sectorsWithOwnersAndRegistries } = useScaffoldReadContract({
     contractName: "MaxExtract",
-    functionName: "getSectorsWithOwners" as any,
+    functionName: "getSectorsWithOwnersAndRegistries" as any,
   });
   // Read game info
   const { data: gameInfo } = useScaffoldReadContract({
@@ -113,22 +121,36 @@ const Dashboard: NextPage = () => {
   }, [playersData]);
 
   useEffect(() => {
-    if (sectorsWithOwners && Array.isArray(sectorsWithOwners) && sectorsWithOwners.length >= 2) {
-      // Build a map of player addresses to their sector IDs
-      const [sectorIds, owners] = sectorsWithOwners as unknown as [bigint[], string[]];
+    if (
+      sectorsWithOwnersAndRegistries &&
+      Array.isArray(sectorsWithOwnersAndRegistries) &&
+      sectorsWithOwnersAndRegistries.length >= 3
+    ) {
+      // Build maps of player addresses to their sector IDs and registry addresses
+      const [sectorIds, owners, registries] = sectorsWithOwnersAndRegistries as unknown as [
+        bigint[],
+        string[],
+        string[],
+      ];
       const sectorMap = new Map<string, string>();
+      const registryMap = new Map<string, string>();
 
       for (let i = 0; i < sectorIds.length; i++) {
         const sectorId = sectorIds[i].toString();
         const owner = owners[i];
+        const registry = registries[i];
         if (owner && sectorId !== "0") {
           sectorMap.set(owner.toLowerCase(), sectorId);
+          if (registry && registry !== "0x0000000000000000000000000000000000000000") {
+            registryMap.set(owner.toLowerCase(), registry);
+          }
         }
       }
 
       setPlayerSectors(sectorMap);
+      setPlayerRegistries(registryMap);
     }
-  }, [sectorsWithOwners]);
+  }, [sectorsWithOwnersAndRegistries]);
 
   const formatEntropy = (entropyValue: string | undefined) => {
     if (!entropyValue || entropyValue === "0x0000000000000000000000000000000000000000000000000000000000000000") {
@@ -220,6 +242,7 @@ const Dashboard: NextPage = () => {
                         <th>#</th>
                         <th>Address</th>
                         <th>Sector</th>
+                        <th>Registry</th>
                         <th>Status</th>
                         <th>Score</th>
                       </tr>
@@ -227,7 +250,16 @@ const Dashboard: NextPage = () => {
                     <tbody>
                       {players.map((player, index) => {
                         const sectorId = playerSectors.get(player.address.toLowerCase());
-                        return <PlayerRow key={player.address} player={player} index={index} sectorId={sectorId} />;
+                        const registryAddress = playerRegistries.get(player.address.toLowerCase());
+                        const playerWithRegistry = { ...player, registryAddress };
+                        return (
+                          <PlayerRow
+                            key={player.address}
+                            player={playerWithRegistry}
+                            index={index}
+                            sectorId={sectorId}
+                          />
+                        );
                       })}
                     </tbody>
                   </table>

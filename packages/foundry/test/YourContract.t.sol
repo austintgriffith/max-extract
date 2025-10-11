@@ -18,28 +18,35 @@ contract MaxExtractTest is Test {
     function setUp() public {
         testOwner = vm.addr(1);
         testUser = vm.addr(2);
-        universe = new Universe(testOwner);
+        universe = new Universe();
         credits = new Credits(testOwner);
         game = new Game(address(universe), 0.01 ether);
         maxExtract = new MaxExtract(address(universe), address(game));
         
-        // Set up universe entropy for testing
-        vm.prank(testOwner);
-        universe.setEntropyDirect(keccak256("test-entropy"));
+        // Set up universe entropy for testing using commit-reveal
+        address god = universe.GOD();
+        bytes32 testEntropy = keccak256("test-entropy");
+        uint256 randomNumber = 12345;
+        bytes32 commitHash = keccak256(abi.encodePacked(randomNumber, testEntropy));
+        
+        vm.prank(god);
+        universe.commit(commitHash);
+        
+        vm.prank(god);
+        universe.reveal(randomNumber);
     }
 
     function testContractsDeployment() public view {
-        require(universe.GOD() == testOwner, "Universe GOD not set correctly");
+        require(universe.GOD() != address(0), "Universe GOD not set correctly");
         require(credits.owner() == testOwner, "Credits owner not set correctly");
         require(address(maxExtract.universe()) != address(0), "MaxExtract universe not set correctly");
     }
 
     function testMaxExtractRules() public view {
-        // Test the three eternal rules
-        (string memory rule1, string memory rule2, string memory rule3) = maxExtract.getRules();
-        assertEq(rule1, "You will not attack other pirates who have signed the oath");
-        assertEq(rule2, "You will claim asteroids fairly, not steal them by force");
-        assertEq(rule3, "Your reputation will be recorded, traceable, and unforgeable");
+        // Test the three eternal rules using individual constants
+        assertEq(maxExtract.RULE_ONE(), "You will not attack other pirates who have signed the oath");
+        assertEq(maxExtract.RULE_TWO(), "You will claim asteroids fairly, not steal them by force");
+        assertEq(maxExtract.RULE_THREE(), "Your reputation will be recorded, traceable, and unforgeable");
     }
 
     function testMaxExtractConstants() public view {
@@ -63,15 +70,16 @@ contract MaxExtractTest is Test {
         
         // Should fail because game requirements are not met
         vm.expectRevert("Game is in open mode - broadcasting not allowed");
-        mock.callBroadcast(mockRegistry);
+        mock.callBroadcast();
     }
 
     function testBroadcastInvalidRegistry() public {
         MockRegistry mock = new MockRegistry(payable(address(maxExtract)));
         
-        // Test zero address - should fail before game checks
-        vm.expectRevert("Registry cannot be zero address");
-        mock.callBroadcast(address(0));
+        // Since msg.sender is now used as the registry, and MockRegistry is a valid contract,
+        // this test should fail on game requirements instead
+        vm.expectRevert("Game is in open mode - broadcasting not allowed");
+        mock.callBroadcast();
     }
 
     // Event for testing
@@ -171,7 +179,7 @@ contract MockRegistry {
         maxExtract = MaxExtract(_maxExtract);
     }
     
-    function callBroadcast(address registry) external returns (uint256) {
-        return maxExtract.broadcast(registry);
+    function callBroadcast() external returns (uint256) {
+        return maxExtract.broadcast();
     }
 }
