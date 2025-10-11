@@ -618,35 +618,6 @@ export default function GodPage() {
             </div>
           )}
         </div>
-
-        {/* Instructions */}
-        <div className="bg-base-200 rounded-3xl p-6 mt-6">
-          <h3 className="text-xl font-bold mb-4">How it Works</h3>
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>1. Generate:</strong> Create a large cryptographically secure random number
-            </p>
-            <p>
-              <strong>2. Commit:</strong> Hash the random number and commit the hash on-chain
-            </p>
-            <p>
-              <strong>3. Wait:</strong> The commitment is recorded with the current block number
-            </p>
-            <p>
-              <strong>4. Reveal:</strong> In a subsequent block, reveal the random number
-            </p>
-            <p>
-              <strong>5. Entropy:</strong> Final entropy = keccak256(randomNumber + commitBlockHash)
-            </p>
-            <p className="text-warning">
-              <strong>⚠️ Important:</strong> Keep your random number secret until the reveal step!
-            </p>
-            <p className="text-info">
-              <strong>🔒 Security:</strong> The commit block hash adds unpredictable entropy that even God cannot
-              control!
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

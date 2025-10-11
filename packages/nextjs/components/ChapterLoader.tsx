@@ -33,7 +33,7 @@ export const ChapterLoader = () => {
       <div className="bg-base-300 rounded-3xl p-6 mb-6">
         <div className="text-center opacity-70">
           <h3 className="text-xl font-bold mb-2">📚 No Chapters Available</h3>
-          <p>Chapters will appear here as they are unlocked by the game master.</p>
+          <p>Chapters will appear here as they are unlocked.</p>
         </div>
       </div>
     );

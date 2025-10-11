@@ -218,28 +218,24 @@ const Dashboard: NextPage = () => {
       <div className="px-5 w-full max-w-4xl">
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
-            <h2 className="card-title text-2xl mb-6">Game Status</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div>
-                <div className="text-sm opacity-70 mb-1">Game State</div>
-                <div className="text-lg font-semibold">
-                  {gameInfo ? formatGameState(Number(gameInfo[0])) : "Loading..."}
-                </div>
+            {/* Compact Game Status */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 p-2 bg-base-200 rounded-lg">
+              <div className="badge badge-lg badge-primary">
+                {gameInfo ? formatGameState(Number(gameInfo[0])) : "Loading..."}
               </div>
-              <div>
-                <div className="text-sm opacity-70 mb-1">Players</div>
-                <div className="text-lg font-semibold">{gameInfo ? Number(gameInfo[1]).toString() : "0"}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-70">Players:</span>
+                <span className="font-mono">{gameInfo ? Number(gameInfo[1]).toString() : "0"}</span>
               </div>
-              <div>
-                <div className="text-sm opacity-70 mb-1">Buy-in Price</div>
-                <div className="text-lg font-semibold">{gameInfo ? `${Number(gameInfo[2]) / 1e18} ETH` : "0 ETH"}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-70">Buy-in:</span>
+                <span className="font-mono">{gameInfo ? `${Number(gameInfo[2]) / 1e18}Ξ` : "0Ξ"}</span>
               </div>
-              <div>
-                <div className="text-sm opacity-70 mb-1">Total Pot</div>
-                <div className="text-lg font-semibold">
-                  {gameInfo ? `${(Number(gameInfo[1]) * Number(gameInfo[2])) / 1e18} ETH` : "0 ETH"}
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm opacity-70">Pot:</span>
+                <span className="font-mono">
+                  {gameInfo ? `${(Number(gameInfo[1]) * Number(gameInfo[2])) / 1e18}Ξ` : "0Ξ"}
+                </span>
               </div>
             </div>
 
