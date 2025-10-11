@@ -2,7 +2,10 @@ import express from "express";
 import { createServer } from "http";
 import { Sector } from "./Sector";
 import { SECTOR_CONFIG } from "./types";
-import { BlockchainManager, BlockchainConfig } from "./managers/BlockchainManager";
+import {
+  BlockchainManager,
+  BlockchainConfig,
+} from "./managers/BlockchainManager";
 import { EntropyManager } from "./managers/EntropyManager";
 import { WebSocketManager } from "./managers/WebSocketManager";
 import { RouteManager } from "./managers/RouteManager";
@@ -26,7 +29,7 @@ export class GameServer {
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
-    
+
     // Initialize Express app and server
     this.app = express();
     this.server = createServer(this.app);
@@ -45,7 +48,11 @@ export class GameServer {
     // Initialize managers
     this.blockchainManager = new BlockchainManager(blockchainConfig, debugMode);
     this.entropyManager = new EntropyManager(this.blockchainManager, debugMode);
-    this.webSocketManager = new WebSocketManager(this.server, this.sectors, debugMode);
+    this.webSocketManager = new WebSocketManager(
+      this.server,
+      this.sectors,
+      debugMode
+    );
     this.routeManager = new RouteManager(
       this.app,
       this.sectors,
@@ -87,7 +94,9 @@ export class GameServer {
       this.debugLog("Loading sectors from contract...");
 
       const activeSectors = await this.blockchainManager.getActiveSectors();
-      this.debugLog(`Found ${activeSectors.length} active sectors from contract`);
+      this.debugLog(
+        `Found ${activeSectors.length} active sectors from contract`
+      );
 
       let newSectorsAdded = false;
       for (const sectorId of activeSectors) {
