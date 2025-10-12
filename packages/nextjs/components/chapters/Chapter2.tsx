@@ -61,18 +61,9 @@ export const Chapter2 = () => {
             modules mapping:
           </p>
 
-          {/* Code Example */}
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`// Call this function on your Registry contract
-setModule("about", address(yourAboutContract));`}</code>
-            </pre>
-          </div>
-
           <p className="mb-4 text-sm text-base-content/70">
-            You&apos;ll need to implement a <code className="bg-base-100 px-2 py-1 rounded text-sm">setModule</code>{" "}
-            function (or similar) in your Registry contract that allows you to update the modules mapping with proper
-            access control.
+            You probably have a <code className="bg-base-100 px-2 py-1 rounded text-sm">setModule</code> function (or
+            similar) in your Registry contract that allows you to update the modules mapping with proper access control.
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Why This Matters</h3>

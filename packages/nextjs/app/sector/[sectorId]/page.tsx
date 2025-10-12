@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -16,6 +16,7 @@ const SectorPage = () => {
   const params = useParams();
   const sectorId = params?.sectorId as string;
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   // Custom hooks for data management
   const { sectorData, setSectorData, error } = useSectorData({ sectorId });
@@ -29,6 +30,26 @@ const SectorPage = () => {
   useVectorMatching({ sectorData, setSectorData, wsRef, sectorId });
   useParticleCleanup({ particles, setParticles, setSectorData });
 
+  // Auto-reload functionality when there's an error
+  useEffect(() => {
+    if (error) {
+      setCountdown(5);
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev === null || prev <= 1) {
+            window.location.reload();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else {
+      setCountdown(null);
+    }
+  }, [error]);
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -37,7 +58,14 @@ const SectorPage = () => {
           Back to Home
         </Link>
         <div className="alert alert-error">
-          <span>{error}</span>
+          <div>
+            <span>{error}</span>
+            {countdown !== null && (
+              <div className="mt-2 text-sm">
+                Auto-reloading in {countdown} second{countdown !== 1 ? "s" : ""}...
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );

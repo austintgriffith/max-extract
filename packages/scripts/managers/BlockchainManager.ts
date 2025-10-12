@@ -137,6 +137,7 @@ export class BlockchainManager {
       address: maxExtractContract.address as `0x${string}`,
       abi: maxExtractContract.abi,
       functionName: "getActiveSectors",
+      args: [],
     })) as bigint[];
 
     this.debugLog(`Found ${activeSectors.length} active sectors from contract`);
@@ -173,7 +174,7 @@ export class BlockchainManager {
       address: contractAddress as `0x${string}`,
       abi,
       functionName,
-      args,
+      args: args || [],
     });
   }
 
@@ -190,7 +191,7 @@ export class BlockchainManager {
       address: contractAddress as `0x${string}`,
       abi,
       functionName,
-      args,
+      args: args || [],
     });
 
     this.debugLog(`Transaction sent: ${hash}`);
@@ -210,7 +211,7 @@ export class BlockchainManager {
       address: contractAddress as `0x${string}`,
       abi,
       functionName,
-      args,
+      args: args || [],
       account: this.godAccount.address,
     });
   }
