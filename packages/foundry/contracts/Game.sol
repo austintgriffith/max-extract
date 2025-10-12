@@ -25,6 +25,9 @@ contract Game {
     address[] public pilots;
     uint256 public buyInPrice;
     
+    // Player scores mapping
+    mapping(address => uint256) public scores;
+    
     // Events
     event ChaptersUpdated(uint8[] newVisibleChapters);
     event GameStateChanged(GameState newState);
@@ -33,6 +36,7 @@ contract Game {
     event PotPaidOut(address[] recipients, uint256[] percentages, uint256 totalAmount);
     event PilotAdded(address indexed pilot);
     event PilotsAdded(address[] pilots);
+    event TipGiven(address indexed pilot, address indexed player, uint256 amount);
     
     // Errors
     error OnlyGod();
@@ -212,6 +216,26 @@ contract Game {
      */
     function getPilotCount() external view returns (uint256) {
         return pilots.length;
+    }
+    
+    /**
+     * Tip a player with a score increase
+     * Only callable by pilots
+     * @param _player Address of the player to tip
+     * @param _tipAmount Amount to add to the player's score
+     */
+    function tipPlayer(address _player, uint256 _tipAmount) external onlyPilot {
+        scores[_player] += _tipAmount;
+        emit TipGiven(msg.sender, _player, _tipAmount);
+    }
+    
+    /**
+     * Get a player's current score
+     * @param _player Address of the player
+     * @return The player's current score
+     */
+    function getPlayerScore(address _player) external view returns (uint256) {
+        return scores[_player];
     }
     
     /**

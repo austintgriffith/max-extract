@@ -5,19 +5,15 @@ import Link from "next/link";
 import type { NextPage } from "next";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useGameServerStats } from "~~/hooks/useGameServerStatus";
 
 interface PlayerData {
   address: string;
-  sectorId?: number;
+  sectorId?: string;
   registryAddress?: string;
   name?: string;
   social?: string;
-  sectorStats?: {
-    name: string;
-    status: string;
-    asteroidCount: number;
-    score: number;
-  };
+  score?: number;
 }
 
 const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: number; sectorId?: string }) => {
@@ -78,17 +74,10 @@ const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: num
         )}
       </td>
       <td>
-        {player.sectorStats ? (
-          <span className="badge badge-success badge-sm">{player.sectorStats.status}</span>
+        {player.score !== undefined ? (
+          <span className="font-mono text-sm">{player.score.toLocaleString()}</span>
         ) : (
-          <span className="badge badge-ghost badge-sm">-</span>
-        )}
-      </td>
-      <td>
-        {player.sectorStats ? (
-          <span className="font-mono text-sm">{player.sectorStats.score.toLocaleString()}</span>
-        ) : (
-          <span className="text-xs opacity-50">-</span>
+          <span className="text-xs opacity-50">0</span>
         )}
       </td>
     </tr>
@@ -101,6 +90,10 @@ const Dashboard: NextPage = () => {
   const [playerRegistries, setPlayerRegistries] = useState<Map<string, string>>(new Map());
   const [playerNames, setPlayerNames] = useState<Map<string, string>>(new Map());
   const [playerSocials, setPlayerSocials] = useState<Map<string, string>>(new Map());
+  const [playerScores, setPlayerScores] = useState<Map<string, number>>(new Map());
+
+  // Get game server stats
+  const { stats: gameServerStats, status: gameServerStatus, error: gameServerError } = useGameServerStats();
 
   // Read players from the Game contract
   const { data: playersData } = useScaffoldReadContract({
@@ -148,8 +141,6 @@ const Dashboard: NextPage = () => {
       // Convert addresses to PlayerData objects
       const playerList: PlayerData[] = (playersData as string[]).map(address => ({
         address,
-        sectorId: undefined,
-        sectorStats: undefined,
       }));
       setPlayers(playerList);
     }
@@ -159,20 +150,22 @@ const Dashboard: NextPage = () => {
     if (
       sectorsWithOwnersAndRegistries &&
       Array.isArray(sectorsWithOwnersAndRegistries) &&
-      sectorsWithOwnersAndRegistries.length >= 5
+      sectorsWithOwnersAndRegistries.length >= 6
     ) {
-      // Build maps of player addresses to their sector IDs, registry addresses, names, and socials
-      const [sectorIds, owners, registries, names, socials] = sectorsWithOwnersAndRegistries as unknown as [
+      // Build maps of player addresses to their sector IDs, registry addresses, names, socials, and scores
+      const [sectorIds, owners, registries, names, socials, scores] = sectorsWithOwnersAndRegistries as unknown as [
         bigint[],
         string[],
         string[],
         string[],
         string[],
+        bigint[],
       ];
       const sectorMap = new Map<string, string>();
       const registryMap = new Map<string, string>();
       const nameMap = new Map<string, string>();
       const socialMap = new Map<string, string>();
+      const scoreMap = new Map<string, number>();
 
       for (let i = 0; i < sectorIds.length; i++) {
         const sectorId = sectorIds[i].toString();
@@ -180,6 +173,7 @@ const Dashboard: NextPage = () => {
         const registry = registries[i];
         const name = names[i];
         const social = socials[i];
+        const score = Number(scores[i]);
 
         if (owner && sectorId !== "0") {
           sectorMap.set(owner.toLowerCase(), sectorId);
@@ -193,12 +187,18 @@ const Dashboard: NextPage = () => {
             socialMap.set(owner.toLowerCase(), social);
           }
         }
+
+        // Always set score for the owner, even if they don't have a sector
+        if (owner) {
+          scoreMap.set(owner.toLowerCase(), score);
+        }
       }
 
       setPlayerSectors(sectorMap);
       setPlayerRegistries(registryMap);
       setPlayerNames(nameMap);
       setPlayerSocials(socialMap);
+      setPlayerScores(scoreMap);
     }
   }, [sectorsWithOwnersAndRegistries]);
 
@@ -239,6 +239,44 @@ const Dashboard: NextPage = () => {
                   {gameInfo ? `${(Number(gameInfo[1]) * Number(gameInfo[2])) / 1e18}Ξ` : "0Ξ"}
                 </span>
               </div>
+            </div>
+
+            {/* Game Server Status */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 p-2 bg-base-300 rounded-lg">
+              <div
+                className={`badge badge-lg ${gameServerStatus === "online" ? "badge-success" : gameServerStatus === "offline" ? "badge-error" : "badge-warning"}`}
+              >
+                Game Server: {gameServerStatus}
+              </div>
+              {gameServerStats && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm opacity-70">Sectors:</span>
+                    <span className="font-mono">{gameServerStats.sectors.total}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm opacity-70">Asteroids:</span>
+                    <span className="font-mono">{gameServerStats.sectors.totalAsteroids.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm opacity-70">Ships:</span>
+                    <span className="font-mono">{gameServerStats.sectors.totalShips.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm opacity-70">Simulation:</span>
+                    <span
+                      className={`badge badge-sm ${gameServerStats.simulation.isRunning ? "badge-success" : "badge-error"}`}
+                    >
+                      {gameServerStats.simulation.isRunning ? "Running" : "Stopped"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm opacity-70">WebSocket:</span>
+                    <span className="font-mono">{gameServerStats.websocket.totalConnections}</span>
+                  </div>
+                </>
+              )}
+              {gameServerError && <div className="text-xs text-error opacity-70">Error: {gameServerError}</div>}
             </div>
 
             <div className="divider">Universe Entropy</div>
@@ -292,21 +330,23 @@ const Dashboard: NextPage = () => {
                         <th>Address</th>
                         <th>Sector</th>
                         <th>Registry</th>
-                        <th>Status</th>
                         <th>Score</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {players.map((player, index) => {
-                        const sectorId = playerSectors.get(player.address.toLowerCase());
-                        const registryAddress = playerRegistries.get(player.address.toLowerCase());
-                        const name = playerNames.get(player.address.toLowerCase());
-                        const social = playerSocials.get(player.address.toLowerCase());
-                        const playerWithData = { ...player, registryAddress, name, social };
-                        return (
-                          <PlayerRow key={player.address} player={playerWithData} index={index} sectorId={sectorId} />
-                        );
-                      })}
+                      {players
+                        .map(player => {
+                          const sectorId = playerSectors.get(player.address.toLowerCase());
+                          const registryAddress = playerRegistries.get(player.address.toLowerCase());
+                          const name = playerNames.get(player.address.toLowerCase());
+                          const social = playerSocials.get(player.address.toLowerCase());
+                          const score = playerScores.get(player.address.toLowerCase()) || 0;
+                          return { ...player, registryAddress, name, social, score, sectorId };
+                        })
+                        .sort((a, b) => (b.score || 0) - (a.score || 0)) // Sort by score, highest first
+                        .map((player, index) => (
+                          <PlayerRow key={player.address} player={player} index={index} sectorId={player.sectorId} />
+                        ))}
                     </tbody>
                   </table>
                 </div>

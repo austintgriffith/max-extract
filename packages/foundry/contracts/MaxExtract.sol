@@ -16,6 +16,7 @@ interface IGame {
     function getVisibleChapters() external view returns (uint8[] memory);
     function state() external view returns (uint8); // 0 = Open, 1 = Active
     function getPlayers() external view returns (address[] memory);
+    function getPlayerScore(address player) external view returns (uint256);
 }
 
 /**
@@ -228,19 +229,21 @@ contract MaxExtract {
     }
 
     /**
-     * Get all active sectors with their owners, registry addresses, and about contract info
+     * Get all active sectors with their owners, registry addresses, about contract info, and scores
      * @return sectorIds Array of all active sector IDs
      * @return owners Array of owner addresses corresponding to each sector
      * @return registries Array of registry contract addresses corresponding to each sector
      * @return names Array of player names from about contracts (empty string if not available)
      * @return socials Array of player social links from about contracts (empty string if not available)
+     * @return scores Array of player scores from the game contract
      */
     function getPlayerData() external view returns (
         uint256[] memory sectorIds, 
         address[] memory owners, 
         address[] memory registries,
         string[] memory names,
-        string[] memory socials
+        string[] memory socials,
+        uint256[] memory scores
     ) {
         uint256 sectorCount = activeSectors.length;
         sectorIds = new uint256[](sectorCount);
@@ -248,12 +251,18 @@ contract MaxExtract {
         registries = new address[](sectorCount);
         names = new string[](sectorCount);
         socials = new string[](sectorCount);
+        scores = new uint256[](sectorCount);
         
         for (uint256 i = 0; i < sectorCount; i++) {
             uint256 sectorId = activeSectors[i];
+            address owner = sectorToOwner[sectorId];
+            
             sectorIds[i] = sectorId;
-            owners[i] = sectorToOwner[sectorId];
+            owners[i] = owner;
             registries[i] = sectors[sectorId];
+            
+            // Get player score from game contract
+            scores[i] = game.getPlayerScore(owner);
             
             // Try to get name and social from about contract
             (string memory playerName, string memory playerSocial) = _getAboutInfo(sectors[sectorId]);
@@ -261,7 +270,7 @@ contract MaxExtract {
             socials[i] = playerSocial;
         }
         
-        return (sectorIds, owners, registries, names, socials);
+        return (sectorIds, owners, registries, names, socials, scores);
     }
     
     /**

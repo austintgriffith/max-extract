@@ -2,12 +2,14 @@ import express from "express";
 import { Sector } from "../Sector";
 import { EntropyManager } from "./EntropyManager";
 import { WebSocketManager } from "./WebSocketManager";
+import { SimulationManager } from "./SimulationManager";
 
 export class RouteManager {
   private app: express.Application;
   private sectors: Map<string, Sector>;
   private entropyManager: EntropyManager;
   private webSocketManager: WebSocketManager;
+  private simulationManager: SimulationManager;
   private debugMode: boolean;
 
   constructor(
@@ -15,12 +17,14 @@ export class RouteManager {
     sectors: Map<string, Sector>,
     entropyManager: EntropyManager,
     webSocketManager: WebSocketManager,
+    simulationManager: SimulationManager,
     debugMode: boolean = false
   ) {
     this.app = app;
     this.sectors = sectors;
     this.entropyManager = entropyManager;
     this.webSocketManager = webSocketManager;
+    this.simulationManager = simulationManager;
     this.debugMode = debugMode;
 
     this.setupRoutes();
@@ -53,18 +57,11 @@ export class RouteManager {
       res.json(snapshot);
     });
 
-    // Health check
+    // Simple health check
     this.app.get("/api/health", (req, res) => {
-      const wsStats = this.webSocketManager.getStats();
-
       res.json({
         status: "healthy",
-        sectorCount: this.sectors.size,
-        uptime: process.uptime(),
-        websocket: {
-          totalConnections: wsStats.totalConnections,
-          sectorSubscriptions: wsStats.sectorSubscriptions,
-        },
+        timestamp: new Date().toISOString(),
       });
     });
 
@@ -151,34 +148,65 @@ export class RouteManager {
       res.json(stats);
     });
 
-    // Server statistics
+    // Comprehensive server statistics and status
     this.app.get("/api/stats", (req, res) => {
       let totalAsteroids = 0;
       let totalShips = 0;
+      const sectorDetails: Array<{
+        id: string;
+        asteroidCount: number;
+        shipCount: number;
+        subscriberCount: number;
+      }> = [];
 
-      for (const sector of this.sectors.values()) {
+      for (const [sectorId, sector] of this.sectors.entries()) {
         const snapshot = sector.getSnapshot();
-        totalAsteroids += Object.keys(snapshot.asteroids).length;
-        totalShips += Object.keys(snapshot.ships).length;
+        const asteroidCount = Object.keys(snapshot.asteroids).length;
+        const shipCount = Object.keys(snapshot.ships).length;
+
+        totalAsteroids += asteroidCount;
+        totalShips += shipCount;
+
+        sectorDetails.push({
+          id: sectorId,
+          asteroidCount,
+          shipCount,
+          subscriberCount: sector.subscribers.size,
+        });
       }
 
       const wsStats = this.webSocketManager.getStats();
+      const simulationStatus = this.simulationManager.getStatus();
+      const allReveals = this.entropyManager.getAllReveals();
 
       res.json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
         sectors: {
           total: this.sectors.size,
           totalAsteroids,
           totalShips,
+          details: sectorDetails,
+        },
+        simulation: {
+          isRunning: simulationStatus.isRunning,
+          innerLoopRunning: simulationStatus.innerLoopRunning,
+          outerLoopRunning: simulationStatus.outerLoopRunning,
+          innerLoopInterval: simulationStatus.innerLoopInterval,
+          outerLoopInterval: simulationStatus.outerLoopInterval,
         },
         websocket: wsStats,
         entropy: {
           isAvailable: this.entropyManager.getCurrentRollingEntropy() !== null,
           currentEntropy: this.entropyManager.getCurrentRollingEntropy(),
           latestRound: this.entropyManager.getLatestRound(),
+          revealsCount: Object.keys(allReveals).length,
         },
         server: {
           uptime: process.uptime(),
           memory: process.memoryUsage(),
+          nodeVersion: process.version,
+          platform: process.platform,
         },
       });
     });

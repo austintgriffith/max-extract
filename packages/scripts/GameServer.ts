@@ -57,18 +57,19 @@ export class GameServer {
       debugMode
     );
     this.characterManager = new CharacterManager(debugMode);
-    this.routeManager = new RouteManager(
-      this.app,
-      this.sectors,
-      this.entropyManager,
-      this.webSocketManager,
-      debugMode
-    );
     this.simulationManager = new SimulationManager(
       this.sectors,
       this.blockchainManager,
       this.entropyManager,
       this.loadSectorsFromContract.bind(this),
+      debugMode
+    );
+    this.routeManager = new RouteManager(
+      this.app,
+      this.sectors,
+      this.entropyManager,
+      this.webSocketManager,
+      this.simulationManager,
       debugMode
     );
 
