@@ -56,14 +56,10 @@ export const Chapter2 = () => {
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Registry Integration</h3>
           <p className="mb-4">
-            After deploying your About contract, you need to call a function in your Registry contract to register it
-            under the <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;about&rdquo;</code> key in your
-            modules mapping:
-          </p>
-
-          <p className="mb-4 text-sm text-base-content/70">
-            You probably have a <code className="bg-base-100 px-2 py-1 rounded text-sm">setModule</code> function (or
-            similar) in your Registry contract that allows you to update the modules mapping with proper access control.
+            After deploying your &ldquo;about&ldquo; contract, you need to call a function in your Registry contract to
+            register it under the <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;about&rdquo;</code> key
+            in your modules mapping. (You probably have a{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">setModule</code> function or something similar.)
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Why This Matters</h3>
@@ -82,9 +78,9 @@ export const Chapter2 = () => {
           </div>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Implementation Steps</h3>
-          <div className="space-y-3 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="bg-primary text-primary-content rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 1
               </div>
               <p>
@@ -93,8 +89,8 @@ export const Chapter2 = () => {
                 <code className="bg-base-100 px-2 py-1 rounded text-sm">constant social</code> fields
               </p>
             </div>
-            <div className="flex items-start space-x-3">
-              <div className="bg-primary text-primary-content rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 2
               </div>
               <p>
@@ -102,8 +98,8 @@ export const Chapter2 = () => {
                 &ldquo;about&rdquo; key
               </p>
             </div>
-            <div className="flex items-start space-x-3">
-              <div className="bg-primary text-primary-content rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 3
               </div>
               <p>
