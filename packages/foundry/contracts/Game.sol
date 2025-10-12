@@ -22,6 +22,7 @@ contract Game {
     GameState public state;
     uint8[] public visibleChapters;
     address[] public players;
+    address[] public pilots;
     uint256 public buyInPrice;
     
     // Events
@@ -30,18 +31,27 @@ contract Game {
     event PlayerBoughtIn(address indexed player, uint256 amount);
     event BuyInPriceUpdated(uint256 newPrice);
     event PotPaidOut(address[] recipients, uint256[] percentages, uint256 totalAmount);
+    event PilotAdded(address indexed pilot);
+    event PilotsAdded(address[] pilots);
     
     // Errors
     error OnlyGod();
+    error OnlyPilot();
     error GameNotOpen();
     error InsufficientPayment();
     error PlayerAlreadyJoined();
+    error PilotAlreadyAdded();
     error InvalidArrayLengths();
     error InvalidPercentages();
     error PayoutFailed();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
+        _;
+    }
+    
+    modifier onlyPilot() {
+        if (!isPilot(msg.sender)) revert OnlyPilot();
         _;
     }
     
@@ -84,6 +94,34 @@ contract Game {
     function setBuyInPrice(uint256 _newPrice) external onlyGod {
         buyInPrice = _newPrice;
         emit BuyInPriceUpdated(_newPrice);
+    }
+    
+    /**
+     * Add a pilot address
+     * Only callable by the God address
+     * @param _pilot Address to add as a pilot
+     */
+    function addPilot(address _pilot) external onlyGod {
+        // Check if pilot is already added
+        if (isPilot(_pilot)) revert PilotAlreadyAdded();
+        
+        pilots.push(_pilot);
+        emit PilotAdded(_pilot);
+    }
+    
+    /**
+     * Add multiple pilot addresses in batch
+     * Only callable by the God address
+     * @param _pilots Array of addresses to add as pilots
+     */
+    function addPilots(address[] calldata _pilots) external onlyGod {
+        for (uint256 i = 0; i < _pilots.length; i++) {
+            // Check if pilot is already added
+            if (!isPilot(_pilots[i])) {
+                pilots.push(_pilots[i]);
+            }
+        }
+        emit PilotsAdded(_pilots);
     }
     
     /**
@@ -144,6 +182,36 @@ contract Game {
             }
         }
         return false;
+    }
+    
+    /**
+     * Check if a specific address is a pilot
+     * @param _pilot Address to check
+     * @return True if the address is a pilot
+     */
+    function isPilot(address _pilot) public view returns (bool) {
+        for (uint256 i = 0; i < pilots.length; i++) {
+            if (pilots[i] == _pilot) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Get all pilots
+     * @return Array of pilot addresses
+     */
+    function getPilots() external view returns (address[] memory) {
+        return pilots;
+    }
+    
+    /**
+     * Get the number of pilots
+     * @return Number of pilots
+     */
+    function getPilotCount() external view returns (uint256) {
+        return pilots.length;
     }
     
     /**

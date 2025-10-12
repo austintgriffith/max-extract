@@ -4,6 +4,12 @@ out = 'out'
 libs = ['lib', 'node_modules']
 fs_permissions = [{ access = "read-write", path = "./"}]
 
+# Gas configuration for different networks
+[profile.arbitrum]
+gas_limit = 30000000
+gas_price = 100000000  # 0.1 gwei
+priority_gas_price = 1000000  # 0.001 gwei
+
 
 [rpc_endpoints]
 default_network = "http://127.0.0.1:8545"

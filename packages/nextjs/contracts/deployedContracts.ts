@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xada14aaf760bb06cdff369fd47240d5352abca63",
+      address: "0x547c22e900813bb331893878cd3bfe7171e4702f",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3483,
+      deployedOnBlock: 4150,
     },
     Credits: {
-      address: "0x0f3b355ebd1663353c9f3afbb7848d26f9ba094b",
+      address: "0x8434ddb4ddf4ca5b68eb66e14c6eb1892002f726",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3484,
+      deployedOnBlock: 4151,
     },
     Game: {
-      address: "0x5aa753c4d976805a6a12ea62d8638fa79fc7a66d",
+      address: "0x5542e8e09547be32f6a679e6064085bd4129959c",
       abi: [
         {
           type: "constructor",
@@ -871,6 +871,32 @@ const deployedContracts = {
               internalType: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addPilot",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addPilots",
+          inputs: [
+            {
+              name: "_pilots",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -931,6 +957,32 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getPilotCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPilots",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getPlayerCount",
           inputs: [],
           outputs: [
@@ -964,6 +1016,25 @@ const deployedContracts = {
               name: "",
               type: "uint8[]",
               internalType: "uint8[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPilot",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -1004,6 +1075,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "pilots",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -1156,6 +1246,32 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "PilotAdded",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PilotsAdded",
+          inputs: [
+            {
+              name: "pilots",
+              type: "address[]",
+              indexed: false,
+              internalType: "address[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "PlayerBoughtIn",
           inputs: [
             {
@@ -1225,7 +1341,17 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "OnlyPilot",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "PayoutFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PilotAlreadyAdded",
           inputs: [],
         },
         {
@@ -1235,10 +1361,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3484,
+      deployedOnBlock: 4151,
     },
     MaxExtract: {
-      address: "0x4ba19f6fbf97e954d2980ebdae23cd86bdfa04bc",
+      address: "0x290f22f28752de7fb3c1f5ab42f9702c9bb7a25f",
       abi: [
         {
           type: "constructor",
@@ -1591,12 +1717,12 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3484,
+      deployedOnBlock: 4151,
     },
   },
   42161: {
     Universe: {
-      address: "0x552315e69d66286cb4dbcb0a9e7a225a2205ff4a",
+      address: "0x3817cba719582a237ca55a050364e3ea93bab2d4",
       abi: [
         {
           type: "constructor",
@@ -1956,10 +2082,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 386522363,
+      deployedOnBlock: 388596650,
     },
     Credits: {
-      address: "0xe10748a7981d32f846daecfb4f651b170cce07c0",
+      address: "0xbd46f170d5cacb9e266d9228b8c28d03600affca",
       abi: [
         {
           type: "constructor",
@@ -2441,10 +2567,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 386522366,
+      deployedOnBlock: 388596655,
     },
     Game: {
-      address: "0x25f6c16597764cd6327a785063e299dcc5fe37c5",
+      address: "0x360fe87bbf340a0f4e66e1e81aa1f8794cb925d4",
       abi: [
         {
           type: "constructor",
@@ -2460,6 +2586,32 @@ const deployedContracts = {
               internalType: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addPilot",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addPilots",
+          inputs: [
+            {
+              name: "_pilots",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -2520,6 +2672,32 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getPilotCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPilots",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getPlayerCount",
           inputs: [],
           outputs: [
@@ -2553,6 +2731,25 @@ const deployedContracts = {
               name: "",
               type: "uint8[]",
               internalType: "uint8[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPilot",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -2593,6 +2790,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "pilots",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -2745,6 +2961,32 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "PilotAdded",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PilotsAdded",
+          inputs: [
+            {
+              name: "pilots",
+              type: "address[]",
+              indexed: false,
+              internalType: "address[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "PlayerBoughtIn",
           inputs: [
             {
@@ -2814,7 +3056,17 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "OnlyPilot",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "PayoutFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PilotAlreadyAdded",
           inputs: [],
         },
         {
@@ -2824,10 +3076,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 386522369,
+      deployedOnBlock: 388596661,
     },
     MaxExtract: {
-      address: "0xede99301362c1ab91828f5617a8338fabfcaf6c3",
+      address: "0xd50d82bc274fb6a4e752a0ffbd2e29be4f3e42bb",
       abi: [
         {
           type: "constructor",
@@ -3180,7 +3432,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 386522372,
+      deployedOnBlock: 388596666,
     },
   },
 } as const;

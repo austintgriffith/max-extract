@@ -260,4 +260,131 @@ export class BlockchainManager {
   public getConfig(): BlockchainConfig {
     return this.config;
   }
+
+  /**
+   * Add multiple pilots to the Game contract in batches
+   * @param pilotAddresses Array of pilot addresses to add
+   * @param batchSize Number of pilots to add per transaction (default: 50)
+   */
+  public async addPilotsToGame(
+    pilotAddresses: string[],
+    batchSize: number = 50
+  ): Promise<void> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    this.debugLog(
+      `Adding ${pilotAddresses.length} pilots to Game contract in batches of ${batchSize}`
+    );
+
+    // Process pilots in batches
+    for (let i = 0; i < pilotAddresses.length; i += batchSize) {
+      const batch = pilotAddresses.slice(i, i + batchSize);
+
+      try {
+        this.debugLog(
+          `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
+            pilotAddresses.length / batchSize
+          )}: ${batch.length} pilots`
+        );
+
+        // Simulate the call first to check for errors
+        await this.simulateContract(
+          gameContract.address,
+          gameContract.abi,
+          "addPilots",
+          [batch]
+        );
+
+        // Execute the transaction
+        const hash = await this.writeContract(
+          gameContract.address,
+          gameContract.abi,
+          "addPilots",
+          [batch]
+        );
+
+        this.debugLog(`Batch transaction sent: ${hash}`);
+
+        // Wait for transaction to be mined
+        const receipt = await this.waitForTransactionReceipt(hash);
+        this.debugLog(
+          `Batch transaction mined in block ${receipt.blockNumber}`
+        );
+
+        console.log(
+          `✅ Added ${batch.length} pilots to Game contract (batch ${
+            Math.floor(i / batchSize) + 1
+          }/${Math.ceil(pilotAddresses.length / batchSize)})`
+        );
+      } catch (error: any) {
+        console.error(
+          `❌ Failed to add pilot batch ${Math.floor(i / batchSize) + 1}: ${
+            error.shortMessage || error.message
+          }`
+        );
+        this.debugLog("Pilot batch addition error details:", error);
+        throw error;
+      }
+    }
+
+    console.log(
+      `🎯 Successfully added all ${pilotAddresses.length} pilots to Game contract`
+    );
+  }
+
+  /**
+   * Check if an address is already a pilot in the Game contract
+   * @param pilotAddress Address to check
+   * @returns True if the address is already a pilot
+   */
+  public async isPilot(pilotAddress: string): Promise<boolean> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "isPilot",
+      [pilotAddress]
+    );
+  }
+
+  /**
+   * Get all pilots from the Game contract
+   * @returns Array of pilot addresses
+   */
+  public async getPilots(): Promise<string[]> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "getPilots"
+    );
+  }
+
+  /**
+   * Get the number of pilots in the Game contract
+   * @returns Number of pilots
+   */
+  public async getPilotCount(): Promise<bigint> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "getPilotCount"
+    );
+  }
 }

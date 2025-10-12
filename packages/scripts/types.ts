@@ -65,6 +65,9 @@ export interface SectorSnapshot {
 export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
+  // Character generation
+  CHARACTER_COUNT: 100,
+  PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {
     small: { size: 45, minResources: 100, maxResources: 200 },
