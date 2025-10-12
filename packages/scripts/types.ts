@@ -66,7 +66,7 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 100,
+  CHARACTER_COUNT: 25,
   PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {
@@ -81,7 +81,9 @@ export const SECTOR_CONFIG = {
   MAX_ASTEROID_RESOURCES: 500,
   ASTEROID_SPEED: 20,
   SHIP_SPEED: 80,
-  UPDATE_INTERVAL: parseInt(process.env.UPDATE_INTERVAL || "5000"), // Configurable via env var
+  // Dual-loop system configuration
+  INNER_LOOP_INTERVAL: parseInt(process.env.INNER_LOOP_INTERVAL || "2000"), // Fast loop for ship movement, mining, battles
+  OUTER_LOOP_INTERVAL: parseInt(process.env.OUTER_LOOP_INTERVAL || "10000"), // Slow loop for heavy operations
   ASTEROID_SPAWN_CHANCE: 0.4,
   SHIP_SPAWN_CHANCE: 0.2,
   FUEL_CONSUMPTION_RATE: 0.7,

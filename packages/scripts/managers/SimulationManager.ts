@@ -4,7 +4,8 @@ import { BlockchainManager } from "./BlockchainManager";
 import { EntropyManager } from "./EntropyManager";
 
 export class SimulationManager {
-  private simulationInterval: NodeJS.Timeout | null = null;
+  private innerLoopInterval: NodeJS.Timeout | null = null;
+  private outerLoopInterval: NodeJS.Timeout | null = null;
   private debugMode: boolean;
 
   constructor(
@@ -29,39 +30,80 @@ export class SimulationManager {
   }
 
   /**
-   * Start the main simulation loop
+   * Start the dual simulation loops
    */
   public start(): void {
-    this.debugLog("Starting simulation loop");
+    this.debugLog("Starting dual simulation loops");
+    this.debugLog(
+      `Inner loop interval: ${SECTOR_CONFIG.INNER_LOOP_INTERVAL}ms`
+    );
+    this.debugLog(
+      `Outer loop interval: ${SECTOR_CONFIG.OUTER_LOOP_INTERVAL}ms`
+    );
 
-    const simulate = async () => {
-      await this.runSimulationCycle();
+    // Start inner loop (fast operations)
+    const runInnerLoop = async () => {
+      await this.runInnerLoopCycle();
 
-      // Schedule next update
-      this.simulationInterval = setTimeout(
-        simulate,
-        SECTOR_CONFIG.UPDATE_INTERVAL
+      // Schedule next inner loop update
+      this.innerLoopInterval = setTimeout(
+        runInnerLoop,
+        SECTOR_CONFIG.INNER_LOOP_INTERVAL
       );
     };
 
-    simulate();
+    // Start outer loop (heavy operations)
+    const runOuterLoop = async () => {
+      await this.runOuterLoopCycle();
+
+      // Schedule next outer loop update
+      this.outerLoopInterval = setTimeout(
+        runOuterLoop,
+        SECTOR_CONFIG.OUTER_LOOP_INTERVAL
+      );
+    };
+
+    // Start both loops
+    runInnerLoop();
+    runOuterLoop();
   }
 
   /**
-   * Stop the simulation loop
+   * Stop both simulation loops
    */
   public stop(): void {
-    if (this.simulationInterval) {
-      clearTimeout(this.simulationInterval);
-      this.simulationInterval = null;
-      this.debugLog("Simulation loop stopped");
+    if (this.innerLoopInterval) {
+      clearTimeout(this.innerLoopInterval);
+      this.innerLoopInterval = null;
+      this.debugLog("Inner loop stopped");
+    }
+
+    if (this.outerLoopInterval) {
+      clearTimeout(this.outerLoopInterval);
+      this.outerLoopInterval = null;
+      this.debugLog("Outer loop stopped");
     }
   }
 
   /**
-   * Run a single simulation cycle
+   * Run inner loop cycle - fast operations (ship movement, mining, battles)
    */
-  private async runSimulationCycle(): Promise<void> {
+  private async runInnerLoopCycle(): Promise<void> {
+    // Show a dot to indicate inner loop is running (no newline)
+    process.stdout.write(".");
+
+    this.debugLog("Running inner loop cycle");
+
+    // Update all sectors (ship movement, mining, battles, retargeting)
+    await this.updateSectorsInnerLoop();
+  }
+
+  /**
+   * Run outer loop cycle - heavy operations (blockchain interactions, spawning)
+   */
+  private async runOuterLoopCycle(): Promise<void> {
+    this.debugLog("Running outer loop cycle");
+
     // Get and print GOD account balance
     await this.checkGodBalance();
 
@@ -74,8 +116,8 @@ export class SimulationManager {
     // Reload sectors from contract periodically
     await this.loadSectorsFromContract();
 
-    // Update all sectors and collect statistics
-    await this.updateSectors();
+    // Update all sectors with spawning and heavy operations
+    await this.updateSectorsOuterLoop();
 
     // Update all sectors with current rolling entropy
     await this.updateSectorEntropy();
@@ -113,9 +155,9 @@ export class SimulationManager {
   }
 
   /**
-   * Update all sectors and collect statistics
+   * Update all sectors for inner loop - fast operations only
    */
-  private async updateSectors(): Promise<void> {
+  private async updateSectorsInnerLoop(): Promise<void> {
     let totalAsteroids = 0;
     let totalShips = 0;
 
@@ -128,14 +170,43 @@ export class SimulationManager {
       totalShips += shipCount;
 
       this.debugLog(
-        `Sector ${sectorId}: ${asteroidCount} asteroids, ${shipCount} ships`
+        `Inner Loop - Sector ${sectorId}: ${asteroidCount} asteroids, ${shipCount} ships`
       );
 
-      sector.update();
+      // Only update existing entities (no spawning)
+      sector.updateInnerLoop();
     }
 
     this.debugLog(
-      `Total across all sectors: ${totalAsteroids} asteroids, ${totalShips} ships`
+      `Inner Loop - Total across all sectors: ${totalAsteroids} asteroids, ${totalShips} ships`
+    );
+  }
+
+  /**
+   * Update all sectors for outer loop - heavy operations including spawning
+   */
+  private async updateSectorsOuterLoop(): Promise<void> {
+    let totalAsteroids = 0;
+    let totalShips = 0;
+
+    for (const [sectorId, sector] of Array.from(this.sectors.entries())) {
+      const snapshot = sector.getSnapshot();
+      const asteroidCount = Object.keys(snapshot.asteroids).length;
+      const shipCount = Object.keys(snapshot.ships).length;
+
+      totalAsteroids += asteroidCount;
+      totalShips += shipCount;
+
+      this.debugLog(
+        `Outer Loop - Sector ${sectorId}: ${asteroidCount} asteroids, ${shipCount} ships`
+      );
+
+      // Full update including spawning
+      sector.updateOuterLoop();
+    }
+
+    this.debugLog(
+      `Outer Loop - Total across all sectors: ${totalAsteroids} asteroids, ${totalShips} ships`
     );
   }
 
@@ -156,13 +227,20 @@ export class SimulationManager {
    */
   public getStatus(): {
     isRunning: boolean;
+    innerLoopRunning: boolean;
+    outerLoopRunning: boolean;
     sectorCount: number;
-    updateInterval: number;
+    innerLoopInterval: number;
+    outerLoopInterval: number;
   } {
     return {
-      isRunning: this.simulationInterval !== null,
+      isRunning:
+        this.innerLoopInterval !== null || this.outerLoopInterval !== null,
+      innerLoopRunning: this.innerLoopInterval !== null,
+      outerLoopRunning: this.outerLoopInterval !== null,
       sectorCount: this.sectors.size,
-      updateInterval: SECTOR_CONFIG.UPDATE_INTERVAL,
+      innerLoopInterval: SECTOR_CONFIG.INNER_LOOP_INTERVAL,
+      outerLoopInterval: SECTOR_CONFIG.OUTER_LOOP_INTERVAL,
     };
   }
 }

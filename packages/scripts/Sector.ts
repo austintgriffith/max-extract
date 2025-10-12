@@ -1378,11 +1378,28 @@ export class Sector {
     });
   }
 
-  public update(): void {
+  /**
+   * Inner loop update - fast operations (ship movement, mining, battles)
+   */
+  public updateInnerLoop(): void {
     // Increment game loop counter for performance tracking
     this.gameLoopCounter++;
 
-    // Roll dice for spawning
+    // Check if ships have arrived at their targets (mining, battles)
+    this.checkArrival();
+
+    // Update entities (movement, fuel consumption, retargeting)
+    this.updateShips();
+    this.updateAsteroids();
+
+    this.lastUpdate = Date.now();
+  }
+
+  /**
+   * Outer loop update - heavy operations (spawning new entities)
+   */
+  public updateOuterLoop(): void {
+    // Roll dice for spawning new entities
     const roll = this.getRandom();
     if (roll < SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE) {
       this.spawnAsteroid();
@@ -1392,15 +1409,15 @@ export class Sector {
     ) {
       this.spawnShip();
     }
+  }
 
-    // Check if ships have arrived at their targets
-    this.checkArrival();
-
-    // Update entities
-    this.updateShips();
-    this.updateAsteroids();
-
-    this.lastUpdate = Date.now();
+  /**
+   * Legacy update method for backward compatibility
+   * @deprecated Use updateInnerLoop() and updateOuterLoop() instead
+   */
+  public update(): void {
+    this.updateInnerLoop();
+    this.updateOuterLoop();
   }
 
   public getSnapshot(): SectorSnapshot {

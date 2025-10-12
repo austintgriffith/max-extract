@@ -175,7 +175,7 @@ export class GameServer {
 
     this.server.listen(port, () => {
       console.log(
-        `🚀 Game Server: port ${port} | ${this.sectors.size} sectors | ${SECTOR_CONFIG.UPDATE_INTERVAL}ms intervals`
+        `🚀 Game Server: port ${port} | ${this.sectors.size} sectors | Inner: ${SECTOR_CONFIG.INNER_LOOP_INTERVAL}ms | Outer: ${SECTOR_CONFIG.OUTER_LOOP_INTERVAL}ms`
       );
     });
   }

@@ -267,9 +267,6 @@ export class CharacterManager {
       if (existingCharacterCount > 0) {
         console.log(`🎭 Found existing ${existingCharacterCount} characters`);
 
-        // Display sample character
-        this.displaySampleCharacter();
-
         // Even with existing characters, check if they need to be added as pilots
         await this.addCharactersAsPilots(blockchainManager);
 
@@ -321,34 +318,8 @@ export class CharacterManager {
       `🎭 Generated ${characters.length} new characters in ${generationTime}ms`
     );
 
-    // Display sample character
-    this.displaySampleCharacter();
-
     // Add all character addresses as pilots to the Game contract
     await this.addCharactersAsPilots(blockchainManager);
-  }
-
-  /**
-   * Display a sample character for debugging/verification
-   */
-  private displaySampleCharacter(): void {
-    const characters = this.listCharacters();
-    if (characters.length > 0) {
-      const sampleCharacter = characters[0];
-      console.log(`📋 Sample Character:`, {
-        name: `${sampleCharacter.firstname} ${sampleCharacter.lastname}`,
-        ship: sampleCharacter.ship,
-        stats: {
-          fuel: sampleCharacter.fuel,
-          cargo: sampleCharacter.cargo,
-          aggression: sampleCharacter.aggression,
-          intelligence: sampleCharacter.intelligence,
-          dexterity: sampleCharacter.dexterity,
-        },
-        privateKey: sampleCharacter.privateKey,
-        address: sampleCharacter.publicAddress,
-      });
-    }
   }
 
   /**
