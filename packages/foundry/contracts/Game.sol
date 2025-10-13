@@ -28,6 +28,9 @@ contract Game {
     // Player scores mapping
     mapping(address => uint256) public scores;
     
+    // Pilot death tracking
+    mapping(address => bool) public deadPilots;
+    
     // Events
     event ChaptersUpdated(uint8[] newVisibleChapters);
     event GameStateChanged(GameState newState);
@@ -37,6 +40,7 @@ contract Game {
     event PilotAdded(address indexed pilot);
     event PilotsAdded(address[] pilots);
     event TipGiven(address indexed pilot, address indexed player, uint256 amount);
+    event PilotDied(address indexed pilot, address indexed killer, address indexed playerPenalized, uint256 scorePenalty, uint256 ethForwarded);
     
     // Errors
     error OnlyGod();
@@ -48,6 +52,8 @@ contract Game {
     error InvalidArrayLengths();
     error InvalidPercentages();
     error PayoutFailed();
+    error PilotAlreadyDead();
+    error NotAPlayer();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -114,17 +120,60 @@ contract Game {
     }
     
     /**
-     * Add multiple pilot addresses in batch
+     * Add multiple pilot addresses in batch and fund them with ETH
      * Only callable by the God address
      * @param _pilots Array of addresses to add as pilots
      */
-    function addPilots(address[] calldata _pilots) external onlyGod {
+    function addPilots(address[] calldata _pilots) external payable onlyGod {
+        require(_pilots.length > 0, "No pilots provided");
+        
+        uint256 newPilotsCount = 0;
+        
+        // First pass: count new pilots and add them
         for (uint256 i = 0; i < _pilots.length; i++) {
             // Check if pilot is already added
-            if (!isPilot(_pilots[i])) {
+            if (!isPilot(_pilots[i]) && !deadPilots[_pilots[i]]) {
                 pilots.push(_pilots[i]);
+                newPilotsCount++;
             }
         }
+        
+        // If ETH was sent and we have new pilots, distribute it equally
+        if (msg.value > 0 && newPilotsCount > 0) {
+            uint256 ethPerPilot = msg.value / newPilotsCount;
+            uint256 remainder = msg.value % newPilotsCount;
+            
+            // Second pass: fund the new pilots
+            for (uint256 i = 0; i < _pilots.length; i++) {
+                if (!deadPilots[_pilots[i]]) {
+                    // Check if this pilot was just added (not already in the array before this call)
+                    bool wasJustAdded = false;
+                    uint256 pilotCount = 0;
+                    for (uint256 j = 0; j < pilots.length; j++) {
+                        if (pilots[j] == _pilots[i]) {
+                            pilotCount++;
+                            if (pilotCount == 1) {
+                                wasJustAdded = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (wasJustAdded && ethPerPilot > 0) {
+                        uint256 amountToSend = ethPerPilot;
+                        // Give remainder to the first pilot
+                        if (remainder > 0) {
+                            amountToSend += remainder;
+                            remainder = 0;
+                        }
+                        
+                        (bool success, ) = payable(_pilots[i]).call{value: amountToSend}("");
+                        require(success, "ETH transfer failed");
+                    }
+                }
+            }
+        }
+        
         emit PilotsAdded(_pilots);
     }
     
@@ -189,17 +238,30 @@ contract Game {
     }
     
     /**
-     * Check if a specific address is a pilot
+     * Check if a specific address is a pilot (and not dead)
      * @param _pilot Address to check
-     * @return True if the address is a pilot
+     * @return True if the address is a pilot and not dead
      */
     function isPilot(address _pilot) public view returns (bool) {
+        if (deadPilots[_pilot]) {
+            return false; // Dead pilots are no longer considered active pilots
+        }
+        
         for (uint256 i = 0; i < pilots.length; i++) {
             if (pilots[i] == _pilot) {
                 return true;
             }
         }
         return false;
+    }
+    
+    /**
+     * Check if a pilot is dead
+     * @param _pilot Address to check
+     * @return True if the pilot is dead
+     */
+    function isPilotDead(address _pilot) external view returns (bool) {
+        return deadPilots[_pilot];
     }
     
     /**
@@ -216,6 +278,103 @@ contract Game {
      */
     function getPilotCount() external view returns (uint256) {
         return pilots.length;
+    }
+    
+    /**
+     * Get all pilots with their ETH balances and death status
+     * @return pilotAddresses Array of pilot addresses
+     * @return ethBalances Array of ETH balances (in wei)
+     * @return isDead Array of death status for each pilot
+     */
+    function getAllPilotsAndBalances() external view returns (
+        address[] memory pilotAddresses,
+        uint256[] memory ethBalances,
+        bool[] memory isDead
+    ) {
+        uint256 pilotCount = pilots.length;
+        
+        pilotAddresses = new address[](pilotCount);
+        ethBalances = new uint256[](pilotCount);
+        isDead = new bool[](pilotCount);
+        
+        for (uint256 i = 0; i < pilotCount; i++) {
+            address pilot = pilots[i];
+            pilotAddresses[i] = pilot;
+            ethBalances[i] = pilot.balance;
+            isDead[i] = deadPilots[pilot];
+        }
+        
+        return (pilotAddresses, ethBalances, isDead);
+    }
+    
+    /**
+     * Ensure a pilot has enough gas for transactions
+     * Tops up pilot with minimum required ETH if balance is too low
+     * Only callable by the God address
+     * @param _pilot Address of the pilot to check and fund if needed
+     * @param _minRequired Minimum ETH balance required (in wei)
+     */
+    function makeSurePilotHasEnoughGas(address _pilot, uint256 _minRequired) external payable onlyGod {
+        require(isPilot(_pilot) || deadPilots[_pilot], "Not a pilot");
+        
+        uint256 currentBalance = _pilot.balance;
+        
+        if (currentBalance < _minRequired) {
+            uint256 needed = _minRequired - currentBalance;
+            require(msg.value >= needed, "Insufficient ETH sent");
+            
+            (bool success, ) = payable(_pilot).call{value: needed}("");
+            require(success, "ETH transfer failed");
+            
+            // Refund excess ETH to GOD
+            uint256 excess = msg.value - needed;
+            if (excess > 0) {
+                payable(universe.GOD()).transfer(excess);
+            }
+        } else {
+            // Pilot already has enough, refund all ETH to GOD
+            if (msg.value > 0) {
+                payable(universe.GOD()).transfer(msg.value);
+            }
+        }
+    }
+
+    /**
+     * Dead man's switch - called when a pilot is killed
+     * Marks the pilot as dead, penalizes the player who owned the sector, and forwards ETH to GOD
+     * Only callable by pilots (before they die)
+     * @param _killer Address of the pilot who killed this pilot
+     * @param _playerToPenalize Address of the player to penalize (sector owner)
+     */
+    function deadMansSwitch(address _killer, address _playerToPenalize) external payable onlyPilot {
+        // Check if pilot is already dead
+        if (deadPilots[msg.sender]) revert PilotAlreadyDead();
+        
+        // Check if the player to penalize is actually a player
+        bool isValidPlayer = false;
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == _playerToPenalize) {
+                isValidPlayer = true;
+                break;
+            }
+        }
+        if (!isValidPlayer) revert NotAPlayer();
+        
+        // Mark pilot as dead
+        deadPilots[msg.sender] = true;
+        
+        // Penalize the player's score (subtract 10, minimum 0)
+        uint256 currentScore = scores[_playerToPenalize];
+        uint256 penalty = currentScore >= 10 ? 10 : currentScore;
+        scores[_playerToPenalize] = currentScore - penalty;
+        
+        // Forward all received ETH to GOD
+        uint256 ethAmount = msg.value;
+        if (ethAmount > 0) {
+            payable(universe.GOD()).transfer(ethAmount);
+        }
+        
+        emit PilotDied(msg.sender, _killer, _playerToPenalize, penalty, ethAmount);
     }
     
     /**

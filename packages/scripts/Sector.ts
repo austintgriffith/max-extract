@@ -1,8 +1,4 @@
-import {
-  generatePrivateKey,
-  privateKeyToAccount,
-  PrivateKeyAccount,
-} from "viem/accounts";
+// Note: generatePrivateKey and privateKeyToAccount no longer needed since we use real pilots
 import { createHash, randomBytes } from "crypto";
 import { WebSocket } from "ws";
 import {
@@ -12,11 +8,14 @@ import {
   SectorEvent,
   SectorSnapshot,
   SECTOR_CONFIG,
+  TipResult,
 } from "./types";
 import { PositionUtils } from "./utils/PositionUtils";
 import { ShipAI } from "./utils/ShipAI";
 import { AsteroidUtils } from "./utils/AsteroidUtils";
 import { DeterministicDice, createSectorDice } from "./utils/DeterministicDice";
+import { CharacterManager, PilotManager } from "./managers/CharacterManager";
+import { BlockchainManager } from "./managers/BlockchainManager";
 
 export class Sector {
   public id: string;
@@ -29,10 +28,23 @@ export class Sector {
   private lastUpdate: number = Date.now();
   private debugMode: boolean;
   private gameLoopCounter: number = 0; // Track game loop cycles for performance optimization
+  private characterManager: CharacterManager;
+  private pilotManager: PilotManager;
+  private blockchainManager: BlockchainManager;
 
-  constructor(id: string, seed?: string, debugMode: boolean = false) {
+  constructor(
+    id: string,
+    characterManager: CharacterManager,
+    pilotManager: PilotManager,
+    blockchainManager: BlockchainManager,
+    seed?: string,
+    debugMode: boolean = false
+  ) {
     this.id = id;
     this.debugMode = debugMode;
+    this.characterManager = characterManager;
+    this.pilotManager = pilotManager;
+    this.blockchainManager = blockchainManager;
 
     let seedValue = seed ? this.hashSeed(seed) : Math.random() * 1000000;
     this.rng = () => {
@@ -801,10 +813,44 @@ export class Sector {
         data: {
           attackerId: attackerShip.id,
           victimId: targetShip.id,
+          attackerPilotAddress: attackerShip.pilotAddress,
+          attackerPilotName: attackerShip.pilotName,
+          victimPilotAddress: targetShip.pilotAddress,
+          victimPilotName: targetShip.pilotName,
           stolenScore,
           stolenFuel,
           attackerPosition: attackerPos,
           victimPosition: targetPos,
+        },
+      });
+
+      // Mark the victim pilot as dead in the local system
+      this.pilotManager.markPilotAsDead(
+        targetShip.pilotAddress,
+        attackerShip.pilotAddress
+      );
+
+      // Execute deadMansSwitch on blockchain (async, don't wait)
+      this.executeDeadMansSwitch(targetShip, attackerShip, currentTime).catch(
+        (error) => {
+          console.error(
+            `Failed to execute deadMansSwitch for pilot ${targetShip.pilotName}:`,
+            error
+          );
+        }
+      );
+
+      // Broadcast pilot death event
+      this.broadcastEvent({
+        type: "pilot_death",
+        timestamp: currentTime,
+        data: {
+          victimPilotAddress: targetShip.pilotAddress,
+          victimPilotName: targetShip.pilotName,
+          killerPilotAddress: attackerShip.pilotAddress,
+          killerPilotName: attackerShip.pilotName,
+          sectorId: this.id,
+          deathPosition: targetPos,
         },
       });
 
@@ -1024,38 +1070,62 @@ export class Sector {
   private spawnShip(): void {
     if (this.asteroids.size === 0) return;
 
-    const privateKey = generatePrivateKey();
-    const account: PrivateKeyAccount = privateKeyToAccount(privateKey);
+    // All managers are required - no fallbacks
+
+    // Select an available pilot
+    const selectedPilot = this.characterManager.selectRandomAvailablePilot(
+      this.pilotManager,
+      this.getRandom()
+    );
+
+    if (!selectedPilot) {
+      const totalPilots = this.characterManager.getCharacterCount();
+      const assignedPilots = this.pilotManager.getAssignedPilotsCount();
+      console.log(
+        `❌ No available pilots for ship spawning in sector ${this.id} - ${assignedPilots}/${totalPilots} pilots currently assigned to sectors`
+      );
+      return;
+    }
+
+    // Assign pilot to this sector
+    this.pilotManager.assignPilotToSector(selectedPilot.publicAddress, this.id);
+
     const angle = this.getRandom() * 360;
     const { position } = this.getShipSpawnPosition(angle);
 
-    const startingFuel = 50 + this.getRandom() * 40; // 50-90% fuel
+    // Use pilot's current fuel level instead of random fuel
+    const startingFuel = selectedPilot.fuel;
     const ship: Ship = {
       id: this.generateId(),
-      address: account.address,
-      privateKey,
+      address: selectedPilot.publicAddress, // Use pilot's address
+      privateKey: selectedPilot.privateKey, // Use pilot's private key
+      pilotAddress: selectedPilot.publicAddress, // Pilot reference
+      pilotName: `${selectedPilot.firstname} ${selectedPilot.lastname}`, // Display name
+      shipType: selectedPilot.ship, // Ship size
       position,
       velocity: { x: 0, y: 0 },
       targetAsteroidId: null,
-      targetShipId: null, // Initialize ship targeting
+      targetShipId: null,
       state: "flying",
       spawnTime: Date.now(),
       spawnAngle: angle,
       score: 0,
       fuel: startingFuel,
-      maxFuel: startingFuel,
+      maxFuel: 100, // Max fuel is always 100%
       isLockedOn: false,
       interceptTime: null,
       isVectorMatched: false,
       vectorMatchTime: null,
-      fullCargo: false, // Ships start with no cargo
-      lastCourseUpdate: this.gameLoopCounter, // Initialize with current game loop
+      fullCargo: false,
+      lastCourseUpdate: this.gameLoopCounter,
     };
 
-    this.debugLog(
-      `Spawning ship ${ship.id} at (${Math.round(position.x)}, ${Math.round(
+    console.log(
+      `🚀 Spawning ship ${ship.id} with pilot ${ship.pilotName} (${
+        selectedPilot.ship
+      } ship) at (${Math.round(position.x)}, ${Math.round(
         position.y
-      )}) with ${Math.round(startingFuel)}% fuel`
+      )}) with ${Math.round(startingFuel)}% fuel (pilot's current fuel)`
     );
 
     // Assign initial target for newly spawned ship
@@ -1068,6 +1138,9 @@ export class Sector {
       data: {
         id: ship.id,
         address: ship.address,
+        pilotAddress: ship.pilotAddress,
+        pilotName: ship.pilotName,
+        shipType: ship.shipType,
         position: ship.position,
         velocity: ship.velocity,
         targetAsteroidId: ship.targetAsteroidId,
@@ -1208,6 +1281,7 @@ export class Sector {
             timestamp: currentTime,
             data: {
               shipId: ship.id,
+              pilotName: ship.pilotName,
               position: currentPos,
               score: finalScore,
               miningScore: ship.score,
@@ -1215,6 +1289,9 @@ export class Sector {
               fuelRemaining: ship.fuel,
             },
           });
+
+          // Handle pilot tipping based on final score
+          this.handlePilotTipping(ship, finalScore);
         } else if (
           ship.state === "flying" &&
           ship.isVectorMatched &&
@@ -1269,6 +1346,7 @@ export class Sector {
               timestamp: currentTime,
               data: {
                 shipId: ship.id,
+                pilotName: ship.pilotName,
                 position: currentPos,
                 score: finalScore,
                 miningScore: ship.score,
@@ -1276,6 +1354,9 @@ export class Sector {
                 fuelRemaining: ship.fuel,
               },
             });
+
+            // Handle pilot tipping based on final score
+            this.handlePilotTipping(ship, finalScore);
           } else {
             // Vector-matched but asteroid already gone - emergency exit
             this.debugLog(
@@ -1291,6 +1372,7 @@ export class Sector {
               timestamp: currentTime,
               data: {
                 shipId: ship.id,
+                pilotName: ship.pilotName,
                 position: currentPos,
                 score: ship.score,
                 miningScore: ship.score,
@@ -1298,6 +1380,9 @@ export class Sector {
                 fuelRemaining: ship.fuel,
               },
             });
+
+            // Handle pilot tipping based on final score (no fuel bonus)
+            this.handlePilotTipping(ship, ship.score);
           }
         } else {
           // Regular flying ship drifted off (shouldn't happen with smart targeting)
@@ -1314,6 +1399,7 @@ export class Sector {
             timestamp: currentTime,
             data: {
               shipId: ship.id,
+              pilotName: ship.pilotName,
               position: currentPos,
               score: ship.score,
               miningScore: ship.score,
@@ -1321,6 +1407,9 @@ export class Sector {
               fuelRemaining: ship.fuel,
             },
           });
+
+          // Handle pilot tipping based on final score (no fuel bonus)
+          this.handlePilotTipping(ship, ship.score);
         }
 
         shipsToRemove.push(shipId);
@@ -1441,6 +1530,213 @@ export class Sector {
       ships: shipSnapshot,
       lastUpdate: this.lastUpdate,
     };
+  }
+
+  /**
+   * Execute deadMansSwitch transaction when a pilot is killed
+   */
+  private async executeDeadMansSwitch(
+    victimShip: Ship,
+    killerShip: Ship,
+    currentTime: number
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Executing deadMansSwitch for pilot ${victimShip.pilotName}`
+      );
+
+      // Get the sector owner (player to penalize)
+      const playerAddress = await this.blockchainManager.getSectorOwner(
+        this.id
+      );
+      if (!playerAddress) {
+        this.debugLog(
+          `Could not find sector owner for ${this.id}, skipping deadMansSwitch`
+        );
+        return;
+      }
+
+      // Ensure pilot has enough gas for the deadMansSwitch transaction
+      await this.blockchainManager.makeSurePilotHasEnoughGas(
+        victimShip.pilotAddress,
+        "0.005" // Minimum 0.005 ETH for deadMansSwitch
+      );
+
+      // Calculate remaining ETH to send (victim's remaining fuel as a percentage of gas funding)
+      const remainingFuelPercentage = victimShip.fuel / 100;
+      const ethToSend = (remainingFuelPercentage * 0.001).toString(); // Small amount based on fuel
+
+      // Execute the deadMansSwitch transaction
+      const txHash = await this.blockchainManager.executeDeadMansSwitch(
+        victimShip.privateKey,
+        killerShip.pilotAddress,
+        playerAddress,
+        ethToSend
+      );
+
+      console.log(
+        `💀 DeadMansSwitch executed! Pilot ${victimShip.pilotName} killed by ${killerShip.pilotName}. Player ${playerAddress} penalized -10 points. (tx: ${txHash})`
+      );
+
+      // Broadcast deadMansSwitch event
+      this.broadcastEvent({
+        type: "pilot_death",
+        timestamp: currentTime,
+        data: {
+          victimPilotAddress: victimShip.pilotAddress,
+          victimPilotName: victimShip.pilotName,
+          killerPilotAddress: killerShip.pilotAddress,
+          killerPilotName: killerShip.pilotName,
+          playerPenalized: playerAddress,
+          scorePenalty: 10,
+          ethForwarded: ethToSend,
+          transactionHash: txHash,
+          sectorId: this.id,
+          blockchainConfirmed: true,
+        },
+      });
+    } catch (error: any) {
+      this.debugLog(`Failed to execute deadMansSwitch: ${error.message}`);
+
+      // Broadcast failed deadMansSwitch event
+      this.broadcastEvent({
+        type: "pilot_death",
+        timestamp: currentTime,
+        data: {
+          victimPilotAddress: victimShip.pilotAddress,
+          victimPilotName: victimShip.pilotName,
+          killerPilotAddress: killerShip.pilotAddress,
+          killerPilotName: killerShip.pilotName,
+          sectorId: this.id,
+          error: error.message,
+          blockchainConfirmed: false,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handle pilot tipping when a ship exits the sector
+   */
+  private async handlePilotTipping(
+    ship: Ship,
+    finalScore: number
+  ): Promise<void> {
+    try {
+      // Release pilot from sector assignment
+      this.pilotManager.releasePilotFromSector(ship.pilotAddress);
+      this.debugLog(`Released pilot ${ship.pilotName} from sector ${this.id}`);
+
+      // Update pilot's fuel level based on ship's remaining fuel
+      this.characterManager.updatePilotFuel(ship.pilotAddress, ship.fuel);
+      this.debugLog(`Updated pilot ${ship.pilotName} fuel to ${ship.fuel}%`);
+
+      // Calculate enhanced tip amount based on final score and about contract status
+      const { tipAmount, aboutInfo } =
+        await this.blockchainManager.calculateEnhancedTipAmount(
+          finalScore,
+          this.id
+        );
+
+      if (tipAmount === 0) {
+        this.debugLog(
+          `Ship ${ship.id} (${ship.pilotName}) scored ${finalScore} - no tip (below threshold)`
+        );
+        return;
+      }
+
+      const tipType = aboutInfo.hasAboutContract ? "enhanced" : "standard";
+      const stationInfo = aboutInfo.stationName
+        ? ` (station: "${aboutInfo.stationName}")`
+        : "";
+
+      console.log(
+        `💰 Ship ${ship.id} (${ship.pilotName}) scored ${finalScore} - attempting ${tipType} tip of ${tipAmount}${stationInfo}`
+      );
+
+      // Get the player address (sector owner)
+      const playerAddress = await this.blockchainManager.getSectorOwner(
+        this.id
+      );
+      if (!playerAddress) {
+        this.debugLog(
+          `Could not find sector owner for ${this.id}, skipping tip`
+        );
+        return;
+      }
+
+      // Ensure pilot has enough gas for the tip transaction
+      try {
+        await this.blockchainManager.makeSurePilotHasEnoughGas(
+          ship.pilotAddress,
+          SECTOR_CONFIG.TIP_GAS_AMOUNT
+        );
+        this.debugLog(`Ensured pilot ${ship.pilotAddress} has enough gas`);
+      } catch (error: any) {
+        this.debugLog(`Failed to ensure pilot has gas: ${error.message}`);
+        return;
+      }
+
+      // Execute the tip transaction
+      try {
+        const txHash = await this.blockchainManager.executePilotTip(
+          ship.privateKey,
+          playerAddress,
+          tipAmount
+        );
+
+        const tipTypeText = aboutInfo.hasAboutContract
+          ? " (enhanced)"
+          : " (standard)";
+        console.log(
+          `💰 Pilot ${ship.pilotName} tipped player ${tipAmount} points${tipTypeText}! (tx: ${txHash})`
+        );
+
+        // Broadcast tip event
+        this.broadcastEvent({
+          type: "pilot_tip",
+          timestamp: Date.now(),
+          data: {
+            shipId: ship.id,
+            pilotAddress: ship.pilotAddress,
+            pilotName: ship.pilotName,
+            playerAddress,
+            tipAmount,
+            finalScore,
+            transactionHash: txHash,
+            aboutInfo: {
+              hasAboutContract: aboutInfo.hasAboutContract,
+              stationName: aboutInfo.stationName,
+              tipType: aboutInfo.hasAboutContract ? "enhanced" : "standard",
+            },
+          },
+        });
+      } catch (error: any) {
+        this.debugLog(`Failed to execute tip transaction: ${error.message}`);
+
+        // Broadcast failed tip event
+        this.broadcastEvent({
+          type: "pilot_tip",
+          timestamp: Date.now(),
+          data: {
+            shipId: ship.id,
+            pilotAddress: ship.pilotAddress,
+            pilotName: ship.pilotName,
+            playerAddress,
+            tipAmount,
+            finalScore,
+            error: error.message,
+            aboutInfo: {
+              hasAboutContract: aboutInfo.hasAboutContract,
+              stationName: aboutInfo.stationName,
+              tipType: aboutInfo.hasAboutContract ? "enhanced" : "standard",
+            },
+          },
+        });
+      }
+    } catch (error: any) {
+      this.debugLog(`Error in handlePilotTipping: ${error.message}`);
+    }
   }
 
   private broadcastEvent(event: SectorEvent): void {

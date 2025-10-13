@@ -2,20 +2,26 @@ import { Sector } from "../Sector";
 import { SECTOR_CONFIG } from "../types";
 import { BlockchainManager } from "./BlockchainManager";
 import { EntropyManager } from "./EntropyManager";
+import { CharacterManager, PilotManager } from "./CharacterManager";
 
 export class SimulationManager {
   private innerLoopInterval: NodeJS.Timeout | null = null;
   private outerLoopInterval: NodeJS.Timeout | null = null;
   private debugMode: boolean;
+  private characterManager: CharacterManager;
+  private pilotManager: PilotManager;
 
   constructor(
     private sectors: Map<string, Sector>,
     private blockchainManager: BlockchainManager,
     private entropyManager: EntropyManager,
     private loadSectorsFromContract: () => Promise<void>,
+    characterManager: CharacterManager,
     debugMode: boolean = false
   ) {
     this.debugMode = debugMode;
+    this.characterManager = characterManager;
+    this.pilotManager = new PilotManager(debugMode);
   }
 
   private debugLog(message: string, data?: any): void {
@@ -242,5 +248,26 @@ export class SimulationManager {
       innerLoopInterval: SECTOR_CONFIG.INNER_LOOP_INTERVAL,
       outerLoopInterval: SECTOR_CONFIG.OUTER_LOOP_INTERVAL,
     };
+  }
+
+  /**
+   * Get the pilot manager instance
+   */
+  public getPilotManager(): PilotManager {
+    return this.pilotManager;
+  }
+
+  /**
+   * Get the character manager instance
+   */
+  public getCharacterManager(): CharacterManager {
+    return this.characterManager;
+  }
+
+  /**
+   * Get the blockchain manager instance
+   */
+  public getBlockchainManager(): BlockchainManager {
+    return this.blockchainManager;
   }
 }

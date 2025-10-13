@@ -21,6 +21,9 @@ export interface Ship {
   id: string;
   address: string;
   privateKey: string;
+  pilotAddress: string; // Reference to the actual pilot
+  pilotName: string; // For display purposes
+  shipType: "small" | "medium" | "large"; // Ship size from character
   position: Vector2D;
   velocity: Vector2D;
   targetAsteroidId: string | null;
@@ -39,6 +42,30 @@ export interface Ship {
   lastCourseUpdate: number; // Track which game loop cycle the course was last updated
 }
 
+export interface PilotAssignment {
+  pilotAddress: string;
+  currentSectorId: string | null;
+  assignedAt: number;
+  isDead: boolean; // Track if pilot has been killed
+  deathTime: number | null; // When the pilot died
+  killedBy: string | null; // Address of the pilot who killed them
+}
+
+export interface TipResult {
+  success: boolean;
+  tipAmount: number;
+  transactionHash?: string;
+  error?: string;
+}
+
+export interface AboutContractInfo {
+  hasAboutContract: boolean;
+  stationName?: string;
+  registryAddress?: string;
+  aboutAddress?: string;
+  error?: string;
+}
+
 export interface SectorEvent {
   type:
     | "asteroid_spawn"
@@ -51,7 +78,9 @@ export interface SectorEvent {
     | "ship_fuel_update"
     | "ship_vector_matched" // Event for when ship matches asteroid vector
     | "ship_combat" // New event for ship-to-ship combat
-    | "ship_destroyed"; // New event for when a ship is destroyed by another ship
+    | "ship_destroyed" // New event for when a ship is destroyed by another ship
+    | "pilot_death" // New event for when a pilot is killed
+    | "pilot_tip"; // New event for when a pilot tips a player
   timestamp: number;
   data: any;
 }
@@ -85,7 +114,7 @@ export const SECTOR_CONFIG = {
   INNER_LOOP_INTERVAL: parseInt(process.env.INNER_LOOP_INTERVAL || "2000"), // Fast loop for ship movement, mining, battles
   OUTER_LOOP_INTERVAL: parseInt(process.env.OUTER_LOOP_INTERVAL || "10000"), // Slow loop for heavy operations
   ASTEROID_SPAWN_CHANCE: 0.4,
-  SHIP_SPAWN_CHANCE: 0.2,
+  SHIP_SPAWN_CHANCE: 0.4,
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   COURSE_RECALC_CYCLES: 3, // Recalculate course every N game loops (performance optimization)
@@ -95,4 +124,15 @@ export const SECTOR_CONFIG = {
   EXIT_REMOVAL_BUFFER: 5, // Buffer for when entities are actually removed from the game (used in isOutOfBounds)
   EXIT_TARGET_BUFFER: 200, // Buffer for where ships aim when exiting (used in calculateExitVelocity)
   ASTEROID_EDGE_BUFFER: 100, // Buffer for asteroid edge calculations
+  // Tipping system configuration
+  TIP_GAS_AMOUNT: "0.003", // ETH amount to fund pilots for gas
+  TIP_SCORE_THRESHOLDS: {
+    HIGH: 240, // Score >= 240 (large asteroids: 240-360+ with fuel bonus)
+    MEDIUM: 150, // Score >= 150 (medium asteroids: 150-225+ with fuel bonus)
+    LOW: 90, // Score >= 90 (small asteroids: 90-135+ with fuel bonus)
+  },
+  TIP_AMOUNTS: {
+    STANDARD: { HIGH: 3, MEDIUM: 2, LOW: 1 }, // Standard tips for players without about contract
+    ENHANCED: { HIGH: 4, MEDIUM: 3, LOW: 2 }, // Enhanced tips (+1 bonus) for players with about contract
+  },
 };

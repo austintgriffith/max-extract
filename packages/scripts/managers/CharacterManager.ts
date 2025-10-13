@@ -2,7 +2,7 @@ import { keccak256, toHex } from "viem";
 import { privateKeyToAddress } from "viem/accounts";
 import * as fs from "fs";
 import * as path from "path";
-import { SECTOR_CONFIG } from "../types";
+import { SECTOR_CONFIG, PilotAssignment } from "../types";
 import { BlockchainManager } from "./BlockchainManager";
 
 export interface Character {
@@ -16,6 +16,157 @@ export interface Character {
   dexterity: number;
   privateKey: `0x${string}`;
   publicAddress: `0x${string}`;
+}
+
+export class PilotManager {
+  private pilotAssignments: Map<string, PilotAssignment> = new Map();
+  private debugMode: boolean;
+
+  constructor(debugMode: boolean = false) {
+    this.debugMode = debugMode;
+  }
+
+  private debugLog(message: string, data?: any): void {
+    if (this.debugMode) {
+      const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
+      if (data) {
+        console.log(`🚁 [${timestamp}] PilotManager - ${message}:`, data);
+      } else {
+        console.log(`🚁 [${timestamp}] PilotManager - ${message}`);
+      }
+    }
+  }
+
+  public assignPilotToSector(pilotAddress: string, sectorId: string): void {
+    this.pilotAssignments.set(pilotAddress, {
+      pilotAddress,
+      currentSectorId: sectorId,
+      assignedAt: Date.now(),
+      isDead: false,
+      deathTime: null,
+      killedBy: null,
+    });
+    this.debugLog(`Assigned pilot ${pilotAddress} to sector ${sectorId}`);
+  }
+
+  public releasePilotFromSector(pilotAddress: string): void {
+    const assignment = this.pilotAssignments.get(pilotAddress);
+    if (assignment) {
+      const previousSector = assignment.currentSectorId;
+      assignment.currentSectorId = null;
+      this.debugLog(
+        `Released pilot ${pilotAddress} from sector ${previousSector}`
+      );
+    }
+  }
+
+  public isPilotAvailable(pilotAddress: string): boolean {
+    const assignment = this.pilotAssignments.get(pilotAddress);
+    return (
+      !assignment || (assignment.currentSectorId === null && !assignment.isDead)
+    );
+  }
+
+  public getAvailablePilots(allPilots: string[]): string[] {
+    return allPilots.filter((pilot) => this.isPilotAvailable(pilot));
+  }
+
+  public getPilotAssignment(pilotAddress: string): PilotAssignment | undefined {
+    return this.pilotAssignments.get(pilotAddress);
+  }
+
+  public getAllAssignments(): PilotAssignment[] {
+    return Array.from(this.pilotAssignments.values());
+  }
+
+  public getAssignedPilotsCount(): number {
+    return Array.from(this.pilotAssignments.values()).filter(
+      (assignment) => assignment.currentSectorId !== null
+    ).length;
+  }
+
+  public clearAllAssignments(): void {
+    this.pilotAssignments.clear();
+    this.debugLog("Cleared all pilot assignments");
+  }
+
+  /**
+   * Mark a pilot as dead when killed by another pilot
+   */
+  public markPilotAsDead(victimAddress: string, killerAddress: string): void {
+    const assignment = this.pilotAssignments.get(victimAddress);
+    if (assignment) {
+      assignment.isDead = true;
+      assignment.deathTime = Date.now();
+      assignment.killedBy = killerAddress;
+      assignment.currentSectorId = null; // Release from sector
+      this.debugLog(
+        `Marked pilot ${victimAddress} as dead, killed by ${killerAddress}`
+      );
+    } else {
+      // Create new assignment record for the death
+      this.pilotAssignments.set(victimAddress, {
+        pilotAddress: victimAddress,
+        currentSectorId: null,
+        assignedAt: Date.now(),
+        isDead: true,
+        deathTime: Date.now(),
+        killedBy: killerAddress,
+      });
+      this.debugLog(
+        `Created death record for pilot ${victimAddress}, killed by ${killerAddress}`
+      );
+    }
+  }
+
+  /**
+   * Check if a pilot is dead
+   */
+  public isPilotDead(pilotAddress: string): boolean {
+    const assignment = this.pilotAssignments.get(pilotAddress);
+    return assignment ? assignment.isDead : false;
+  }
+
+  /**
+   * Get all dead pilots
+   */
+  public getDeadPilots(): PilotAssignment[] {
+    return Array.from(this.pilotAssignments.values()).filter(
+      (assignment) => assignment.isDead
+    );
+  }
+
+  /**
+   * Get death statistics
+   */
+  public getDeathStats(): {
+    totalDeaths: number;
+    recentDeaths: number; // Deaths in last hour
+    killerStats: Map<string, number>; // Killer address -> kill count
+  } {
+    const deadPilots = this.getDeadPilots();
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const killerStats = new Map<string, number>();
+
+    let recentDeaths = 0;
+    for (const pilot of deadPilots) {
+      if (pilot.deathTime && pilot.deathTime > oneHourAgo) {
+        recentDeaths++;
+      }
+      if (pilot.killedBy) {
+        killerStats.set(
+          pilot.killedBy,
+          (killerStats.get(pilot.killedBy) || 0) + 1
+        );
+      }
+    }
+
+    return {
+      totalDeaths: deadPilots.length,
+      recentDeaths,
+      killerStats,
+    };
+  }
 }
 
 export class CharacterManager {
@@ -162,7 +313,8 @@ export class CharacterManager {
       | "large";
 
     // Generate stats (0-100) using public seed for deterministic traits
-    const fuel = this.generateDeterministicRandom(seed, 3);
+    // Fuel starts at 50-100% instead of 0-100%
+    const fuel = 50 + this.generateDeterministicRandom(seed, 3) / 2;
     const cargo = this.generateDeterministicRandom(seed, 4);
     const aggression = this.generateDeterministicRandom(seed, 5);
     const intelligence = this.generateDeterministicRandom(seed, 6);
@@ -243,11 +395,63 @@ export class CharacterManager {
   }
 
   /**
+   * Update a pilot's fuel level
+   */
+  public updatePilotFuel(address: string, newFuelLevel: number): void {
+    const character = this.characters.get(address);
+    if (character) {
+      character.fuel = Math.max(0, Math.min(100, newFuelLevel)); // Clamp between 0-100
+      this.debugLog(
+        `Updated pilot ${character.firstname} ${character.lastname} fuel to ${character.fuel}%`
+      );
+    } else {
+      this.debugLog(
+        `Warning: Attempted to update fuel for unknown pilot ${address}`
+      );
+    }
+  }
+
+  /**
    * Clear all characters (useful for testing)
    */
   public clearCharacters(): void {
     this.characters.clear();
     this.debugLog("Cleared all characters");
+  }
+
+  /**
+   * Get available pilots (characters not currently assigned to sectors)
+   */
+  public getAvailablePilots(pilotManager: PilotManager): Character[] {
+    const allCharacters = this.listCharacters();
+    return allCharacters.filter((char) =>
+      pilotManager.isPilotAvailable(char.publicAddress)
+    );
+  }
+
+  /**
+   * Select a random available pilot using deterministic randomness
+   */
+  public selectRandomAvailablePilot(
+    pilotManager: PilotManager,
+    randomValue: number
+  ): Character | null {
+    const availablePilots = this.getAvailablePilots(pilotManager);
+
+    if (availablePilots.length === 0) {
+      this.debugLog("No available pilots for selection");
+      return null;
+    }
+
+    // Use deterministic randomness to select pilot
+    const randomIndex = Math.floor(randomValue * availablePilots.length);
+    const selectedPilot = availablePilots[randomIndex];
+
+    this.debugLog(
+      `Selected pilot ${selectedPilot.firstname} ${selectedPilot.lastname} (${selectedPilot.ship} ship) from ${availablePilots.length} available pilots`
+    );
+
+    return selectedPilot;
   }
 
   /**

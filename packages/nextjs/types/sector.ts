@@ -19,6 +19,9 @@ export interface Asteroid {
 export interface Ship {
   id: string;
   address: string;
+  pilotAddress: string; // Reference to the actual pilot
+  pilotName: string; // For display purposes
+  shipType: "small" | "medium" | "large"; // Ship size from character
   position: Vector2D;
   velocity: Vector2D;
   targetAsteroidId: string | null;
@@ -40,6 +43,22 @@ export interface SectorSnapshot {
   lastUpdate: number;
 }
 
+export interface TipEventData {
+  shipId: string;
+  pilotAddress: string;
+  pilotName: string;
+  playerAddress: string;
+  tipAmount: number;
+  finalScore: number;
+  transactionHash?: string;
+  error?: string;
+  aboutInfo: {
+    hasAboutContract: boolean;
+    stationName?: string;
+    tipType: "standard" | "enhanced";
+  };
+}
+
 export interface SectorEvent {
   type:
     | "asteroid_spawn"
@@ -52,7 +71,9 @@ export interface SectorEvent {
     | "ship_fuel_update"
     | "ship_vector_matched"
     | "ship_combat"
-    | "ship_destroyed";
+    | "ship_destroyed"
+    | "pilot_death" // New event for when a pilot is killed
+    | "pilot_tip"; // New event for when a pilot tips a player
   timestamp: number;
   data: any;
 }
@@ -80,3 +101,56 @@ export const SECTOR_CONFIG = {
 };
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
+
+// Pilot-related interfaces
+export interface PilotStats {
+  fuel: number;
+  cargo: number;
+  aggression: number;
+  intelligence: number;
+  dexterity: number;
+}
+
+export interface PilotAssignment {
+  isAssigned: boolean;
+  currentSectorId: string | null;
+  assignedAt: number | null;
+}
+
+export interface PilotDeath {
+  isDead: boolean;
+  deathTime: number | null;
+  killedBy: string | null;
+}
+
+export interface Pilot {
+  address: string;
+  name: string;
+  firstname: string;
+  lastname: string;
+  shipType: "small" | "medium" | "large";
+  stats: PilotStats;
+  assignment: PilotAssignment;
+  death: PilotDeath;
+  isAvailable: boolean;
+  ethBalance: string;
+}
+
+export interface PilotsResponse {
+  pilots: Pilot[];
+  summary: {
+    total: number;
+    assigned: number;
+    available: number;
+    dead: number;
+    recentDeaths: number;
+  };
+  deathStats: {
+    totalDeaths: number;
+    recentDeaths: number;
+    topKillers: Array<{
+      address: string;
+      kills: number;
+    }>;
+  };
+}

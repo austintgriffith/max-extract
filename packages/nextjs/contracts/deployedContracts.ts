@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x547c22e900813bb331893878cd3bfe7171e4702f",
+      address: "0x45009dd3abbe29db54fc5d893ceaa98a624882df",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4150,
+      deployedOnBlock: 1484,
     },
     Credits: {
-      address: "0x8434ddb4ddf4ca5b68eb66e14c6eb1892002f726",
+      address: "0xf56aa3aceddf88ab12e494d0b96da3c09a5d264e",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4151,
+      deployedOnBlock: 1485,
     },
     Game: {
-      address: "0x5542e8e09547be32f6a679e6064085bd4129959c",
+      address: "0xdbd296711ec8ef9aacb623ee3f1c0922dce0d7b2",
       abi: [
         {
           type: "constructor",
@@ -897,7 +897,7 @@ const deployedContracts = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "payable",
         },
         {
           type: "function",
@@ -915,6 +915,66 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "deadMansSwitch",
+          inputs: [
+            {
+              name: "_killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_playerToPenalize",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "deadPilots",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllPilotsAndBalances",
+          inputs: [],
+          outputs: [
+            {
+              name: "pilotAddresses",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "ethBalances",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+            {
+              name: "isDead",
+              type: "bool[]",
+              internalType: "bool[]",
             },
           ],
           stateMutability: "view",
@@ -996,6 +1056,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getPlayerScore",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getPlayers",
           inputs: [],
           outputs: [
@@ -1041,6 +1120,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isPilotDead",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isPlayer",
           inputs: [
             {
@@ -1057,6 +1155,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "makeSurePilotHasEnoughGas",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_minRequired",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
         },
         {
           type: "function",
@@ -1116,6 +1232,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "scores",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "setBuyInPrice",
           inputs: [
             {
@@ -1165,6 +1300,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "tipPlayer",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_tipAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1259,6 +1412,43 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "PilotDied",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "killer",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "playerPenalized",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "scorePenalty",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "ethForwarded",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "PilotsAdded",
           inputs: [
             {
@@ -1315,6 +1505,31 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "TipGiven",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "GameNotOpen",
           inputs: [],
@@ -1332,6 +1547,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "InvalidPercentages",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotAPlayer",
           inputs: [],
         },
         {
@@ -1356,15 +1576,20 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "PilotAlreadyDead",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "PlayerAlreadyJoined",
           inputs: [],
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4151,
+      deployedOnBlock: 1485,
     },
     MaxExtract: {
-      address: "0x290f22f28752de7fb3c1f5ab42f9702c9bb7a25f",
+      address: "0xdfd787c807dea8d7e53311b779bc0c6a4704d286",
       abi: [
         {
           type: "constructor",
@@ -1521,6 +1746,11 @@ const deployedContracts = {
               name: "socials",
               type: "string[]",
               internalType: "string[]",
+            },
+            {
+              name: "scores",
+              type: "uint256[]",
+              internalType: "uint256[]",
             },
           ],
           stateMutability: "view",
@@ -1717,7 +1947,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4151,
+      deployedOnBlock: 1485,
     },
   },
   42161: {
@@ -2612,7 +2842,7 @@ const deployedContracts = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "payable",
         },
         {
           type: "function",
@@ -2630,6 +2860,66 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "deadMansSwitch",
+          inputs: [
+            {
+              name: "_killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_playerToPenalize",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "deadPilots",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllPilotsAndBalances",
+          inputs: [],
+          outputs: [
+            {
+              name: "pilotAddresses",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "ethBalances",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+            {
+              name: "isDead",
+              type: "bool[]",
+              internalType: "bool[]",
             },
           ],
           stateMutability: "view",
@@ -2711,6 +3001,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getPlayerScore",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getPlayers",
           inputs: [],
           outputs: [
@@ -2756,6 +3065,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isPilotDead",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isPlayer",
           inputs: [
             {
@@ -2772,6 +3100,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "makeSurePilotHasEnoughGas",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_minRequired",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
         },
         {
           type: "function",
@@ -2831,6 +3177,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "scores",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "setBuyInPrice",
           inputs: [
             {
@@ -2880,6 +3245,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "tipPlayer",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_tipAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -2974,6 +3357,43 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "PilotDied",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "killer",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "playerPenalized",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "scorePenalty",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "ethForwarded",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "PilotsAdded",
           inputs: [
             {
@@ -3030,6 +3450,31 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "TipGiven",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "GameNotOpen",
           inputs: [],
@@ -3051,6 +3496,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "NotAPlayer",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "OnlyGod",
           inputs: [],
         },
@@ -3067,6 +3517,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "PilotAlreadyAdded",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PilotAlreadyDead",
           inputs: [],
         },
         {
@@ -3236,6 +3691,11 @@ const deployedContracts = {
               name: "socials",
               type: "string[]",
               internalType: "string[]",
+            },
+            {
+              name: "scores",
+              type: "uint256[]",
+              internalType: "uint256[]",
             },
           ],
           stateMutability: "view",

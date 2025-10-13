@@ -6,6 +6,8 @@ import type { NextPage } from "next";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
+import { usePilotsData } from "~~/hooks/usePilotsData";
+import { Pilot } from "~~/types/sector";
 
 interface PlayerData {
   address: string;
@@ -15,6 +17,94 @@ interface PlayerData {
   social?: string;
   score?: number;
 }
+
+const PilotRow = ({ pilot, index }: { pilot: Pilot; index: number }) => {
+  // Get ship type badge color
+  const getShipTypeBadgeColor = (shipType: string) => {
+    switch (shipType) {
+      case "small":
+        return "badge-info";
+      case "medium":
+        return "badge-warning";
+      case "large":
+        return "badge-error";
+      default:
+        return "badge-ghost";
+    }
+  };
+
+  // Get stat color based on value (0-100)
+  const getStatColor = (value: number) => {
+    if (value >= 75) return "text-success";
+    if (value >= 50) return "text-warning";
+    if (value >= 25) return "text-info";
+    return "text-error";
+  };
+
+  return (
+    <tr>
+      <td className="text-xs">{index + 1}</td>
+      <td>
+        <span className="text-sm font-medium">{pilot.name}</span>
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          <Address address={pilot.address} size="sm" />
+          <span
+            className={`font-mono text-xs ${
+              parseFloat(pilot.ethBalance) > 0.001
+                ? "text-success"
+                : parseFloat(pilot.ethBalance) > 0
+                  ? "text-warning"
+                  : "text-error"
+            }`}
+            title="ETH Balance"
+          >
+            {parseFloat(pilot.ethBalance).toFixed(4)}
+          </span>
+        </div>
+      </td>
+      <td>
+        <span className={`badge badge-sm ${getShipTypeBadgeColor(pilot.shipType)}`}>
+          {pilot.shipType === "small" ? "S" : pilot.shipType === "medium" ? "M" : "L"}
+        </span>
+      </td>
+      <td>
+        {pilot.assignment.isAssigned && pilot.assignment.currentSectorId ? (
+          <Link
+            href={`/sector/${pilot.assignment.currentSectorId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="badge badge-primary badge-sm hover:badge-primary-focus cursor-pointer"
+          >
+            s{pilot.assignment.currentSectorId.slice(0, 8)}...
+          </Link>
+        ) : (
+          <span className="badge badge-success badge-sm">Available</span>
+        )}
+      </td>
+      <td>
+        <div className="flex gap-1 text-xs">
+          <span className={`font-mono ${getStatColor(pilot.stats.fuel)}`} title="Fuel">
+            ⛽{pilot.stats.fuel.toFixed(1)}
+          </span>
+          <span className={`font-mono ${getStatColor(pilot.stats.cargo)}`} title="Cargo">
+            📦{pilot.stats.cargo}
+          </span>
+          <span className={`font-mono ${getStatColor(pilot.stats.aggression)}`} title="Aggression">
+            ⚔️{pilot.stats.aggression}
+          </span>
+          <span className={`font-mono ${getStatColor(pilot.stats.intelligence)}`} title="Intelligence">
+            🧠{pilot.stats.intelligence}
+          </span>
+          <span className={`font-mono ${getStatColor(pilot.stats.dexterity)}`} title="Dexterity">
+            🏃{pilot.stats.dexterity}
+          </span>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
 const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: number; sectorId?: string }) => {
   // Only allow social links that start with https://
@@ -94,6 +184,9 @@ const Dashboard: NextPage = () => {
 
   // Get game server stats
   const { stats: gameServerStats, status: gameServerStatus, error: gameServerError } = useGameServerStats();
+
+  // Get pilots data
+  const { pilots: pilotsData, isLoading: pilotsLoading, error: pilotsError } = usePilotsData();
 
   // Read players from the Game contract
   const { data: playersData } = useScaffoldReadContract({
@@ -349,6 +442,70 @@ const Dashboard: NextPage = () => {
                         ))}
                     </tbody>
                   </table>
+                </div>
+              </>
+            )}
+
+            {/* Pilots List */}
+            {pilotsData && pilotsData.pilots.length > 0 && (
+              <>
+                <div className="divider">
+                  Pilots
+                  <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs opacity-70">Total:</span>
+                      <span className="font-mono text-xs">{pilotsData.summary.total}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs opacity-70">Assigned:</span>
+                      <span className="font-mono text-xs">{pilotsData.summary.assigned}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs opacity-70">Available:</span>
+                      <span className="font-mono text-xs">{pilotsData.summary.available}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Pilot Name</th>
+                        <th>Address</th>
+                        <th>Ship</th>
+                        <th>Status</th>
+                        <th>Stats</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pilotsData.pilots
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((pilot, index) => (
+                          <PilotRow key={pilot.address} pilot={pilot} index={index} />
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* Pilots Loading/Error States */}
+            {pilotsLoading && (
+              <>
+                <div className="divider">Pilots</div>
+                <div className="flex justify-center items-center py-8">
+                  <span className="loading loading-spinner loading-md"></span>
+                  <span className="ml-2">Loading pilots...</span>
+                </div>
+              </>
+            )}
+
+            {pilotsError && (
+              <>
+                <div className="divider">Pilots</div>
+                <div className="alert alert-error">
+                  <span>Error loading pilots: {pilotsError}</span>
                 </div>
               </>
             )}

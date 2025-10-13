@@ -39,7 +39,13 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                                       ? "badge-accent"
                                       : event.type === "ship_vector_matched"
                                         ? "badge-primary"
-                                        : "badge-ghost"
+                                        : event.type === "ship_destroyed"
+                                          ? "badge-error"
+                                          : event.type === "pilot_death"
+                                            ? "badge-error"
+                                            : event.type === "pilot_tip"
+                                              ? "badge-success"
+                                              : "badge-ghost"
                         }`}
                       >
                         {event.type.replace("_", " ")}
@@ -49,19 +55,64 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                       </span>
                     </div>
                     <div className="mt-1 text-xs text-base-content/70">
-                      {event.type === "ship_spawn" && `Ship ${event.data.address.slice(0, 8)}... spawned`}
+                      {event.type === "ship_spawn" &&
+                        `${event.data.pilotName || `Ship ${event.data.address.slice(0, 8)}...`} spawned${event.data.shipType ? ` (${event.data.shipType} ship)` : ""}`}
                       {event.type === "asteroid_spawn" && `Asteroid spawned (size: ${Math.round(event.data.size)})`}
                       {event.type === "asteroid_depleted" && `Asteroid mined (score: ${event.data.score})`}
                       {event.type === "asteroid_exit" && `Asteroid drifted off map`}
                       {event.type === "ship_exit" &&
-                        `Ship exited (total: ${event.data.score}${event.data.fuelBonus ? `, fuel bonus: ${event.data.fuelBonus}` : ""})`}
+                        `${event.data.pilotName || "Ship"} exited (total: ${event.data.score}${event.data.fuelBonus ? `, fuel bonus: ${event.data.fuelBonus}` : ""})`}
                       {event.type === "ship_retarget" && `Ship changed course (${event.data.state})`}
                       {event.type === "ship_vector_matched" &&
                         (event.data.targetShipId
                           ? `Ship matched target ship vector (combat)`
                           : `Ship matched asteroid vector (mining)`)}
                       {event.type === "ship_destroyed" &&
-                        `Ship destroyed! Attacker gained ${event.data.stolenScore} points + ${event.data.stolenFuel} fuel`}
+                        `${event.data.attackerPilotName || "Attacker"} destroyed ${event.data.victimPilotName || "victim"}! Gained ${event.data.stolenScore} points + ${event.data.stolenFuel} fuel`}
+                      {event.type === "pilot_death" && (
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            💀 {event.data.victimPilotName} killed by {event.data.killerPilotName}
+                          </div>
+                          {event.data.blockchainConfirmed === true && (
+                            <div className="text-xs text-red-400">
+                              ⛓️ Player penalized -{event.data.scorePenalty} points on-chain
+                              {event.data.transactionHash && (
+                                <span className="ml-1 opacity-70">
+                                  (tx: {event.data.transactionHash.slice(0, 8)}...)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {event.data.blockchainConfirmed === false && (
+                            <div className="text-xs text-yellow-400">
+                              ⚠️ Blockchain transaction failed: {event.data.error}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {event.type === "pilot_tip" && (
+                        <div className="flex items-center gap-1">
+                          {event.data.error ? (
+                            <span>❌ {event.data.pilotName} tip failed</span>
+                          ) : (
+                            <>
+                              <span>{event.data.pilotName} tipped</span>
+                              <div
+                                className={`px-2 py-1 rounded text-white font-bold ${
+                                  event.data.aboutInfo?.tipType === "enhanced"
+                                    ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                    : "bg-green-600"
+                                }`}
+                              >
+                                +{event.data.tipAmount} points
+                                {event.data.aboutInfo?.tipType === "enhanced" && " ⭐"}
+                              </div>
+                              <span>to {event.data.aboutInfo?.stationName || "the sector owner"}.</span>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))

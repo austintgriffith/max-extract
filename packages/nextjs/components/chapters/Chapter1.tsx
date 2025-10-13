@@ -103,6 +103,38 @@ export const Chapter1 = () => {
             </pre>
           </div>
 
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Implementation Steps</h3>
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                1
+              </div>
+              <p>
+                Create and deploy your Registry contract with a{" "}
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">modules</code> mapping and access control
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                2
+              </div>
+              <p>
+                Call the <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast</code> function on the
+                MaxExtract contract from your Registry to launch your satellite
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                3
+              </div>
+              <p>
+                Verify your sector assignment by checking{" "}
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">playerToSector(yourAddress)</code> on the
+                MaxExtract contract
+              </p>
+            </div>
+          </div>
+
           {/* Factory Contract TODO */}
           <div className="bg-warning/10 border border-warning rounded-lg p-4 mt-6">
             <p className="text-warning font-semibold text-sm">

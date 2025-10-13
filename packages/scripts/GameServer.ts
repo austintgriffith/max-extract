@@ -62,6 +62,7 @@ export class GameServer {
       this.blockchainManager,
       this.entropyManager,
       this.loadSectorsFromContract.bind(this),
+      this.characterManager,
       debugMode
     );
     this.routeManager = new RouteManager(
@@ -114,7 +115,14 @@ export class GameServer {
       for (const sectorId of activeSectors) {
         const sectorIdStr = sectorId.toString();
         if (!this.sectors.has(sectorIdStr)) {
-          const newSector = new Sector(sectorIdStr, undefined, this.debugMode);
+          const newSector = new Sector(
+            sectorIdStr,
+            this.characterManager,
+            this.simulationManager.getPilotManager(),
+            this.blockchainManager,
+            undefined,
+            this.debugMode
+          );
 
           // Update sector with current rolling entropy if available
           const currentEntropy = this.entropyManager.getCurrentRollingEntropy();
