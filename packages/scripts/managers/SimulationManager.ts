@@ -10,6 +10,7 @@ export class SimulationManager {
   private debugMode: boolean;
   private characterManager: CharacterManager;
   private pilotManager: PilotManager;
+  private gameSettled: boolean = false;
 
   constructor(
     private sectors: Map<string, Sector>,
@@ -17,7 +18,8 @@ export class SimulationManager {
     private entropyManager: EntropyManager,
     private loadSectorsFromContract: () => Promise<void>,
     characterManager: CharacterManager,
-    debugMode: boolean = false
+    debugMode: boolean = false,
+    private stopGameServer?: () => void
   ) {
     this.debugMode = debugMode;
     this.characterManager = characterManager;
@@ -95,6 +97,11 @@ export class SimulationManager {
    * Run inner loop cycle - fast operations (ship movement, mining, battles)
    */
   private async runInnerLoopCycle(): Promise<void> {
+    // If game is settled, don't run inner loop
+    if (this.gameSettled) {
+      return;
+    }
+
     // Show a dot to indicate inner loop is running (no newline)
     process.stdout.write(".");
 
@@ -109,6 +116,11 @@ export class SimulationManager {
    */
   private async runOuterLoopCycle(): Promise<void> {
     this.debugLog("Running outer loop cycle");
+
+    // Check if game is settled - if so, stop the loops
+    if (await this.checkGameSettlement()) {
+      return; // Early exit - loops will be stopped
+    }
 
     // Get and print GOD account balance
     await this.checkGodBalance();
@@ -224,6 +236,112 @@ export class SimulationManager {
     if (currentEntropy) {
       for (const sector of Array.from(this.sectors.values())) {
         sector.updateRollingEntropy(currentEntropy);
+      }
+    }
+  }
+
+  /**
+   * Check game settlement status and handle settlement/game end
+   * @returns true if game is settled (loops should stop)
+   */
+  private async checkGameSettlement(): Promise<boolean> {
+    try {
+      // If we already know the game is settled, return true
+      if (this.gameSettled) {
+        return true;
+      }
+
+      // Check current game state
+      const gameState = await this.blockchainManager.getGameState();
+
+      // GameState: 0 = Open, 1 = Active, 2 = Settled
+      if (gameState === 2) {
+        // Game is already settled
+        await this.handleGameEnd();
+        return true;
+      }
+
+      // Check if game can be settled
+      const canSettle = await this.blockchainManager.canGameSettle();
+
+      if (canSettle) {
+        console.log("🏁 Game can be settled! Attempting to settle...");
+
+        try {
+          // Attempt to settle the game
+          await this.blockchainManager.settleGame();
+
+          // Handle game end
+          await this.handleGameEnd();
+          return true;
+        } catch (error: any) {
+          console.error(`❌ Failed to settle game: ${error.message}`);
+          // Don't stop the loops if settlement failed - someone else might settle it
+          return false;
+        }
+      }
+
+      return false; // Game not settled, continue loops
+    } catch (error: any) {
+      this.debugLog("Failed to check game settlement status", error);
+      return false; // Continue loops on error
+    }
+  }
+
+  /**
+   * Handle game end - display winners and stop loops
+   */
+  private async handleGameEnd(): Promise<void> {
+    try {
+      console.log("\n🎉 GAME HAS ENDED! 🎉");
+      console.log("=".repeat(50));
+
+      // Get winners and winning score
+      const winners = await this.blockchainManager.getGameWinners();
+      const winningScore = await this.blockchainManager.getWinningScore();
+
+      if (winners.length === 0) {
+        console.log("🤷 No winners found (no players participated)");
+      } else if (winners.length === 1) {
+        console.log(`🏆 WINNER: ${winners[0]}`);
+        console.log(`📊 Winning Score: ${winningScore.toString()}`);
+      } else {
+        console.log(`🏆 TIE! ${winners.length} winners:`);
+        winners.forEach((winner, index) => {
+          console.log(`   ${index + 1}. ${winner}`);
+        });
+        console.log(`📊 Winning Score: ${winningScore.toString()}`);
+      }
+
+      console.log("=".repeat(50));
+      console.log("🛑 Stopping game simulation...");
+
+      // Clean up pilot ETH before shutting down
+      await this.blockchainManager.cleanupPilotETH(this.characterManager);
+
+      // Mark as settled and stop entire game server
+      this.gameSettled = true;
+      this.stop();
+
+      // Stop the entire game server if callback is provided
+      if (this.stopGameServer) {
+        console.log("🛑 Shutting down entire game server...");
+        setTimeout(() => {
+          this.stopGameServer!();
+        }, 2000); // Give a 2 second delay to show the message
+      }
+    } catch (error: any) {
+      console.error(`❌ Error handling game end: ${error.message}`);
+      // Still mark as settled and stop loops
+      this.gameSettled = true;
+      this.stop();
+
+      // Stop the entire game server even on error
+      if (this.stopGameServer) {
+        console.log("🛑 Shutting down entire game server...");
+        setTimeout(() => {
+          this.stopGameServer!();
+        }, 2000);
       }
     }
   }

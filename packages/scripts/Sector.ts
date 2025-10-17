@@ -594,6 +594,21 @@ export class Sector {
           timestamp: Date.now(),
           data: {
             shipId: ship.id,
+            position: ship.position,
+            velocity: ship.velocity,
+            targetAsteroidId: ship.targetAsteroidId,
+            targetShipId: ship.targetShipId,
+            state: ship.state,
+            fuel: ship.fuel,
+          },
+        });
+
+        // Broadcast the ship targeting event
+        this.broadcastEvent({
+          type: "ship_retarget",
+          timestamp: Date.now(),
+          data: {
+            shipId: ship.id,
             position: currentPos,
             velocity: ship.velocity,
             targetAsteroidId: null,
@@ -649,6 +664,21 @@ export class Sector {
             oldAsteroidTarget || "none"
           }, ship: ${oldShipTarget || "none"})`
         );
+
+        // Broadcast the asteroid targeting event
+        this.broadcastEvent({
+          type: "ship_retarget",
+          timestamp: Date.now(),
+          data: {
+            shipId: ship.id,
+            position: ship.position,
+            velocity: ship.velocity,
+            targetAsteroidId: ship.targetAsteroidId,
+            targetShipId: ship.targetShipId,
+            state: ship.state,
+            fuel: ship.fuel,
+          },
+        });
 
         // Broadcast the asteroid targeting event
         this.broadcastEvent({
@@ -1232,6 +1262,21 @@ export class Sector {
               ship.position = currentShipPos;
               ship.spawnTime = currentTime;
               ship.lastCourseUpdate = this.gameLoopCounter; // Update the cycle counter
+
+              // Broadcast course recalculation event
+              this.broadcastEvent({
+                type: "ship_retarget",
+                timestamp: currentTime,
+                data: {
+                  shipId: ship.id,
+                  position: ship.position,
+                  velocity: ship.velocity,
+                  targetAsteroidId: ship.targetAsteroidId,
+                  targetShipId: ship.targetShipId,
+                  state: ship.state,
+                  fuel: ship.fuel,
+                },
+              });
             }
           }
           // Handle asteroid targeting recalculation
@@ -1248,6 +1293,21 @@ export class Sector {
               ship.position = currentShipPos;
               ship.spawnTime = currentTime;
               ship.lastCourseUpdate = this.gameLoopCounter; // Update the cycle counter
+
+              // Broadcast course recalculation event
+              this.broadcastEvent({
+                type: "ship_retarget",
+                timestamp: currentTime,
+                data: {
+                  shipId: ship.id,
+                  position: ship.position,
+                  velocity: ship.velocity,
+                  targetAsteroidId: ship.targetAsteroidId,
+                  targetShipId: ship.targetShipId,
+                  state: ship.state,
+                  fuel: ship.fuel,
+                },
+              });
             }
           }
         }

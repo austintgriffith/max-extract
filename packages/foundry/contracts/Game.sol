@@ -3,19 +3,34 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "./Universe.sol";
 
+// WETH interface for safe ETH transfers
+interface IWETH {
+    function deposit() external payable;
+    function transfer(address to, uint256 value) external returns (bool);
+    function balanceOf(address) external view returns (uint256);
+}
+
 /**
  * Game Contract - Manages game sessions and player participation
  * Controls visible chapters, game state, and player buy-ins
  * @author Max Extract Protocol
  */
 contract Game {
+    // Game configuration - hardcoded values
+    uint256 public constant BUY_IN_PRICE = 0.001 ether;
+    uint256 public immutable gameEndTime = block.timestamp + 1 minutes;
+    
+    // WETH contract address (Ethereum mainnet - update for other networks)
+    address public constant WETH_ADDRESS = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    
     // Reference to the Universe contract
     Universe public immutable universe;
     
     // Game states
     enum GameState {
         Open,    // 0 - Players can buy in
-        Active   // 1 - Game is active, no more buy-ins allowed
+        Active,  // 1 - Game is active, no more buy-ins allowed
+        Settled  // 2 - Game has been settled, winners determined
     }
     
     // Game state variables
@@ -23,7 +38,10 @@ contract Game {
     uint8[] public visibleChapters;
     address[] public players;
     address[] public pilots;
-    uint256 public buyInPrice;
+    
+    // Game end and settlement variables
+    address[] public gameWinners;          // Array of winner addresses after settlement
+    uint256 public winningScore;           // The winning score after settlement
     
     // Player scores mapping
     mapping(address => uint256) public scores;
@@ -35,12 +53,12 @@ contract Game {
     event ChaptersUpdated(uint8[] newVisibleChapters);
     event GameStateChanged(GameState newState);
     event PlayerBoughtIn(address indexed player, uint256 amount);
-    event BuyInPriceUpdated(uint256 newPrice);
     event PotPaidOut(address[] recipients, uint256[] percentages, uint256 totalAmount);
     event PilotAdded(address indexed pilot);
     event PilotsAdded(address[] pilots);
     event TipGiven(address indexed pilot, address indexed player, uint256 amount);
     event PilotDied(address indexed pilot, address indexed killer, address indexed playerPenalized, uint256 scorePenalty, uint256 ethForwarded);
+    event GameSettled(address[] winners, uint256 winningScore, uint256 totalPayout, uint256 payoutPerWinner);
     
     // Errors
     error OnlyGod();
@@ -54,6 +72,8 @@ contract Game {
     error PayoutFailed();
     error PilotAlreadyDead();
     error NotAPlayer();
+    error GameNotEnded();
+    error GameAlreadySettled();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -70,10 +90,9 @@ contract Game {
         _;
     }
     
-    constructor(address _universe, uint256 _buyInPrice) {
+    constructor(address _universe) {
         universe = Universe(_universe);
         state = GameState.Open;
-        buyInPrice = _buyInPrice;
     }
     
     /**
@@ -96,15 +115,6 @@ contract Game {
         emit GameStateChanged(_newState);
     }
     
-    /**
-     * Set the buy-in price for the game
-     * Only callable by the God address
-     * @param _newPrice The new buy-in price in wei
-     */
-    function setBuyInPrice(uint256 _newPrice) external onlyGod {
-        buyInPrice = _newPrice;
-        emit BuyInPriceUpdated(_newPrice);
-    }
     
     /**
      * Add a pilot address
@@ -183,7 +193,7 @@ contract Game {
      * Players can only buy in once
      */
     function buyIn() external payable gameOpen {
-        if (msg.value < buyInPrice) revert InsufficientPayment();
+        if (msg.value < BUY_IN_PRICE) revert InsufficientPayment();
         
         // Check if player has already joined
         for (uint256 i = 0; i < players.length; i++) {
@@ -194,8 +204,8 @@ contract Game {
         emit PlayerBoughtIn(msg.sender, msg.value);
         
         // Refund excess payment
-        if (msg.value > buyInPrice) {
-            payable(msg.sender).transfer(msg.value - buyInPrice);
+        if (msg.value > BUY_IN_PRICE) {
+            payable(msg.sender).transfer(msg.value - BUY_IN_PRICE);
         }
     }
     
@@ -408,7 +418,7 @@ contract Game {
         uint256 _playerCount,
         uint256 _buyInPrice
     ) {
-        return (state, players.length, buyInPrice);
+        return (state, players.length, BUY_IN_PRICE);
     }
     
     /**
@@ -463,5 +473,97 @@ contract Game {
      */
     function getBalance() external view returns (uint256) {
         return address(this).balance;
+    }
+    
+    /**
+     * Settle the game by finding the highest scoring player(s) and paying out the pot
+     * Can be called by anyone after the game end time has passed
+     * Splits the pot equally among all players with the highest score
+     */
+    function settleGame() external {
+        // Check if game has ended
+        if (block.timestamp < gameEndTime) revert GameNotEnded();
+        
+        // Check if game has already been settled
+        if (state == GameState.Settled) revert GameAlreadySettled();
+        
+        // If no players, nothing to settle
+        if (players.length == 0) {
+            state = GameState.Settled;
+            return;
+        }
+        
+        // Find the highest score
+        uint256 highestScore = 0;
+        for (uint256 i = 0; i < players.length; i++) {
+            uint256 playerScore = scores[players[i]];
+            if (playerScore > highestScore) {
+                highestScore = playerScore;
+            }
+        }
+        
+        // Find all players with the highest score
+        address[] memory winners = new address[](players.length);
+        uint256 winnerCount = 0;
+        
+        for (uint256 i = 0; i < players.length; i++) {
+            if (scores[players[i]] == highestScore) {
+                winners[winnerCount] = players[i];
+                winnerCount++;
+            }
+        }
+        
+        // Resize winners array to actual winner count
+        gameWinners = new address[](winnerCount);
+        for (uint256 i = 0; i < winnerCount; i++) {
+            gameWinners[i] = winners[i];
+        }
+        
+        // Set winning score and mark as settled
+        winningScore = highestScore;
+        state = GameState.Settled;
+        
+        // Calculate and distribute payout
+        uint256 totalPayout = address(this).balance;
+        uint256 payoutPerWinner = 0;
+        
+        if (totalPayout > 0 && winnerCount > 0) {
+            payoutPerWinner = totalPayout / winnerCount;
+            
+            // Pay each winner
+            for (uint256 i = 0; i < winnerCount; i++) {
+                (bool success, ) = payable(gameWinners[i]).call{value: payoutPerWinner}("");
+                if (!success) revert PayoutFailed();
+            }
+        }
+        
+        emit GameSettled(gameWinners, winningScore, totalPayout, payoutPerWinner);
+    }
+    
+    /**
+     * Get the game winners (only available after settlement)
+     * @return Array of winner addresses
+     */
+    function getGameWinners() external view returns (address[] memory) {
+        return gameWinners;
+    }
+    
+    /**
+     * Check if the game can be settled (time has passed and not already settled)
+     * @return True if current time is past game end time and game is not settled
+     */
+    function canGameSettle() external view returns (bool) {
+        return block.timestamp >= gameEndTime && state != GameState.Settled;
+    }
+    
+    /**
+     * Get time remaining until game ends
+     * @return Seconds remaining (0 if game has ended)
+     */
+    function getTimeRemaining() external view returns (uint256) {
+        if (block.timestamp >= gameEndTime) {
+            return 0;
+        }
+        return gameEndTime - block.timestamp;
     }
 }

@@ -395,6 +395,13 @@ export class CharacterManager {
   }
 
   /**
+   * Get a character by their address
+   */
+  public getCharacterByAddress(address: string): Character | undefined {
+    return this.characters.get(address);
+  }
+
+  /**
    * Update a pilot's fuel level
    */
   public updatePilotFuel(address: string, newFuelLevel: number): void {

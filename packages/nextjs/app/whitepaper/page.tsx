@@ -2,6 +2,16 @@
 
 import { MarkdownWithMath } from "~~/components/MarkdownWithMath";
 
+// Add Google Font import
+if (typeof document !== "undefined") {
+  const link = document.createElement("link");
+  link.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap";
+  link.rel = "stylesheet";
+  if (!document.querySelector(`link[href="${link.href}"]`)) {
+    document.head.appendChild(link);
+  }
+}
+
 const WhitepaperPage = () => {
   return (
     <div className="flex items-center flex-col flex-grow pt-8 pb-8 bg-gray-50">
@@ -14,77 +24,101 @@ const WhitepaperPage = () => {
             minHeight: "11in",
             maxWidth: "90vw",
             // Remove aspectRatio so content can expand vertically
-            padding: "1in",
+            padding: "1in 1.25in",
             fontSize: "11pt",
-            lineHeight: "1.55",
+            lineHeight: "1.4",
             fontFamily: '"Times New Roman", "STIX Two Text", "Georgia", serif',
             textRendering: "optimizeLegibility",
+            color: "#000",
           }}
         >
           {/* Title Block */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-16">
             <h1
-              className="font-bold mb-4"
+              className="mb-4"
               style={{
-                fontSize: "1.85rem",
-                margin: "2rem 0 0.25rem",
-                fontWeight: "700",
+                fontSize: "2.4rem",
+                margin: "2rem 0 0.5rem",
+                fontWeight: "400",
+                fontFamily: '"Cormorant Garamond", "Times New Roman", serif',
+                letterSpacing: "0.08em",
+                lineHeight: "0.9",
+                textTransform: "uppercase",
+                color: "#000",
+                fontStretch: "condensed",
               }}
             >
               Extract Protocol
             </h1>
             <div
-              className="mb-6"
+              className="mb-2"
               style={{
-                color: "#555",
-                marginBottom: "1.25rem",
-                fontSize: "1rem",
+                color: "#000",
+                fontSize: "1.1rem",
+                fontFamily: '"Times New Roman", serif',
+                marginBottom: "0.5rem",
               }}
             >
               Max Extract
             </div>
+            <div
+              className="mb-8"
+              style={{
+                color: "#000",
+                fontSize: "1rem",
+                fontStyle: "italic",
+                fontFamily: '"Times New Roman", serif',
+                marginBottom: "2rem",
+              }}
+            >
+              extract.fi
+            </div>
           </div>
 
           {/* Abstract */}
-          <section className="mb-8" style={{ margin: "2rem 0", fontSize: "0.975rem" }}>
+          <section className="mb-12" style={{ margin: "3rem 0", fontSize: "0.95rem" }}>
             <div
-              className="mb-2"
+              className="text-center mb-6"
               style={{
-                fontVariant: "small-caps",
-                letterSpacing: "0.04em",
-                color: "#555",
-                marginBottom: "0.25rem",
-                fontWeight: "600",
+                fontWeight: "700",
+                fontSize: "1.1rem",
+                color: "#000",
+                marginBottom: "1.5rem",
+                fontFamily: '"Times New Roman", serif',
               }}
             >
               Abstract
             </div>
-            <p
-              className="text-justify"
+            <div
               style={{
                 textAlign: "justify",
                 hyphens: "auto",
-                margin: "0 0 0.9rem",
+                lineHeight: "1.5",
+                fontSize: "0.95rem",
+                maxWidth: "100%",
+                margin: "0 auto",
               }}
             >
               TODO
-            </p>
+            </div>
           </section>
 
           {/* Table of Contents */}
           <nav
-            className="mb-8"
+            className="mb-12"
             style={{
-              margin: "2rem 0",
+              margin: "3rem 0",
               fontSize: "0.95rem",
             }}
           >
             <h2
-              className="font-bold mb-4"
+              className="text-center mb-8"
               style={{
-                fontSize: "1.2rem",
+                fontSize: "1.1rem",
                 fontWeight: "700",
-                marginBottom: "1rem",
+                marginBottom: "2rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
               Contents
@@ -136,17 +170,19 @@ const WhitepaperPage = () => {
           </nav>
 
           {/* Section 1 */}
-          <section className="mb-6">
+          <section className="mb-8">
             <h2
               className="font-bold mb-4"
               style={{
-                fontSize: "1.3rem",
+                fontSize: "1.15rem",
                 fontWeight: "700",
-                marginTop: "2.2rem",
+                marginTop: "2.5rem",
                 marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
-              <span className="text-gray-500 mr-2">1.</span>Introduction
+              1&nbsp;&nbsp;&nbsp;&nbsp;Introduction
             </h2>
             <p
               className="text-justify mb-4"
@@ -161,17 +197,19 @@ const WhitepaperPage = () => {
           </section>
 
           {/* Section 2 - Randomness */}
-          <section className="mb-6">
+          <section className="mb-8">
             <h2
               className="font-bold mb-4"
               style={{
-                fontSize: "1.3rem",
+                fontSize: "1.15rem",
                 fontWeight: "700",
-                marginTop: "2.2rem",
+                marginTop: "2.5rem",
                 marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
-              <span className="text-gray-500 mr-2">2.</span>Randomness
+              2&nbsp;&nbsp;&nbsp;&nbsp;Randomness
             </h2>
 
             <p
@@ -188,12 +226,14 @@ const WhitepaperPage = () => {
             </p>
 
             <h3
-              className="font-bold mb-3"
+              className="font-bold mb-4"
               style={{
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
                 fontWeight: "600",
-                marginTop: "1.5rem",
-                marginBottom: "0.75rem",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
               2.1 Universe Entropy Generation
@@ -226,15 +266,25 @@ const WhitepaperPage = () => {
               entropy is generated by combining the revealed number with the block hash from the commitment block:
             </p>
 
-            <MarkdownWithMath
-              content="$$entropy = keccak256(randomNumber, commitBlockHash)$$"
-              className="text-center my-6 p-4 bg-gray-50 border-l-4 border-gray-300"
+            <div
+              className="text-center my-8"
               style={{
-                margin: "1.5rem 0",
-                fontSize: "1.1rem",
-                fontWeight: "600",
+                margin: "2rem 0",
+                padding: "1.5rem 0",
+                borderTop: "1px solid #ddd",
+                borderBottom: "1px solid #ddd",
+                backgroundColor: "#fafafa",
               }}
-            />
+            >
+              <MarkdownWithMath
+                content="$$entropy = keccak256(randomNumber, commitBlockHash)$$"
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: "400",
+                  fontFamily: '"Computer Modern", "Latin Modern Math", "Times New Roman", serif',
+                }}
+              />
+            </div>
 
             <p
               className="text-justify mb-4"
@@ -249,12 +299,14 @@ const WhitepaperPage = () => {
             </p>
 
             <h3
-              className="font-bold mb-3"
+              className="font-bold mb-4"
               style={{
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
                 fontWeight: "600",
-                marginTop: "1.5rem",
-                marginBottom: "0.75rem",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
               2.2 Rolling Entropy System
@@ -285,15 +337,25 @@ const WhitepaperPage = () => {
               The rolling entropy is updated using the following formula:
             </p>
 
-            <MarkdownWithMath
-              content="$$rollingEntropy = keccak256(revealNumber, blockHash, previousRollingEntropy)$$"
-              className="text-center my-6 p-4 bg-gray-50 border-l-4 border-gray-300"
+            <div
+              className="text-center my-8"
               style={{
-                margin: "1.5rem 0",
-                fontSize: "1.1rem",
-                fontWeight: "600",
+                margin: "2rem 0",
+                padding: "1.5rem 0",
+                borderTop: "1px solid #ddd",
+                borderBottom: "1px solid #ddd",
+                backgroundColor: "#fafafa",
               }}
-            />
+            >
+              <MarkdownWithMath
+                content="$$rollingEntropy = keccak256(revealNumber, blockHash, previousRollingEntropy)$$"
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: "400",
+                  fontFamily: '"Computer Modern", "Latin Modern Math", "Times New Roman", serif',
+                }}
+              />
+            </div>
 
             <p
               className="text-justify mb-4"
@@ -308,12 +370,14 @@ const WhitepaperPage = () => {
             </p>
 
             <h3
-              className="font-bold mb-3"
+              className="font-bold mb-4"
               style={{
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
                 fontWeight: "600",
-                marginTop: "1.5rem",
-                marginBottom: "0.75rem",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
               2.3 Sector-Specific Randomness
@@ -332,15 +396,25 @@ const WhitepaperPage = () => {
               sector&apos;s unique identifier:
             </p>
 
-            <MarkdownWithMath
-              content={`$$sectorEntropy = keccak256(rollingEntropy + sectorId.padStart(64, "0"))$$`}
-              className="text-center my-6 p-4 bg-gray-50 border-l-4 border-gray-300"
+            <div
+              className="text-center my-8"
               style={{
-                margin: "1.5rem 0",
-                fontSize: "1.1rem",
-                fontWeight: "600",
+                margin: "2rem 0",
+                padding: "1.5rem 0",
+                borderTop: "1px solid #ddd",
+                borderBottom: "1px solid #ddd",
+                backgroundColor: "#fafafa",
               }}
-            />
+            >
+              <MarkdownWithMath
+                content={`$$sectorEntropy = keccak256(rollingEntropy + sectorId.padStart(64, "0"))$$`}
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: "400",
+                  fontFamily: '"Computer Modern", "Latin Modern Math", "Times New Roman", serif',
+                }}
+              />
+            </div>
 
             <p
               className="text-justify mb-4"
@@ -368,12 +442,14 @@ const WhitepaperPage = () => {
             </p>
 
             <h3
-              className="font-bold mb-3"
+              className="font-bold mb-4"
               style={{
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
                 fontWeight: "600",
-                marginTop: "1.5rem",
-                marginBottom: "0.75rem",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
               2.4 Deterministic Dice Implementation
@@ -408,12 +484,14 @@ const WhitepaperPage = () => {
             </p>
 
             <h3
-              className="font-bold mb-3"
+              className="font-bold mb-4"
               style={{
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
                 fontWeight: "600",
-                marginTop: "1.5rem",
-                marginBottom: "0.75rem",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
               2.5 Game Event Generation

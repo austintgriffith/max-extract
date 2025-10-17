@@ -70,7 +70,9 @@ const PilotRow = ({ pilot, index }: { pilot: Pilot; index: number }) => {
         </span>
       </td>
       <td>
-        {pilot.assignment.isAssigned && pilot.assignment.currentSectorId ? (
+        {pilot.death.isDead ? (
+          <span className="badge badge-error badge-sm">💀 Dead</span>
+        ) : pilot.assignment.isAssigned && pilot.assignment.currentSectorId ? (
           <Link
             href={`/sector/${pilot.assignment.currentSectorId}`}
             target="_blank"
@@ -84,23 +86,29 @@ const PilotRow = ({ pilot, index }: { pilot: Pilot; index: number }) => {
         )}
       </td>
       <td>
-        <div className="flex gap-1 text-xs">
-          <span className={`font-mono ${getStatColor(pilot.stats.fuel)}`} title="Fuel">
-            ⛽{pilot.stats.fuel.toFixed(1)}
-          </span>
-          <span className={`font-mono ${getStatColor(pilot.stats.cargo)}`} title="Cargo">
-            📦{pilot.stats.cargo}
-          </span>
-          <span className={`font-mono ${getStatColor(pilot.stats.aggression)}`} title="Aggression">
-            ⚔️{pilot.stats.aggression}
-          </span>
-          <span className={`font-mono ${getStatColor(pilot.stats.intelligence)}`} title="Intelligence">
-            🧠{pilot.stats.intelligence}
-          </span>
-          <span className={`font-mono ${getStatColor(pilot.stats.dexterity)}`} title="Dexterity">
-            🏃{pilot.stats.dexterity}
-          </span>
-        </div>
+        <span className={`font-mono text-xs ${getStatColor(pilot.stats.fuel)}`} title="Fuel">
+          {pilot.stats.fuel.toFixed(1)}
+        </span>
+      </td>
+      <td>
+        <span className={`font-mono text-xs ${getStatColor(pilot.stats.cargo)}`} title="Cargo">
+          {pilot.stats.cargo}
+        </span>
+      </td>
+      <td>
+        <span className={`font-mono text-xs ${getStatColor(pilot.stats.aggression)}`} title="Aggression">
+          {pilot.stats.aggression}
+        </span>
+      </td>
+      <td>
+        <span className={`font-mono text-xs ${getStatColor(pilot.stats.intelligence)}`} title="Intelligence">
+          {pilot.stats.intelligence}
+        </span>
+      </td>
+      <td>
+        <span className={`font-mono text-xs ${getStatColor(pilot.stats.dexterity)}`} title="Dexterity">
+          {pilot.stats.dexterity}
+        </span>
       </td>
     </tr>
   );
@@ -174,6 +182,77 @@ const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: num
   );
 };
 
+const CountdownTimer = ({ endTime }: { endTime: bigint }) => {
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const endTimeSeconds = Number(endTime);
+      const difference = endTimeSeconds - now;
+
+      if (difference <= 0) {
+        setTimeLeft("00:00:00");
+        setIsExpired(true);
+        return;
+      }
+
+      const hours = Math.floor(difference / 3600);
+      const minutes = Math.floor((difference % 3600) / 60);
+      const seconds = difference % 60;
+
+      setTimeLeft(
+        `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+      );
+      setIsExpired(false);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [endTime]);
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm opacity-70">Time Left:</span>
+      <span className={`font-mono text-lg ${isExpired ? "text-error" : "text-primary"}`}>{timeLeft}</span>
+      {isExpired && <span className="badge badge-error badge-sm">Expired</span>}
+    </div>
+  );
+};
+
+const WinnersDisplay = ({ winners, winningScore }: { winners: string[]; winningScore: bigint }) => {
+  if (!winners || winners.length === 0) {
+    return (
+      <div className="alert alert-info">
+        <span>🤷 No winners - no players participated in the game</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="alert alert-success">
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🏆</span>
+          <span className="font-bold">{winners.length === 1 ? "Winner!" : `${winners.length} Winners! (Tie)`}</span>
+          <span className="badge badge-primary">Score: {winningScore.toString()}</span>
+        </div>
+        <div className="space-y-1">
+          {winners.map((winner, index) => (
+            <div key={winner} className="flex items-center gap-2">
+              <span className="text-sm opacity-70">{index + 1}.</span>
+              <Address address={winner} size="sm" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard: NextPage = () => {
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [playerSectors, setPlayerSectors] = useState<Map<string, string>>(new Map());
@@ -203,6 +282,30 @@ const Dashboard: NextPage = () => {
   const { data: gameInfo } = useScaffoldReadContract({
     contractName: "Game",
     functionName: "getGameInfo",
+  });
+
+  // Read game end time
+  const { data: gameEndTime } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "gameEndTime",
+  });
+
+  // Read if game can be settled
+  const { data: canGameSettle } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "canGameSettle",
+  });
+
+  // Read game winners (only available after settlement)
+  const { data: gameWinners } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "getGameWinners",
+  });
+
+  // Read winning score (only available after settlement)
+  const { data: winningScore } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "winningScore",
   });
 
   // Read entropy from Universe contract
@@ -303,7 +406,16 @@ const Dashboard: NextPage = () => {
   };
 
   const formatGameState = (state: number) => {
-    return state === 0 ? "Open" : "Active";
+    switch (state) {
+      case 0:
+        return "Open";
+      case 1:
+        return "Active";
+      case 2:
+        return "Settled";
+      default:
+        return "Unknown";
+    }
   };
 
   return (
@@ -311,27 +423,53 @@ const Dashboard: NextPage = () => {
       <div className="px-5 w-full max-w-4xl">
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
-            {/* Compact Game Status */}
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 p-2 bg-base-200 rounded-lg">
-              <div
-                className={`badge badge-lg ${gameInfo && Number(gameInfo[0]) === 1 ? "badge-success" : "badge-primary"}`}
-              >
-                {gameInfo ? formatGameState(Number(gameInfo[0])) : "Loading..."}
+            {/* Game Status */}
+            <div className="space-y-4 mb-8">
+              {/* Game State and Basic Info */}
+              <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-base-200 rounded-lg">
+                <div
+                  className={`badge badge-lg ${
+                    gameInfo && Number(gameInfo[0]) === 2
+                      ? "badge-success"
+                      : gameInfo && Number(gameInfo[0]) === 1
+                        ? "badge-warning"
+                        : "badge-primary"
+                  }`}
+                >
+                  {gameInfo ? formatGameState(Number(gameInfo[0])) : "Loading..."}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm opacity-70">Players:</span>
+                  <span className="font-mono">{gameInfo ? Number(gameInfo[1]).toString() : "0"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm opacity-70">Buy-in:</span>
+                  <span className="font-mono">{gameInfo ? `${Number(gameInfo[2]) / 1e18}Ξ` : "0Ξ"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm opacity-70">Pot:</span>
+                  <span className="font-mono">
+                    {gameInfo ? `${(Number(gameInfo[1]) * Number(gameInfo[2])) / 1e18}Ξ` : "0Ξ"}
+                  </span>
+                </div>
+                {/* Countdown Timer for Active Games */}
+                {gameInfo && Number(gameInfo[0]) === 1 && gameEndTime && (
+                  <CountdownTimer endTime={gameEndTime as bigint} />
+                )}
+                {/* Settlement Status */}
+                {canGameSettle && <div className="badge badge-error badge-lg animate-pulse">Can Settle!</div>}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm opacity-70">Players:</span>
-                <span className="font-mono">{gameInfo ? Number(gameInfo[1]).toString() : "0"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm opacity-70">Buy-in:</span>
-                <span className="font-mono">{gameInfo ? `${Number(gameInfo[2]) / 1e18}Ξ` : "0Ξ"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm opacity-70">Pot:</span>
-                <span className="font-mono">
-                  {gameInfo ? `${(Number(gameInfo[1]) * Number(gameInfo[2])) / 1e18}Ξ` : "0Ξ"}
-                </span>
-              </div>
+
+              {/* Winners Display for Settled Games */}
+              {gameInfo &&
+                Number(gameInfo[0]) === 2 &&
+                (gameWinners && winningScore !== undefined && winningScore !== null ? (
+                  <WinnersDisplay winners={gameWinners as string[]} winningScore={winningScore as bigint} />
+                ) : (
+                  <div className="alert alert-warning">
+                    <span>🔄 Game is settled but winners data is still loading...</span>
+                  </div>
+                ))}
             </div>
 
             {/* Game Server Status */}
@@ -464,6 +602,10 @@ const Dashboard: NextPage = () => {
                       <span className="text-xs opacity-70">Available:</span>
                       <span className="font-mono text-xs">{pilotsData.summary.available}</span>
                     </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs opacity-70">Dead:</span>
+                      <span className="font-mono text-xs">{pilotsData.summary.dead}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -475,7 +617,11 @@ const Dashboard: NextPage = () => {
                         <th>Address</th>
                         <th>Ship</th>
                         <th>Status</th>
-                        <th>Stats</th>
+                        <th title="Fuel">⛽</th>
+                        <th title="Cargo">📦</th>
+                        <th title="Aggression">⚔️</th>
+                        <th title="Intelligence">🧠</th>
+                        <th title="Dexterity">🏃</th>
                       </tr>
                     </thead>
                     <tbody>

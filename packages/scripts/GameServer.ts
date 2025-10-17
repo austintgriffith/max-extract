@@ -63,7 +63,8 @@ export class GameServer {
       this.entropyManager,
       this.loadSectorsFromContract.bind(this),
       this.characterManager,
-      debugMode
+      debugMode,
+      this.stop.bind(this)
     );
     this.routeManager = new RouteManager(
       this.app,

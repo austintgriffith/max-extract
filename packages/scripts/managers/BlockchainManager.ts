@@ -472,6 +472,96 @@ export class BlockchainManager {
   }
 
   /**
+   * Check if the game can be settled
+   */
+  public async canGameSettle(): Promise<boolean> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "canGameSettle",
+      []
+    );
+  }
+
+  /**
+   * Get the current game state
+   */
+  public async getGameState(): Promise<number> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "state",
+      []
+    );
+  }
+
+  /**
+   * Get game winners (only available after settlement)
+   */
+  public async getGameWinners(): Promise<string[]> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "getGameWinners",
+      []
+    );
+  }
+
+  /**
+   * Get the winning score (only available after settlement)
+   */
+  public async getWinningScore(): Promise<bigint> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      gameContract.address,
+      gameContract.abi,
+      "winningScore",
+      []
+    );
+  }
+
+  /**
+   * Settle the game (can be called by anyone after game end time)
+   */
+  public async settleGame(): Promise<string> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    console.log("🏁 Settling the game...");
+
+    const result = await this.writeContract(
+      gameContract.address as `0x${string}`,
+      gameContract.abi,
+      "settleGame",
+      []
+    );
+
+    console.log("✅ Game settled successfully!");
+    return result;
+  }
+
+  /**
    * Get all pilots with their ETH balances and death status in one call
    */
   public async getAllPilotsAndBalances(): Promise<{
@@ -505,6 +595,144 @@ export class BlockchainManager {
     } catch (error: any) {
       this.debugLog(`Failed to get all pilots and balances:`, error);
       throw new Error(`Failed to get pilots data: ${error.message}`);
+    }
+  }
+
+  /**
+   * Clean up all pilot ETH by sending their balances back to GOD
+   * Called when the game ends to reclaim all distributed ETH
+   */
+  public async cleanupPilotETH(characterManager: any): Promise<void> {
+    try {
+      console.log("🧹 Starting pilot ETH cleanup...");
+
+      // Get all pilots and their balances
+      const { pilots } = await this.getAllPilotsAndBalances();
+
+      // Set minimum balance threshold based on network
+      const chainId = this.config.chainId;
+      let minBalance: number;
+
+      if (chainId === 31337) {
+        // Foundry localhost - higher gas costs, need higher minimum
+        minBalance = 0.001; // 1000x higher than gas cost
+      } else if (chainId === 42161) {
+        // Arbitrum - very low gas costs
+        minBalance = 0.0001; // Still much higher than gas cost
+      } else {
+        // Other networks - conservative default
+        minBalance = 0.0005;
+      }
+
+      console.log(
+        `🧹 Network detected: Chain ID ${chainId}, minimum balance threshold: ${minBalance} ETH`
+      );
+
+      let totalReclaimed = 0;
+      let successfulTransfers = 0;
+      let failedTransfers = 0;
+
+      for (const pilot of pilots) {
+        const balance = parseFloat(pilot.ethBalance);
+
+        // Skip pilots with very low balances based on network-specific threshold
+        if (balance < minBalance) {
+          this.debugLog(
+            `Skipping pilot ${pilot.address.slice(
+              0,
+              8
+            )}... with low balance: ${balance.toFixed(
+              6
+            )} ETH (min: ${minBalance} ETH)`
+          );
+          continue;
+        }
+
+        try {
+          // Get the actual character with their real private key
+          const character = characterManager.getCharacterByAddress(
+            pilot.address
+          );
+          if (!character) {
+            console.log(
+              `⏭️  Skipping ${pilot.address.slice(
+                0,
+                8
+              )}... - character not found`
+            );
+            continue;
+          }
+
+          const pilotAccount = privateKeyToAccount(character.privateKey);
+          const pilotWalletClient = createWalletClient({
+            account: pilotAccount,
+            chain: this.getChain(),
+            transport: http(this.config.rpcUrl),
+          });
+
+          // Get current balance
+          const currentBalance = await this.publicClient.getBalance({
+            address: pilot.address as `0x${string}`,
+          });
+
+          // Calculate exactly how much to send: balance - (gas cost)
+          const gasLimit = 21000n; // Standard ETH transfer
+          const gasPrice = await this.publicClient.getGasPrice();
+          const gasCost = gasLimit * gasPrice;
+
+          if (currentBalance <= gasCost) {
+            console.log(
+              `⏭️  Skipping ${pilot.address.slice(0, 8)}... - balance too low`
+            );
+            continue;
+          }
+
+          const amountToSend = currentBalance - gasCost;
+
+          console.log(`🔍 RECLAIM for ${pilot.address.slice(0, 8)}...:`);
+          console.log(`   📊 Balance: ${formatEther(currentBalance)} ETH`);
+          console.log(`   💰 Sending: ${formatEther(amountToSend)} ETH`);
+          console.log(`   🔒 Reserving: ${formatEther(gasCost)} ETH for gas`);
+
+          // Send ETH back to GOD with EXPLICIT gas limit and gas price
+          const hash = await pilotWalletClient.sendTransaction({
+            to: this.godAccount.address,
+            value: amountToSend,
+            gas: gasLimit,
+            gasPrice: gasPrice, // CRITICAL: lock in the gas price we used for calculation
+            chain: this.getChain(),
+          });
+
+          const amountInEth = parseFloat(formatEther(amountToSend));
+          console.log(
+            `✅ Reclaimed ${amountInEth.toFixed(
+              4
+            )} ETH from pilot ${pilot.address.slice(0, 8)}... (tx: ${hash.slice(
+              0,
+              10
+            )}...)`
+          );
+
+          totalReclaimed += amountInEth;
+          successfulTransfers++;
+        } catch (error: any) {
+          const balance = parseFloat(pilot.ethBalance);
+          console.error(
+            `❌ Failed to reclaim ETH from pilot ${pilot.address.slice(
+              0,
+              8
+            )}... (balance: ${balance.toFixed(6)} ETH): ${error.message}`
+          );
+          failedTransfers++;
+        }
+      }
+
+      console.log(`✅ Pilot cleanup complete:`);
+      console.log(`   💰 Total reclaimed: ${totalReclaimed.toFixed(4)} ETH`);
+      console.log(`   ✅ Successful transfers: ${successfulTransfers}`);
+      console.log(`   ❌ Failed transfers: ${failedTransfers}`);
+    } catch (error: any) {
+      console.error(`❌ Pilot ETH cleanup failed: ${error.message}`);
     }
   }
 

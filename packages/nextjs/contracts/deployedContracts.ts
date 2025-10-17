@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x45009dd3abbe29db54fc5d893ceaa98a624882df",
+      address: "0x4e85dc48a70da1298489d5b6fc2492767d98f384",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1484,
+      deployedOnBlock: 121,
     },
     Credits: {
-      address: "0xf56aa3aceddf88ab12e494d0b96da3c09a5d264e",
+      address: "0x4d8e02bbfcf205828a8352af4376b165e123d7b0",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1485,
+      deployedOnBlock: 122,
     },
     Game: {
-      address: "0xdbd296711ec8ef9aacb623ee3f1c0922dce0d7b2",
+      address: "0xeab25969e5285df34a3b245324d0b2b91e31cad4",
       abi: [
         {
           type: "constructor",
@@ -865,13 +865,34 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "BUY_IN_PRICE",
+          inputs: [],
+          outputs: [
             {
-              name: "_buyInPrice",
+              name: "",
               type: "uint256",
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "WETH_ADDRESS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -908,13 +929,13 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "buyInPrice",
+          name: "canGameSettle",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "uint256",
-              internalType: "uint256",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -952,6 +973,38 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "gameEndTime",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "gameWinners",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -1011,6 +1064,19 @@ const deployedContracts = {
               name: "_buyInPrice",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getGameWinners",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
             },
           ],
           stateMutability: "view",
@@ -1082,6 +1148,19 @@ const deployedContracts = {
               name: "",
               type: "address[]",
               internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getTimeRemaining",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -1251,19 +1330,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setBuyInPrice",
-          inputs: [
-            {
-              name: "_newPrice",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setState",
           inputs: [
             {
@@ -1272,6 +1338,13 @@ const deployedContracts = {
               internalType: "enum Game.GameState",
             },
           ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "settleGame",
+          inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -1353,23 +1426,23 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "winningScore",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "withdraw",
           inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "event",
-          name: "BuyInPriceUpdated",
-          inputs: [
-            {
-              name: "newPrice",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
         },
         {
           type: "event",
@@ -1380,6 +1453,37 @@ const deployedContracts = {
               type: "uint8[]",
               indexed: false,
               internalType: "uint8[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GameSettled",
+          inputs: [
+            {
+              name: "winners",
+              type: "address[]",
+              indexed: false,
+              internalType: "address[]",
+            },
+            {
+              name: "winningScore",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalPayout",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "payoutPerWinner",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -1531,6 +1635,16 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "GameAlreadySettled",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "GameNotEnded",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "GameNotOpen",
           inputs: [],
         },
@@ -1586,10 +1700,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1485,
+      deployedOnBlock: 123,
     },
     MaxExtract: {
-      address: "0xdfd787c807dea8d7e53311b779bc0c6a4704d286",
+      address: "0x150890d6984e98f408162ee65684779804bff858",
       abi: [
         {
           type: "constructor",
@@ -1947,7 +2061,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1485,
+      deployedOnBlock: 123,
     },
   },
   42161: {
@@ -2810,13 +2924,34 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "BUY_IN_PRICE",
+          inputs: [],
+          outputs: [
             {
-              name: "_buyInPrice",
+              name: "",
               type: "uint256",
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "WETH_ADDRESS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -2853,13 +2988,13 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "buyInPrice",
+          name: "canGameSettle",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "uint256",
-              internalType: "uint256",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -2897,6 +3032,38 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "gameEndTime",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "gameWinners",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -2956,6 +3123,19 @@ const deployedContracts = {
               name: "_buyInPrice",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getGameWinners",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
             },
           ],
           stateMutability: "view",
@@ -3027,6 +3207,19 @@ const deployedContracts = {
               name: "",
               type: "address[]",
               internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getTimeRemaining",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -3196,19 +3389,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setBuyInPrice",
-          inputs: [
-            {
-              name: "_newPrice",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setState",
           inputs: [
             {
@@ -3217,6 +3397,13 @@ const deployedContracts = {
               internalType: "enum Game.GameState",
             },
           ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "settleGame",
+          inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -3298,23 +3485,23 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "winningScore",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "withdraw",
           inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "event",
-          name: "BuyInPriceUpdated",
-          inputs: [
-            {
-              name: "newPrice",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
         },
         {
           type: "event",
@@ -3325,6 +3512,37 @@ const deployedContracts = {
               type: "uint8[]",
               indexed: false,
               internalType: "uint8[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GameSettled",
+          inputs: [
+            {
+              name: "winners",
+              type: "address[]",
+              indexed: false,
+              internalType: "address[]",
+            },
+            {
+              name: "winningScore",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalPayout",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "payoutPerWinner",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -3473,6 +3691,16 @@ const deployedContracts = {
             },
           ],
           anonymous: false,
+        },
+        {
+          type: "error",
+          name: "GameAlreadySettled",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "GameNotEnded",
+          inputs: [],
         },
         {
           type: "error",

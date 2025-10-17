@@ -18,8 +18,6 @@ import "../contracts/Game.sol";
  * yarn deploy --file DeployYourContract.s.sol --network optimism # live network (requires keystore)
  */
 contract DeployYourContract is ScaffoldETHDeploy {
-    // Game configuration
-    uint256 public constant GAME_BUYIN_PRICE = 0.001 ether;
     /**
      * @dev Deployer setup based on `ETH_KEYSTORE_ACCOUNT` in `.env`:
      *      - "scaffold-eth-default": Uses Anvil's account #9 (0xa0Ee7A142d267C1f36714E4a8F75612F20a79720), no password prompt
@@ -36,8 +34,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
         Universe universe = new Universe();
         Credits credits = new Credits(universe.GOD());
         
-        // Deploy Game contract with configured buy-in price
-        Game game = new Game(address(universe), GAME_BUYIN_PRICE);
+        // Deploy Game contract (buy-in price and end time are hardcoded in contract)
+        Game game = new Game(address(universe));
         
         // Deploy MaxExtract with both Universe and Game contract addresses
         MaxExtract maxExtract = new MaxExtract(address(universe), address(game));
@@ -47,6 +45,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
         console.log("Credits deployed at:", address(credits));
         console.log("MaxExtract deployed at:", address(maxExtract));
         console.log("Game deployed at:", address(game));
+        console.log("Game ends at timestamp:", game.gameEndTime());
+        console.log("Buy-in price:", game.BUY_IN_PRICE());
         
         // DEVELOPMENT MODE: Auto-setup entropy
         // For production, comment out the line below and manually run commit-reveal
