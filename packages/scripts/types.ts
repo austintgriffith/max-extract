@@ -80,7 +80,9 @@ export interface SectorEvent {
     | "ship_combat" // New event for ship-to-ship combat
     | "ship_destroyed" // New event for when a ship is destroyed by another ship
     | "pilot_death" // New event for when a pilot is killed
-    | "pilot_tip"; // New event for when a pilot tips a player
+    | "pilot_tip" // New event for when a pilot tips a player
+    | "credential_minted" // New event for when a pilot mints a sector credential
+    | "credential_mint_failed"; // New event for when credential minting fails (contract issues)
   timestamp: number;
   data: any;
 }
@@ -95,7 +97,7 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 10,
+  CHARACTER_COUNT: 25,
   PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {

@@ -45,7 +45,11 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                                             ? "badge-error"
                                             : event.type === "pilot_tip"
                                               ? "badge-success"
-                                              : "badge-ghost"
+                                              : event.type === "credential_minted"
+                                                ? "badge-success"
+                                                : event.type === "credential_mint_failed"
+                                                  ? "badge-warning"
+                                                  : "badge-ghost"
                         }`}
                       >
                         {event.type.replace("_", " ")}
@@ -71,19 +75,23 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                         `${event.data.attackerPilotName || "Attacker"} destroyed ${event.data.victimPilotName || "victim"}! Gained ${event.data.stolenScore} points + ${event.data.stolenFuel} fuel`}
                       {event.type === "pilot_death" && (
                         <div className="flex flex-col gap-1">
-                          <div>
-                            💀 {event.data.victimPilotName} killed by {event.data.killerPilotName}
+                          <div className="flex items-center gap-1">
+                            <span>
+                              💀 {event.data.victimPilotName} killed by {event.data.killerPilotName}
+                            </span>
+                            {event.data.blockchainConfirmed === true && (
+                              <>
+                                <div className="px-2 py-1 rounded text-white font-bold bg-gradient-to-r from-red-500 to-red-700">
+                                  -{event.data.scorePenalty} points
+                                </div>
+                                {event.data.transactionHash && (
+                                  <span className="text-xs opacity-70">
+                                    (tx: {event.data.transactionHash.slice(0, 8)}...)
+                                  </span>
+                                )}
+                              </>
+                            )}
                           </div>
-                          {event.data.blockchainConfirmed === true && (
-                            <div className="text-xs text-red-400">
-                              ⛓️ Player penalized -{event.data.scorePenalty} points on-chain
-                              {event.data.transactionHash && (
-                                <span className="ml-1 opacity-70">
-                                  (tx: {event.data.transactionHash.slice(0, 8)}...)
-                                </span>
-                              )}
-                            </div>
-                          )}
                           {event.data.blockchainConfirmed === false && (
                             <div className="text-xs text-yellow-400">
                               ⚠️ Blockchain transaction failed: {event.data.error}
@@ -111,6 +119,35 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                               <span>to {event.data.aboutInfo?.stationName || "the sector owner"}.</span>
                             </>
                           )}
+                        </div>
+                      )}
+                      {event.type === "credential_minted" && (
+                        <div className="flex items-center gap-1">
+                          <span>🎫 {event.data.pilotName} minted access credential</span>
+                          <div className="px-2 py-1 rounded text-white font-bold bg-gradient-to-r from-green-500 to-emerald-600">
+                            +{event.data.pointsEarned} points
+                          </div>
+                          {event.data.transactionHash && (
+                            <span className="text-xs opacity-70">
+                              (tx: {event.data.transactionHash.slice(0, 8)}...)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {event.type === "credential_mint_failed" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-warning">
+                            <span>⚠️ {event.data.pilotName} could not mint credential</span>
+                          </div>
+                          <div className="text-xs bg-warning/10 rounded px-2 py-1 border border-warning/30">
+                            <div className="font-semibold text-warning">Your credential contract has issues:</div>
+                            <div className="mt-1">{event.data.reason}</div>
+                            {event.data.credentialAddress && (
+                              <div className="mt-1 opacity-70">
+                                Contract: {event.data.credentialAddress.slice(0, 10)}...
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

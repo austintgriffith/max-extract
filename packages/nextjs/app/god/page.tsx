@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatEther, keccak256, toBytes } from "viem";
 import { useAccount } from "wagmi";
 import { Address, AddressInput } from "~~/components/scaffold-eth";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import deployedContracts from "~~/contracts/deployedContracts";
+import { useScaffoldReadContract, useScaffoldWriteContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface PayoutRecipient {
@@ -14,17 +15,31 @@ interface PayoutRecipient {
 
 export default function GodPage() {
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const [randomNumber, setRandomNumber] = useState<string>("");
   const [commitmentHash, setCommitmentHash] = useState<string>("");
 
   // Payout state
   const [recipients, setRecipients] = useState<PayoutRecipient[]>([{ address: "", percentage: "" }]);
 
+  // MaxExtract address state
+  const [maxExtractAddress, setMaxExtractAddress] = useState<string>("");
+
   // Read the god address from the Universe contract
   const { data: godAddress } = useScaffoldReadContract({
     contractName: "Universe",
     functionName: "GOD",
   });
+
+  // Pre-populate MaxExtract address from deployed contracts
+  useEffect(() => {
+    const networkId = targetNetwork.id;
+    const networkContracts = deployedContracts[networkId as keyof typeof deployedContracts];
+
+    if (networkContracts && networkContracts.MaxExtract) {
+      setMaxExtractAddress(networkContracts.MaxExtract.address);
+    }
+  }, [targetNetwork]);
 
   // Check if current user is god
   const isGod = address && godAddress && address.toLowerCase() === godAddress.toLowerCase();
@@ -56,6 +71,12 @@ export default function GodPage() {
   const { data: visibleChapters } = useScaffoldReadContract({
     contractName: "Game",
     functionName: "getVisibleChapters",
+  });
+
+  // Read current MaxExtract address
+  const { data: currentMaxExtractAddress } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "maxExtract",
   });
 
   // Write functions
@@ -243,6 +264,26 @@ export default function GodPage() {
     }
   };
 
+  // MaxExtract address update handler
+  const handleUpdateMaxExtract = async () => {
+    if (!maxExtractAddress) {
+      notification.error("Please enter a valid MaxExtract address");
+      return;
+    }
+
+    try {
+      await writeGameAsync({
+        functionName: "setMaxExtract",
+        args: [maxExtractAddress as `0x${string}`],
+      });
+      notification.success("MaxExtract address updated successfully!");
+      setMaxExtractAddress(""); // Clear the input after successful update
+    } catch (error) {
+      console.error("Error updating MaxExtract address:", error);
+      notification.error("Error updating MaxExtract address");
+    }
+  };
+
   if (!isGod) {
     return (
       <div className="flex items-center flex-col flex-grow pt-8">
@@ -400,6 +441,67 @@ export default function GodPage() {
             </p>
             <p>
               <strong>Note:</strong> Only visible chapters can be accessed by players in the game
+            </p>
+          </div>
+        </div>
+
+        {/* MaxExtract Address Configuration */}
+        <div className="bg-base-300 rounded-3xl p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">🔗 MaxExtract Contract Configuration</h2>
+
+          {/* Current MaxExtract Address Display */}
+          <div className="bg-base-200 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-lg font-semibold">MaxExtract Address in Game Contract:</span>
+              <span className="text-sm font-mono">
+                {currentMaxExtractAddress &&
+                currentMaxExtractAddress !== "0x0000000000000000000000000000000000000000" ? (
+                  <Address address={currentMaxExtractAddress} />
+                ) : (
+                  <span className="text-warning">⚠️ Not Set</span>
+                )}
+              </span>
+            </div>
+            <p className="text-sm opacity-70">
+              The Game contract needs to know the address of the MaxExtract contract to verify player credentials and
+              sector ownership.
+            </p>
+          </div>
+
+          {/* MaxExtract Address Input */}
+          <div className="space-y-4">
+            <div>
+              <label className="label">
+                <span className="label-text font-semibold">Deployed MaxExtract Address</span>
+                <span className="label-text-alt text-success">✓ Auto-detected from deployed contracts</span>
+              </label>
+              <AddressInput
+                value={maxExtractAddress}
+                onChange={value => setMaxExtractAddress(value)}
+                placeholder="0x... MaxExtract contract address"
+              />
+              <div className="label">
+                <span className="label-text-alt opacity-70">
+                  This address is pre-filled from your deployed contracts. Just click the button below to set it in the
+                  Game contract.
+                </span>
+              </div>
+            </div>
+
+            <button
+              className={`btn btn-lg w-full ${maxExtractAddress ? "btn-primary" : "btn-disabled"}`}
+              onClick={handleUpdateMaxExtract}
+              disabled={!maxExtractAddress}
+            >
+              🔗 Set MaxExtract Address in Game Contract
+            </button>
+          </div>
+
+          {/* Info */}
+          <div className="mt-4 text-sm opacity-70">
+            <p>
+              <strong>💡 Note:</strong> This enables credential minting and sector-based features. Each pilot that mints
+              a sector credential awards 5 points to the player.
             </p>
           </div>
         </div>

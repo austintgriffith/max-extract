@@ -1158,6 +1158,14 @@ export class Sector {
       )}) with ${Math.round(startingFuel)}% fuel (pilot's current fuel)`
     );
 
+    // Attempt to mint credential (fire and forget - don't await)
+    this.attemptCredentialMinting(ship).catch((error) => {
+      console.error(
+        `Error in credential minting for pilot ${ship.pilotName}:`,
+        error
+      );
+    });
+
     // Assign initial target for newly spawned ship
     this.assignTarget(ship, "initial spawn targeting", false);
 
@@ -1672,6 +1680,184 @@ export class Sector {
           blockchainConfirmed: false,
         },
       });
+    }
+  }
+
+  /**
+   * Attempt to mint a credential when a pilot enters the sector
+   */
+  private async attemptCredentialMinting(ship: Ship): Promise<void> {
+    try {
+      this.debugLog(
+        `Attempting credential minting for pilot ${ship.pilotName} in sector ${this.id}`
+      );
+
+      // Step 0: Check if pilot is actually active on blockchain
+      const isPilot = await this.blockchainManager.isPilot(ship.pilotAddress);
+
+      if (!isPilot) {
+        this.debugLog(
+          `Pilot ${ship.pilotName} is not an active pilot on blockchain (dead or not registered), skipping credential minting`
+        );
+        console.log(
+          `ℹ️  Pilot ${ship.pilotName} is not active on blockchain, skipping credential minting`
+        );
+        return;
+      }
+
+      // Step 1: Look up registry address for this sector
+      const registryAddress =
+        await this.blockchainManager.getRegistryAddressForSector(this.id);
+
+      if (
+        !registryAddress ||
+        registryAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        this.debugLog(`Sector ${this.id} has no registry, skipping credential`);
+        console.log(
+          `ℹ️  Sector ${this.id.slice(0, 10)}... has no registry configured`
+        );
+        return;
+      }
+
+      this.debugLog(`Found registry at ${registryAddress}`);
+
+      // Step 2: Look up credential address from registry
+      const credentialAddress =
+        await this.blockchainManager.getCredentialAddress(registryAddress);
+
+      if (
+        !credentialAddress ||
+        credentialAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        this.debugLog(
+          `Registry ${registryAddress} has no credential contract registered`
+        );
+        console.log(
+          `ℹ️  Sector ${this.id.slice(
+            0,
+            10
+          )}... has no credential contract registered`
+        );
+        return;
+      }
+
+      this.debugLog(`Found credential contract at ${credentialAddress}`);
+
+      // Step 2.5: Check if pilot has already minted from this player
+      const playerAddress = await this.blockchainManager.getSectorOwner(
+        this.id
+      );
+
+      if (!playerAddress) {
+        this.debugLog(`Could not find sector owner, skipping credential`);
+        return;
+      }
+
+      const hasAlreadyMinted =
+        await this.blockchainManager.hasPilotMintedFromPlayer(
+          ship.pilotAddress,
+          playerAddress
+        );
+
+      if (hasAlreadyMinted) {
+        console.log(
+          `ℹ️  Pilot ${ship.pilotName} already bought a credential for this sector`
+        );
+        return;
+      }
+
+      // Step 3: Attempt to mint credential
+      const result = await this.blockchainManager.attemptCredentialMint(
+        ship.privateKey,
+        credentialAddress,
+        ship.pilotAddress
+      );
+
+      // Step 4: Log the result
+      if (result.success) {
+        if (result.alreadyOwned) {
+          console.log(
+            `ℹ️  Pilot ${
+              ship.pilotName
+            } already owns credential for sector ${this.id.slice(0, 10)}...`
+          );
+        } else {
+          console.log(
+            `✅ Pilot ${
+              ship.pilotName
+            } minted credential ${credentialAddress.slice(
+              0,
+              10
+            )}... from sector ${this.id.slice(
+              0,
+              10
+            )}... (tx: ${result.txHash?.slice(0, 10)}...)`
+          );
+
+          // Broadcast credential minted event to notify the sector view
+          this.broadcastEvent({
+            type: "credential_minted",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: ship.pilotAddress,
+              pilotName: ship.pilotName,
+              sectorId: this.id,
+              credentialAddress: credentialAddress,
+              transactionHash: result.txHash,
+              pointsEarned: 5, // Chapter 3 specifies 5 points for credential minting
+            },
+          });
+        }
+      } else {
+        // Check if pilot already minted from this player (special case - not an error)
+        if (
+          result.error &&
+          result.error.includes("PilotAlreadyMintedFromPlayer")
+        ) {
+          console.log(
+            `ℹ️  Pilot ${ship.pilotName} already bought a credential for this sector`
+          );
+        }
+        // Check if this is a simulation failure (likely credential contract issue)
+        else if (result.error && result.error.includes("Simulation failed")) {
+          console.log(
+            `⚠️  Pilot ${ship.pilotName} couldn't mint credential - the player's credential contract has implementation issues`
+          );
+
+          // Broadcast credential mint failure event to notify the player
+          this.broadcastEvent({
+            type: "credential_mint_failed",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: ship.pilotAddress,
+              pilotName: ship.pilotName,
+              sectorId: this.id,
+              credentialAddress: credentialAddress,
+              error: result.error,
+              errorDetails: result.errorDetails,
+              reason:
+                "Contract simulation failed - check your credential contract implementation",
+            },
+          });
+        } else {
+          // Display error with decoded details if available
+          const errorMsg = result.errorDetails
+            ? `${result.error}\n   ℹ️  ${result.errorDetails}`
+            : result.error;
+          console.log(
+            `❌ Pilot ${ship.pilotName} failed to mint credential: ${errorMsg}`
+          );
+        }
+      }
+    } catch (error: any) {
+      this.debugLog(
+        `Error in credential minting for pilot ${ship.pilotName}:`,
+        error
+      );
+      console.log(
+        `❌ Credential minting error for pilot ${ship.pilotName}: ${error.message}`
+      );
     }
   }
 

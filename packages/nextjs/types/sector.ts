@@ -73,7 +73,9 @@ export interface SectorEvent {
     | "ship_combat"
     | "ship_destroyed"
     | "pilot_death" // New event for when a pilot is killed
-    | "pilot_tip"; // New event for when a pilot tips a player
+    | "pilot_tip" // New event for when a pilot tips a player
+    | "credential_minted" // New event for when a pilot mints a sector credential
+    | "credential_mint_failed"; // New event for when credential minting fails (contract issues)
   timestamp: number;
   data: any;
 }

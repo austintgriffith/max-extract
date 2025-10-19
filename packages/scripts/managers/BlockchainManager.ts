@@ -1073,4 +1073,322 @@ export class BlockchainManager {
 
     return { tipAmount, aboutInfo };
   }
+
+  /**
+   * Check if a pilot has already minted a credential from a specific player
+   */
+  public async hasPilotMintedFromPlayer(
+    pilotAddress: string,
+    playerAddress: string
+  ): Promise<boolean> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      const hasMinted = await this.readContract(
+        gameContract.address,
+        gameContract.abi,
+        "pilotPlayerCredentialMinted",
+        [pilotAddress, playerAddress]
+      );
+
+      return hasMinted as boolean;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to check pilotPlayerCredentialMinted for pilot ${pilotAddress} and player ${playerAddress}:`,
+        error
+      );
+      return false; // Default to false on error to allow attempt
+    }
+  }
+
+  /**
+   * Get the credential contract address from a registry
+   */
+  public async getCredentialAddress(
+    registryAddress: string
+  ): Promise<string | null> {
+    try {
+      if (
+        !registryAddress ||
+        registryAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        return null;
+      }
+
+      this.debugLog(
+        `Looking up credential contract from registry: ${registryAddress}`
+      );
+
+      // Call modules("credential") on the registry contract
+      const credentialAddress = (await this.publicClient.readContract({
+        address: registryAddress as `0x${string}`,
+        abi: [
+          {
+            inputs: [{ name: "key", type: "string" }],
+            name: "modules",
+            outputs: [{ name: "", type: "address" }],
+            stateMutability: "view",
+            type: "function",
+          },
+        ],
+        functionName: "modules",
+        args: ["credential"],
+      })) as string;
+
+      // Check if credential contract exists and is not zero address
+      if (
+        !credentialAddress ||
+        credentialAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        this.debugLog(`No credential contract found in registry`);
+        return null;
+      }
+
+      this.debugLog(`Found credential contract at ${credentialAddress}`);
+      return credentialAddress;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get credential address from registry ${registryAddress}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Attempt to mint a credential for a pilot
+   * Checks if pilot already owns the credential, then mints if needed
+   */
+  public async attemptCredentialMint(
+    pilotPrivateKey: string,
+    credentialAddress: string,
+    pilotAddress: string
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    alreadyOwned?: boolean;
+    error?: string;
+    errorDetails?: string;
+  }> {
+    try {
+      this.debugLog(
+        `Attempting credential mint for pilot ${pilotAddress} from ${credentialAddress}`
+      );
+
+      // Check if pilot already owns the credential (ERC721 balanceOf)
+      const balance = (await this.publicClient.readContract({
+        address: credentialAddress as `0x${string}`,
+        abi: [
+          {
+            name: "balanceOf",
+            type: "function",
+            stateMutability: "view",
+            inputs: [{ name: "owner", type: "address" }],
+            outputs: [{ name: "", type: "uint256" }],
+          },
+        ],
+        functionName: "balanceOf",
+        args: [pilotAddress as `0x${string}`],
+      })) as bigint;
+
+      if (balance > 0n) {
+        this.debugLog(`Pilot already owns credential (balance: ${balance})`);
+        return { success: true, alreadyOwned: true };
+      }
+
+      this.debugLog(`Pilot doesn't own credential, calling issue()...`);
+
+      // Create wallet client for the pilot
+      const pilotAccount = privateKeyToAccount(
+        pilotPrivateKey as `0x${string}`
+      );
+
+      this.debugLog(
+        `Created pilot account with address: ${pilotAccount.address}`
+      );
+      this.debugLog(`Expected pilot address: ${pilotAddress}`);
+
+      if (pilotAccount.address.toLowerCase() !== pilotAddress.toLowerCase()) {
+        throw new Error(
+          `Private key mismatch! Generated address ${pilotAccount.address} doesn't match expected ${pilotAddress}`
+        );
+      }
+
+      const pilotWalletClient = createWalletClient({
+        account: pilotAccount,
+        chain: this.selectedChain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      // Double-check pilot status right before transaction
+      const isPilotNow = await this.isPilot(pilotAddress);
+      this.debugLog(`isPilot check right before transaction: ${isPilotNow}`);
+      console.log(
+        `🔍 Credential mint - Pilot ${pilotAddress.slice(
+          0,
+          10
+        )}... isPilot check: ${isPilotNow}`
+      );
+
+      if (!isPilotNow) {
+        throw new Error(
+          `Pilot status changed! ${pilotAddress} is no longer an active pilot`
+        );
+      }
+
+      // Call issue() on the credential contract
+      this.debugLog(
+        `Calling issue() on credential contract ${credentialAddress} as ${pilotAccount.address}`
+      );
+      console.log(
+        `🔍 Calling issue() on credential ${credentialAddress.slice(
+          0,
+          10
+        )}... as ${pilotAccount.address.slice(0, 10)}...`
+      );
+
+      // Try to simulate the transaction first to catch errors before spending gas
+      try {
+        await this.publicClient.simulateContract({
+          address: credentialAddress as `0x${string}`,
+          abi: [
+            {
+              name: "issue",
+              type: "function",
+              stateMutability: "nonpayable",
+              inputs: [],
+              outputs: [],
+            },
+          ],
+          functionName: "issue",
+          account: pilotAccount.address,
+        });
+        console.log(
+          `✅ Simulation passed for ${pilotAccount.address.slice(0, 10)}...`
+        );
+      } catch (simError: any) {
+        const simErrorMsg = simError.shortMessage || simError.message;
+        console.log(`⚠️  Simulation failed: ${simErrorMsg}`);
+        this.debugLog(`Simulation error details:`, simError);
+
+        // If simulation fails, don't try to execute the transaction
+        // This likely means the credential contract has issues or additional requirements
+        return {
+          success: false,
+          error: `Simulation failed: ${simErrorMsg}. The credential contract may have implementation issues.`,
+        };
+      }
+
+      const hash = await pilotWalletClient.writeContract({
+        address: credentialAddress as `0x${string}`,
+        abi: [
+          {
+            name: "issue",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        functionName: "issue",
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Credential mint transaction sent: ${hash}`);
+
+      // Wait for transaction to be mined
+      await this.waitForTransactionReceipt(hash);
+
+      return { success: true, txHash: hash, alreadyOwned: false };
+    } catch (error: any) {
+      this.debugLog(`Failed to mint credential:`, error);
+
+      // Try to decode the error for better debugging
+      let errorMessage = error.shortMessage || error.message || "Unknown error";
+      let errorDetails = "";
+
+      // Complete mapping of ALL contract error signatures for better debugging
+      const errorSignatures: { [key: string]: string } = {
+        // ===== Game Contract Errors (Game.sol) =====
+        "0x32dcf6cc": "OnlyGod() - Only the GOD address can call this function",
+        "0x4632ffe3":
+          "OnlyPilot() - Caller is not a registered pilot or pilot is dead",
+        "0xb80f6dae": "GameNotOpen() - Game is not in open state for buy-in",
+        "0xcd1c8867": "InsufficientPayment() - Not enough ETH sent for buy-in",
+        "0xa627f538":
+          "PlayerAlreadyJoined() - Player has already bought into the game",
+        "0xe0dbb1a7": "PilotAlreadyAdded() - Pilot is already registered",
+        "0xa9854bc9":
+          "InvalidArrayLengths() - Array length mismatch in parameters",
+        "0x6d2fd3c9":
+          "InvalidPercentages() - Payout percentages don't sum to 100%",
+        "0x3b1ab104": "PayoutFailed() - ETH transfer failed during payout",
+        "0x625018cc":
+          "PilotAlreadyDead() - Pilot has already been marked as dead",
+        "0xabca3517":
+          "NotAPlayer() - Address is not a registered player or has no sector",
+        "0x8f86c6b3": "GameNotEnded() - Game end time has not passed yet",
+        "0xdc557126": "GameAlreadySettled() - Game has already been settled",
+        "0xa1427b3a": "NotACredential() - Contract is not a valid credential",
+        "0xbcb63aea":
+          "CredentialNotRegistered() - Credential contract not registered in player's registry",
+        "0x782a830c":
+          "MaxExtractNotSet() - MaxExtract contract address not configured in Game",
+        "0x933099c1":
+          "PilotAlreadyMintedFromPlayer() - Pilot already bought a credential from this player (one-time purchase rule)",
+
+        // ===== Universe Contract Errors (Universe.sol) =====
+        "0x411354e3":
+          "EntropyAlreadySet() - Universe entropy has already been set",
+        "0x11b70ea7":
+          "NoCommitmentMade() - No entropy commitment has been made yet",
+        "0xc349402d":
+          "RevealTooEarly() - Attempting to reveal entropy before minimum wait time",
+        "0x9ea6d127":
+          "InvalidReveal() - Revealed entropy doesn't match commitment",
+        "0x3703b169":
+          "CommitmentAlreadyMade() - Commitment has already been made for this period",
+      };
+
+      let signature = "";
+
+      // Method 1: Check if error data has the signature
+      if (error.data || error.cause?.data) {
+        const errorData = error.data || error.cause?.data;
+        this.debugLog(`Error data:`, errorData);
+        signature = typeof errorData === "string" ? errorData.slice(0, 10) : "";
+      }
+
+      // Method 2: Parse signature from error message if not found in data
+      if (!signature) {
+        const signatureMatch = errorMessage.match(/0x[0-9a-fA-F]{8}/);
+        if (signatureMatch) {
+          signature = signatureMatch[0];
+          this.debugLog(`Extracted signature from error message: ${signature}`);
+        }
+      }
+
+      // Decode the signature if found
+      if (signature && errorSignatures[signature]) {
+        errorDetails = errorSignatures[signature];
+        errorMessage = errorSignatures[signature];
+      } else if (signature) {
+        errorDetails = `Unknown error signature: ${signature}`;
+      }
+
+      // Add additional context
+      if (error.cause) {
+        this.debugLog(`Error cause:`, error.cause);
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        errorDetails: errorDetails || undefined,
+      };
+    }
+  }
 }
