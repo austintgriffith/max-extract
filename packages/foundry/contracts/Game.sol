@@ -10,6 +10,14 @@ interface IWETH {
     function balanceOf(address) external view returns (uint256);
 }
 
+// MaxExtract interface for credential verification
+interface IMaxExtract {
+    function getActiveSectors() external view returns (uint256[] memory);
+    function sectors(uint256 sectorId) external view returns (address);
+    function sectorToOwner(uint256 sectorId) external view returns (address);
+    function playerToSector(address player) external view returns (uint256);
+}
+
 /**
  * Game Contract - Manages game sessions and player participation
  * Controls visible chapters, game state, and player buy-ins
@@ -18,13 +26,16 @@ interface IWETH {
 contract Game {
     // Game configuration - hardcoded values
     uint256 public constant BUY_IN_PRICE = 0.001 ether;
-    uint256 public immutable gameEndTime = block.timestamp + 1 minutes;
+    uint256 public immutable gameEndTime = block.timestamp + 90 minutes;
     
     // WETH contract address (Ethereum mainnet - update for other networks)
     address public constant WETH_ADDRESS = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     
     // Reference to the Universe contract
     Universe public immutable universe;
+    
+    // Reference to the MaxExtract contract for credential verification
+    IMaxExtract public maxExtract;
     
     // Game states
     enum GameState {
@@ -49,6 +60,9 @@ contract Game {
     // Pilot death tracking
     mapping(address => bool) public deadPilots;
     
+    // Track which pilots have minted credentials from which players (one per pilot per player)
+    mapping(address => mapping(address => bool)) public pilotPlayerCredentialMinted;
+    
     // Events
     event ChaptersUpdated(uint8[] newVisibleChapters);
     event GameStateChanged(GameState newState);
@@ -59,6 +73,7 @@ contract Game {
     event TipGiven(address indexed pilot, address indexed player, uint256 amount);
     event PilotDied(address indexed pilot, address indexed killer, address indexed playerPenalized, uint256 scorePenalty, uint256 ethForwarded);
     event GameSettled(address[] winners, uint256 winningScore, uint256 totalPayout, uint256 payoutPerWinner);
+    event CredentialMinted(address indexed pilot, address indexed player, address indexed credentialContract);
     
     // Errors
     error OnlyGod();
@@ -74,6 +89,10 @@ contract Game {
     error NotAPlayer();
     error GameNotEnded();
     error GameAlreadySettled();
+    error NotACredential();
+    error CredentialNotRegistered();
+    error MaxExtractNotSet();
+    error PilotAlreadyMintedFromPlayer();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -565,5 +584,95 @@ contract Game {
             return 0;
         }
         return gameEndTime - block.timestamp;
+    }
+    
+    /**
+     * Set the MaxExtract contract address
+     * Only callable by the God address
+     * @param _maxExtract Address of the MaxExtract contract
+     */
+    function setMaxExtract(address _maxExtract) external onlyGod {
+        require(_maxExtract != address(0), "Invalid address");
+        maxExtract = IMaxExtract(_maxExtract);
+    }
+    
+    /**
+     * Check if a pilot has access to a specific sector
+     * Checks if the pilot owns a credential NFT from that sector's credential contract
+     * @param _pilot The pilot address to check
+     * @param _sectorId The sector ID to check access for
+     * @return True if the pilot has a credential (balance > 0)
+     */
+    function canPilotAccessSector(address _pilot, uint256 _sectorId) external view returns (bool) {
+        if (address(maxExtract) == address(0)) return false;
+        
+        // Get the registry for this sector
+        address registryAddress = maxExtract.sectors(_sectorId);
+        if (registryAddress == address(0)) return false;
+        
+        // Get the credential contract from the registry
+        (bool success, bytes memory data) = registryAddress.staticcall(
+            abi.encodeWithSignature("modules(string)", "credential")
+        );
+        
+        if (!success || data.length < 32) return false;
+        
+        address credentialContract = abi.decode(data, (address));
+        if (credentialContract == address(0)) return false;
+        
+        // Check the pilot's balance in the credential contract (ERC721 balanceOf)
+        (bool balanceSuccess, bytes memory balanceData) = credentialContract.staticcall(
+            abi.encodeWithSignature("balanceOf(address)", _pilot)
+        );
+        
+        if (!balanceSuccess || balanceData.length < 32) return false;
+        
+        uint256 balance = abi.decode(balanceData, (uint256));
+        return balance > 0;
+    }
+    
+    /**
+     * Called by a credential contract when a pilot mints a credential
+     * Verifies the credential is registered in the specified player's registry
+     * Awards 5 points to the player if verification succeeds
+     * Only callable by credential contracts through pilot transactions
+     * Each pilot can only mint one credential per player (prevents point farming)
+     * @param _player The player address who owns the credential contract
+     */
+    function pilotMintSectorCredential(address _player) external {
+        if (address(maxExtract) == address(0)) revert MaxExtractNotSet();
+        
+        // tx.origin must be a pilot
+        if (!isPilot(tx.origin)) revert OnlyPilot();
+        
+        // Check if this pilot has already minted a credential from this player
+        if (pilotPlayerCredentialMinted[tx.origin][_player]) revert PilotAlreadyMintedFromPlayer();
+        
+        // Get the player's sector ID - if non-zero, they're a valid player with a sector
+        uint256 sectorId = maxExtract.playerToSector(_player);
+        if (sectorId == 0) revert NotAPlayer(); // Player has no sector (not a valid player)
+        
+        // Get the registry address for this sector
+        address registryAddress = maxExtract.sectors(sectorId);
+        
+        // Try to call modules("credential") on the registry to get the registered credential
+        (bool success, bytes memory data) = registryAddress.staticcall(
+            abi.encodeWithSignature("modules(string)", "credential")
+        );
+        
+        if (!success || data.length < 32) revert CredentialNotRegistered();
+        
+        address registeredCredential = abi.decode(data, (address));
+        
+        // Verify that msg.sender (the credential contract) matches the registered credential
+        if (registeredCredential != msg.sender) revert CredentialNotRegistered();
+        
+        // Mark that this pilot has minted from this player
+        pilotPlayerCredentialMinted[tx.origin][_player] = true;
+        
+        // All checks passed - award 5 points to the player
+        scores[_player] += 5;
+        
+        emit CredentialMinted(tx.origin, _player, msg.sender);
     }
 }

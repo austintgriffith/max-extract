@@ -467,7 +467,7 @@ export class CharacterManager {
    */
   public async initializeCharacters(
     blockchainManager: BlockchainManager,
-    entropyManager: { getCurrentRollingEntropy: () => string | null }
+    entropyManager: { getUniverseEntropy: () => Promise<string | null> }
   ): Promise<void> {
     try {
       this.debugLog("Starting character initialization...");
@@ -507,14 +507,21 @@ export class CharacterManager {
    */
   private async generateAndRegisterCharacters(
     blockchainManager: BlockchainManager,
-    entropyManager: { getCurrentRollingEntropy: () => string | null }
+    entropyManager: { getUniverseEntropy: () => Promise<string | null> }
   ): Promise<void> {
     // Start timer for character generation
     const startTime = performance.now();
 
     // Generate characters using universe entropy as base seed
-    const universeEntropy = entropyManager.getCurrentRollingEntropy();
+    const universeEntropy = await entropyManager.getUniverseEntropy();
     const baseSeed = universeEntropy || "default_seed_for_characters";
+
+    console.log(
+      `🎲 Using universe entropy for pilot generation: ${baseSeed.slice(
+        0,
+        10
+      )}...${baseSeed.slice(-8)}`
+    );
 
     const characters = this.generateCharacters(
       baseSeed,

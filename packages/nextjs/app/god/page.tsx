@@ -230,6 +230,19 @@ export default function GodPage() {
     }
   };
 
+  const handleUnlockChapter3 = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "showChapters",
+        args: [[1, 2, 3]], // Array containing chapters 1, 2, and 3
+      });
+      notification.success("Chapter 3 unlocked! All three chapters are now visible!");
+    } catch (error) {
+      console.error("Error unlocking chapter 3:", error);
+      notification.error("Error unlocking chapter 3");
+    }
+  };
+
   if (!isGod) {
     return (
       <div className="flex items-center flex-col flex-grow pt-8">
@@ -349,7 +362,7 @@ export default function GodPage() {
           </div>
 
           {/* Chapter Control Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
               className={`btn btn-lg ${visibleChapters && visibleChapters.includes(1) ? "btn-disabled" : "btn-primary"}`}
               onClick={handleMakeChapter1Visible}
@@ -364,6 +377,13 @@ export default function GodPage() {
             >
               🚀 Unlock Chapter 2: The Announcement
             </button>
+            <button
+              className={`btn btn-lg ${visibleChapters && visibleChapters.includes(3) ? "btn-disabled" : "btn-accent"}`}
+              onClick={handleUnlockChapter3}
+              disabled={visibleChapters && visibleChapters.includes(3)}
+            >
+              🎫 Unlock Chapter 3: Access Credentials
+            </button>
           </div>
 
           {/* Info */}
@@ -373,6 +393,10 @@ export default function GodPage() {
             </p>
             <p>
               <strong>Chapter 2:</strong> Players deploy About contracts with name/social info to increase tip potential
+            </p>
+            <p>
+              <strong>Chapter 3:</strong> Players deploy soulbound NFT credentials for sector access control (5 points
+              per pilot mint)
             </p>
             <p>
               <strong>Note:</strong> Only visible chapters can be accessed by players in the game

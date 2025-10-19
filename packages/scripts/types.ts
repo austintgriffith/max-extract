@@ -95,7 +95,7 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 25,
+  CHARACTER_COUNT: 10,
   PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {

@@ -137,11 +137,6 @@ export class EntropyManager {
             console.log(
               "⚠️  No commitment made yet. Universe entropy must be set via commit-reveal process."
             );
-            console.log("   Please run the entropy setup process:");
-            console.log("   1. Visit http://localhost:3000/entropy");
-            console.log(
-              "   2. Or use the GOD interface to commit and reveal entropy"
-            );
             console.log(
               `⏳ Waiting for entropy setup... (checking every ${
                 ENTROPY_CHECK_INTERVAL / 1000
@@ -157,9 +152,6 @@ export class EntropyManager {
         } else if (status.commitmentMade && status.canReveal) {
           if (checkCount === 1) {
             console.log("⚠️  Commitment made but entropy not revealed yet.");
-            console.log("   Please complete the reveal process:");
-            console.log("   1. Visit http://localhost:3000/entropy");
-            console.log("   2. Or use the GOD interface to reveal entropy");
             console.log(
               `⏳ Waiting for entropy reveal... (checking every ${
                 ENTROPY_CHECK_INTERVAL / 1000
@@ -401,6 +393,30 @@ export class EntropyManager {
         }`
       );
       this.debugLog("Rolling commit-reveal failed", error);
+    }
+  }
+
+  /**
+   * Get the universe entropy (main game seed)
+   * This is the immutable entropy set at the start of the game
+   */
+  public async getUniverseEntropy(): Promise<string | null> {
+    try {
+      const universeContract = this.blockchainManager.getContract("Universe");
+      if (!universeContract) {
+        throw new Error("Universe contract not found");
+      }
+
+      const entropy = (await this.blockchainManager.readContract(
+        universeContract.address,
+        universeContract.abi,
+        "entropy"
+      )) as string;
+
+      return entropy;
+    } catch (error: any) {
+      this.debugLog("Failed to get universe entropy", error);
+      return null;
     }
   }
 

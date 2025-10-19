@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x4e85dc48a70da1298489d5b6fc2492767d98f384",
+      address: "0xc6b8fbf96cf7bbe45576417ec2163acecfa88ecc",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 121,
+      deployedOnBlock: 232,
     },
     Credits: {
-      address: "0x4d8e02bbfcf205828a8352af4376b165e123d7b0",
+      address: "0x29a79095352a718b3d7fe84e1f14e9f34a35598e",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 122,
+      deployedOnBlock: 233,
     },
     Game: {
-      address: "0xeab25969e5285df34a3b245324d0b2b91e31cad4",
+      address: "0x6379ebd504941f50d5bfde9348b37593bd29c835",
       abi: [
         {
           type: "constructor",
@@ -931,6 +931,30 @@ const deployedContracts = {
           type: "function",
           name: "canGameSettle",
           inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "canPilotAccessSector",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           outputs: [
             {
               name: "",
@@ -1255,6 +1279,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "maxExtract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IMaxExtract",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "payoutPot",
           inputs: [
             {
@@ -1270,6 +1307,43 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "pilotMintSectorCredential",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "pilotPlayerCredentialMinted",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -1327,6 +1401,19 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "setMaxExtract",
+          inputs: [
+            {
+              name: "_maxExtract",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1453,6 +1540,31 @@ const deployedContracts = {
               type: "uint8[]",
               indexed: false,
               internalType: "uint8[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "CredentialMinted",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "credentialContract",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -1635,6 +1747,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "CredentialNotRegistered",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "GameAlreadySettled",
           inputs: [],
         },
@@ -1661,6 +1778,16 @@ const deployedContracts = {
         {
           type: "error",
           name: "InvalidPercentages",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "MaxExtractNotSet",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotACredential",
           inputs: [],
         },
         {
@@ -1695,15 +1822,20 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "PilotAlreadyMintedFromPlayer",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "PlayerAlreadyJoined",
           inputs: [],
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 123,
+      deployedOnBlock: 234,
     },
     MaxExtract: {
-      address: "0x150890d6984e98f408162ee65684779804bff858",
+      address: "0x5b3120d0da5fdcba7aef87a9c3c64829c1c0d76b",
       abi: [
         {
           type: "constructor",
@@ -2061,7 +2193,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 123,
+      deployedOnBlock: 235,
     },
   },
   42161: {
@@ -3001,6 +3133,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "canPilotAccessSector",
+          inputs: [
+            {
+              name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "deadMansSwitch",
           inputs: [
             {
@@ -3314,6 +3470,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "maxExtract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IMaxExtract",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "payoutPot",
           inputs: [
             {
@@ -3329,6 +3498,43 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "pilotMintSectorCredential",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "pilotPlayerCredentialMinted",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -3386,6 +3592,19 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "setMaxExtract",
+          inputs: [
+            {
+              name: "_maxExtract",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -3512,6 +3731,31 @@ const deployedContracts = {
               type: "uint8[]",
               indexed: false,
               internalType: "uint8[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "CredentialMinted",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "credentialContract",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -3694,6 +3938,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "CredentialNotRegistered",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "GameAlreadySettled",
           inputs: [],
         },
@@ -3724,6 +3973,16 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "MaxExtractNotSet",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotACredential",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "NotAPlayer",
           inputs: [],
         },
@@ -3750,6 +4009,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "PilotAlreadyDead",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PilotAlreadyMintedFromPlayer",
           inputs: [],
         },
         {
