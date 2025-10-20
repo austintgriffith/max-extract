@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xf1078fd568ad76e49e6f88d1ff485402a086976b",
+      address: "0x741050c1d044e23d3ebd2e85ad8b6ce5c17555c7",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1875,
+      deployedOnBlock: 3645,
     },
     Credits: {
-      address: "0xe8f76a822b57b973c7a89006092364fff8f69040",
+      address: "0x4f29f479d3e6c41ad3fc8c7c8d6f423cb2784b8e",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1876,
+      deployedOnBlock: 3646,
     },
     Game: {
-      address: "0x4e85dc48a70da1298489d5b6fc2492767d98f384",
+      address: "0x127a31cc786aec5bc96f395b8d666b8e9c2a516b",
       abi: [
         {
           type: "constructor",
@@ -1832,10 +1832,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1876,
+      deployedOnBlock: 3647,
     },
     MaxExtract: {
-      address: "0x4d8e02bbfcf205828a8352af4376b165e123d7b0",
+      address: "0x0e4b6314d9756d40ee0b3d68cf3999d29eefb147",
       abi: [
         {
           type: "constructor",
@@ -2193,7 +2193,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1876,
+      deployedOnBlock: 3647,
     },
   },
   42161: {

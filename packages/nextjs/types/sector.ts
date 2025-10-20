@@ -26,7 +26,8 @@ export interface Ship {
   velocity: Vector2D;
   targetAsteroidId: string | null;
   targetShipId: string | null; // New field for ship-to-ship targeting
-  state: "flying" | "mining" | "exiting";
+  targetStationId: string | null; // New field for station targeting (refueling)
+  state: "flying" | "mining" | "exiting" | "refueling";
   spawnTime: number;
   spawnAngle: number;
   score: number;
@@ -75,7 +76,8 @@ export interface SectorEvent {
     | "pilot_death" // New event for when a pilot is killed
     | "pilot_tip" // New event for when a pilot tips a player
     | "credential_minted" // New event for when a pilot mints a sector credential
-    | "credential_mint_failed"; // New event for when credential minting fails (contract issues)
+    | "credential_mint_failed" // New event for when credential minting fails (contract issues)
+    | "ship_refuel"; // New event for when a ship refuels at a station
   timestamp: number;
   data: any;
 }
@@ -100,6 +102,7 @@ export const SECTOR_CONFIG = {
   SHIP_COMBAT_RANGE: 10, // Tighter range for ship-to-ship vector matching and combat
   PADDING: 5, // Huge padding to see ships exiting way beyond boundaries
   EXIT_REMOVAL_BUFFER: 5, // Buffer for when entities are actually removed from the game
+  REFUEL_ARRIVAL_DISTANCE: 50, // Distance at which ships can refuel at the station
 };
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";

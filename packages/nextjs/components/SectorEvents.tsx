@@ -116,7 +116,9 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                                 +{event.data.tipAmount} points
                                 {event.data.aboutInfo?.tipType === "enhanced" && " ⭐"}
                               </div>
-                              <span>to {event.data.aboutInfo?.stationName || "the sector owner"}.</span>
+                              <span>
+                                to {event.data.aboutInfo?.stationName || event.data.stationName || "the sector owner"}.
+                              </span>
                             </>
                           )}
                         </div>

@@ -54,6 +54,49 @@ export const useVectorMatching = ({ sectorData, setSectorData, wsRef, sectorId }
           return;
         }
 
+        // Handle refueling ships vector matching with station center
+        if (ship.state === "refueling" && !ship.isVectorMatched && ship.targetStationId) {
+          const shipPos = calculatePosition(ship, currentTime);
+          const centerX = SECTOR_CONFIG.WIDTH / 2;
+          const centerY = SECTOR_CONFIG.HEIGHT / 2;
+
+          const distanceToCenter = Math.sqrt(Math.pow(shipPos.x - centerX, 2) + Math.pow(shipPos.y - centerY, 2));
+
+          // Check if ship has reached the station center
+          const stationArrivalDistance = SECTOR_CONFIG.REFUEL_ARRIVAL_DISTANCE;
+
+          if (distanceToCenter <= stationArrivalDistance) {
+            console.log(`Frontend: Ship ${ship.id} reached station center, matching vector for refueling!`);
+
+            // Stop at the station center (velocity = 0,0)
+            newData.ships[ship.id] = {
+              ...ship,
+              velocity: { x: 0, y: 0 }, // Stop at center
+              position: shipPos, // Update position to current calculated position
+              spawnTime: currentTime, // Reset spawn time for new movement
+              isVectorMatched: true,
+              vectorMatchTime: currentTime,
+            };
+
+            // Notify backend about station vector matching
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(
+                JSON.stringify({
+                  type: "ship_vector_matched",
+                  sectorId: sectorId,
+                  shipId: ship.id,
+                  targetStationId: ship.targetStationId,
+                  position: shipPos,
+                  velocity: { x: 0, y: 0 },
+                }),
+              );
+            }
+
+            hasUpdates = true;
+          }
+          return; // Don't process further targeting for refueling ships
+        }
+
         if (ship.state !== "flying" || ship.isVectorMatched) {
           return; // Skip non-flying or already vector-matched ships
         }

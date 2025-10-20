@@ -313,8 +313,8 @@ export class CharacterManager {
       | "large";
 
     // Generate stats (0-100) using public seed for deterministic traits
-    // Fuel starts at 50-100% instead of 0-100%
-    const fuel = 50 + this.generateDeterministicRandom(seed, 3) / 2;
+    // Fuel starts at 23% for testing low fuel refueling logic (below LOW_FUEL_THRESHOLD of 20%)
+    const fuel = 23;
     const cargo = this.generateDeterministicRandom(seed, 4);
     const aggression = this.generateDeterministicRandom(seed, 5);
     const intelligence = this.generateDeterministicRandom(seed, 6);
@@ -438,27 +438,53 @@ export class CharacterManager {
 
   /**
    * Select a random available pilot using deterministic randomness
+   * Verifies pilot is alive on blockchain before returning
    */
-  public selectRandomAvailablePilot(
+  public async selectRandomAvailablePilot(
     pilotManager: PilotManager,
+    blockchainManager: BlockchainManager,
     randomValue: number
-  ): Character | null {
-    const availablePilots = this.getAvailablePilots(pilotManager);
+  ): Promise<Character | null> {
+    const maxRetries = 10;
+    let attemptCount = 0;
 
-    if (availablePilots.length === 0) {
-      this.debugLog("No available pilots for selection");
-      return null;
+    while (attemptCount < maxRetries) {
+      const availablePilots = this.getAvailablePilots(pilotManager);
+
+      if (availablePilots.length === 0) {
+        this.debugLog("No available pilots for selection");
+        return null;
+      }
+
+      // Use deterministic randomness to select pilot
+      const randomIndex = Math.floor(randomValue * availablePilots.length);
+      const selectedPilot = availablePilots[randomIndex];
+
+      // Verify pilot is actually alive on blockchain
+      const isAliveOnBlockchain = await blockchainManager.isPilot(
+        selectedPilot.publicAddress
+      );
+
+      if (isAliveOnBlockchain) {
+        this.debugLog(
+          `Selected pilot ${selectedPilot.firstname} ${selectedPilot.lastname} (${selectedPilot.ship} ship) from ${availablePilots.length} available pilots`
+        );
+        return selectedPilot;
+      } else {
+        // Pilot is dead on blockchain - mark them as dead locally
+        console.log(
+          `⚠️  Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} (${selectedPilot.publicAddress}) is dead on blockchain, marking as dead locally`
+        );
+        pilotManager.markPilotAsDead(selectedPilot.publicAddress, "unknown");
+
+        // Try again with a different random value to select another pilot
+        randomValue = (randomValue + 0.1337) % 1; // Shift random value for next attempt
+        attemptCount++;
+      }
     }
 
-    // Use deterministic randomness to select pilot
-    const randomIndex = Math.floor(randomValue * availablePilots.length);
-    const selectedPilot = availablePilots[randomIndex];
-
-    this.debugLog(
-      `Selected pilot ${selectedPilot.firstname} ${selectedPilot.lastname} (${selectedPilot.ship} ship) from ${availablePilots.length} available pilots`
-    );
-
-    return selectedPilot;
+    this.debugLog(`Failed to find alive pilot after ${maxRetries} attempts`);
+    return null;
   }
 
   /**

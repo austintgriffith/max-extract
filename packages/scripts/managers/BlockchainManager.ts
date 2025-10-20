@@ -1159,6 +1159,82 @@ export class BlockchainManager {
   }
 
   /**
+   * Check if a pilot has a valid credential for a specific sector
+   * @param pilotAddress The pilot's address
+   * @param sectorId The sector ID to check
+   * @returns True if the pilot has the credential (balance > 0)
+   */
+  public async checkPilotHasCredential(
+    pilotAddress: string,
+    sectorId: string
+  ): Promise<boolean> {
+    try {
+      this.debugLog(
+        `Checking if pilot ${pilotAddress} has credential for sector ${sectorId}`
+      );
+
+      // Get registry address for the sector
+      const registryAddress = await this.getRegistryAddressForSector(sectorId);
+
+      if (
+        !registryAddress ||
+        registryAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        this.debugLog(`No registry found for sector ${sectorId}`);
+        return false;
+      }
+
+      // Get credential contract address from registry
+      const credentialAddress = await this.getCredentialAddress(
+        registryAddress
+      );
+
+      if (
+        !credentialAddress ||
+        credentialAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        this.debugLog(
+          `No credential contract found for sector ${sectorId} in registry ${registryAddress}`
+        );
+        return false;
+      }
+
+      this.debugLog(
+        `Checking balance for pilot ${pilotAddress} in credential contract ${credentialAddress}`
+      );
+
+      // Check pilot's credential balance (ERC721 balanceOf)
+      const balance = (await this.publicClient.readContract({
+        address: credentialAddress as `0x${string}`,
+        abi: [
+          {
+            name: "balanceOf",
+            type: "function",
+            stateMutability: "view",
+            inputs: [{ name: "owner", type: "address" }],
+            outputs: [{ name: "", type: "uint256" }],
+          },
+        ],
+        functionName: "balanceOf",
+        args: [pilotAddress as `0x${string}`],
+      })) as bigint;
+
+      const hasCredential = balance > 0n;
+      this.debugLog(
+        `Pilot ${pilotAddress} credential check for sector ${sectorId}: ${hasCredential} (balance: ${balance})`
+      );
+
+      return hasCredential;
+    } catch (error: any) {
+      this.debugLog(
+        `Error checking pilot credential for sector ${sectorId}:`,
+        error
+      );
+      return false; // Default to false on error
+    }
+  }
+
+  /**
    * Attempt to mint a credential for a pilot
    * Checks if pilot already owns the credential, then mints if needed
    */

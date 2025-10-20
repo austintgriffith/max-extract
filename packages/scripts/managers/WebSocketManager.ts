@@ -8,6 +8,7 @@ export interface WebSocketMessage {
   shipId?: string;
   asteroidId?: string;
   targetShipId?: string;
+  targetStationId?: string;
   position?: any;
   velocity?: any;
 }
@@ -119,13 +120,23 @@ export class WebSocketManager {
       return this.sendError(ws, "Sector not found");
     }
 
-    const targetType = data.targetShipId ? "ship" : "asteroid";
-    const targetId = data.targetShipId || data.asteroidId;
+    // Determine target type and ID
+    let targetType: "asteroid" | "ship" | "station";
+    let targetId: string;
 
-    if (!targetId) {
+    if (data.targetStationId) {
+      targetType = "station";
+      targetId = data.targetStationId;
+    } else if (data.targetShipId) {
+      targetType = "ship";
+      targetId = data.targetShipId;
+    } else if (data.asteroidId) {
+      targetType = "asteroid";
+      targetId = data.asteroidId;
+    } else {
       return this.sendError(
         ws,
-        "Either asteroidId or targetShipId is required"
+        "Either asteroidId, targetShipId, or targetStationId is required"
       );
     }
 

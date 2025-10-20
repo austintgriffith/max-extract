@@ -192,7 +192,7 @@ export class SimulationManager {
       );
 
       // Only update existing entities (no spawning)
-      sector.updateInnerLoop();
+      await sector.updateInnerLoop();
     }
 
     this.debugLog(
@@ -220,7 +220,7 @@ export class SimulationManager {
       );
 
       // Full update including spawning
-      sector.updateOuterLoop();
+      await sector.updateOuterLoop();
     }
 
     this.debugLog(

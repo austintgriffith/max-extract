@@ -528,16 +528,235 @@ export class Sector {
   }
 
   /**
+   * Check if a ship should refuel at the station
+   * @param ship The ship to check
+   * @returns True if ship should refuel (low fuel + has credential)
+   */
+  private async shouldShipRefuel(ship: Ship): Promise<boolean> {
+    // Check if fuel is below refuel threshold
+    if (ship.fuel >= SECTOR_CONFIG.REFUEL_FUEL_THRESHOLD) {
+      return false;
+    }
+
+    // Check if pilot has a valid credential for this sector
+    const hasCredential = await this.blockchainManager.checkPilotHasCredential(
+      ship.pilotAddress,
+      this.id
+    );
+
+    this.debugLog(
+      `Ship ${ship.id} (${ship.pilotName}) refuel check: fuel=${Math.round(
+        ship.fuel
+      )}%, hasCredential=${hasCredential}`
+    );
+
+    return hasCredential;
+  }
+
+  /**
+   * Initiate refueling process for a ship
+   * @param ship The ship to start refueling
+   */
+  private initiateRefueling(ship: Ship): void {
+    const currentPos = PositionUtils.calculatePosition(ship, Date.now());
+    const centerX = SECTOR_CONFIG.WIDTH / 2;
+    const centerY = SECTOR_CONFIG.HEIGHT / 2;
+
+    // Calculate direction to center
+    const dx = centerX - currentPos.x;
+    const dy = centerY - currentPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Calculate velocity to center at normal ship speed
+    const speed = ShipAI.getShipSpeed(ship);
+    const velocity = {
+      x: (dx / distance) * speed,
+      y: (dy / distance) * speed,
+    };
+
+    // Update ship state
+    ship.state = "refueling";
+    ship.position = currentPos;
+    ship.velocity = velocity;
+    ship.spawnTime = Date.now();
+    ship.targetAsteroidId = null;
+    ship.targetShipId = null;
+    ship.targetStationId = "station_center"; // Mark ship as targeting the station
+    ship.isVectorMatched = false; // Reset vector matching
+    ship.vectorMatchTime = null;
+    ship.lastCourseUpdate = this.gameLoopCounter;
+
+    console.log(
+      `⛽ Ship ${ship.id} (${
+        ship.pilotName
+      }) heading to station for refuel (fuel: ${Math.round(ship.fuel)}%)`
+    );
+
+    this.debugLog(
+      `Ship ${ship.id} initiated refueling: pos=(${Math.round(
+        currentPos.x
+      )},${Math.round(
+        currentPos.y
+      )}), center=(${centerX},${centerY}), distance=${Math.round(distance)}`
+    );
+
+    // Broadcast refueling initiation
+    this.broadcastEvent({
+      type: "ship_retarget",
+      timestamp: Date.now(),
+      data: {
+        shipId: ship.id,
+        position: currentPos,
+        velocity: ship.velocity,
+        targetAsteroidId: null,
+        targetShipId: null,
+        targetStationId: "station_center",
+        state: "refueling",
+        fuel: ship.fuel,
+      },
+    });
+  }
+
+  /**
+   * Complete refueling for a ship that has arrived at the station
+   * @param ship The ship to refuel
+   */
+  private async completeRefueling(ship: Ship): Promise<void> {
+    const currentTime = Date.now();
+
+    // Set fuel to 100%
+    ship.fuel = 100;
+
+    // Get player address and station info
+    const playerAddress = await this.blockchainManager.getSectorOwner(this.id);
+    const aboutInfo = await this.blockchainManager.getAboutContractInfo(
+      this.id
+    );
+    const stationName = aboutInfo.stationName || "Station";
+
+    console.log(
+      `⛽ Pilot ${ship.pilotName} refueled at ${stationName} (fuel: 100%)`
+    );
+
+    // Broadcast refuel event
+    this.broadcastEvent({
+      type: "ship_refuel",
+      timestamp: currentTime,
+      data: {
+        shipId: ship.id,
+        pilotAddress: ship.pilotAddress,
+        pilotName: ship.pilotName,
+        stationName: stationName,
+        newFuel: 100,
+      },
+    });
+
+    // Execute blockchain tip (async, don't wait)
+    if (playerAddress) {
+      this.executeRefuelTip(ship, playerAddress, stationName).catch((error) => {
+        console.error(
+          `Failed to execute refuel tip for pilot ${ship.pilotName}:`,
+          error
+        );
+      });
+    }
+
+    // Return to flying state and assign new target
+    ship.state = "flying";
+    ship.targetStationId = null; // Clear station target
+    ship.isVectorMatched = false; // Reset vector matching
+    ship.vectorMatchTime = null;
+    this.assignTarget(ship, "post-refuel targeting", false).catch((error) => {
+      console.error(
+        `Failed to assign target after refuel for ship ${ship.id}:`,
+        error
+      );
+    });
+  }
+
+  /**
+   * Execute the blockchain tip transaction for refueling
+   * @param ship The ship that refueled
+   * @param playerAddress The player to tip
+   * @param stationName The name of the station
+   */
+  private async executeRefuelTip(
+    ship: Ship,
+    playerAddress: string,
+    stationName: string
+  ): Promise<void> {
+    try {
+      // Ensure pilot has enough gas for the tip transaction
+      await this.blockchainManager.makeSurePilotHasEnoughGas(
+        ship.pilotAddress,
+        SECTOR_CONFIG.TIP_GAS_AMOUNT
+      );
+
+      // Execute the tip transaction (+3 points for refueling)
+      const txHash = await this.blockchainManager.executePilotTip(
+        ship.privateKey,
+        playerAddress,
+        3
+      );
+
+      console.log(
+        `💰 Pilot ${ship.pilotName} tipped player 3 points for refueling! (tx: ${txHash})`
+      );
+
+      // Broadcast successful tip event
+      this.broadcastEvent({
+        type: "pilot_tip",
+        timestamp: Date.now(),
+        data: {
+          shipId: ship.id,
+          pilotAddress: ship.pilotAddress,
+          pilotName: ship.pilotName,
+          playerAddress,
+          tipAmount: 3,
+          reason: "refueling",
+          transactionHash: txHash,
+          stationName: stationName,
+        },
+      });
+    } catch (error: any) {
+      this.debugLog(`Failed to execute refuel tip: ${error.message}`);
+
+      // Broadcast failed tip event
+      this.broadcastEvent({
+        type: "pilot_tip",
+        timestamp: Date.now(),
+        data: {
+          shipId: ship.id,
+          pilotAddress: ship.pilotAddress,
+          pilotName: ship.pilotName,
+          playerAddress,
+          tipAmount: 3,
+          reason: "refueling",
+          error: error.message,
+          stationName: stationName,
+        },
+      });
+    }
+  }
+
+  /**
    * Unified targeting function that handles all ship targeting scenarios
    * @param ship The ship to assign a target to
    * @param reason Why targeting is happening (for debugging)
    * @param forceRetarget Whether to force a retarget even if current target is good
    */
-  private assignTarget(
+  private async assignTarget(
     ship: Ship,
     reason: string,
     forceRetarget: boolean = false
-  ): void {
+  ): Promise<void> {
+    // PRIORITY 0: Check if ship needs to refuel (lowest fuel, highest priority)
+    // This check happens before all other targeting logic
+    if (await this.shouldShipRefuel(ship)) {
+      this.initiateRefueling(ship);
+      return;
+    }
+
     // Reset vector matching when retargeting
     if (forceRetarget || (!ship.targetAsteroidId && !ship.targetShipId)) {
       ship.isVectorMatched = false;
@@ -777,7 +996,14 @@ export class Sector {
     if (!targetShip) {
       // Target ship no longer exists, find a new target
       if (!attackerShip.isVectorMatched) {
-        this.assignTarget(attackerShip, "target ship missing", true);
+        this.assignTarget(attackerShip, "target ship missing", true).catch(
+          (error) => {
+            console.error(
+              `Failed to assign target for ship ${attackerShip.id}:`,
+              error
+            );
+          }
+        );
       }
       return;
     }
@@ -807,7 +1033,12 @@ export class Sector {
           attackerShip,
           "target ship already being attacked",
           true
-        );
+        ).catch((error) => {
+          console.error(
+            `Failed to assign target for ship ${attackerShip.id}:`,
+            error
+          );
+        });
         return;
       }
 
@@ -897,7 +1128,14 @@ export class Sector {
           console.log(
             `Found ship ${otherShipId} also targeting destroyed ship ${targetShip.id}, retargeting...`
           );
-          this.assignTarget(otherShip, "target ship was destroyed", true);
+          this.assignTarget(otherShip, "target ship was destroyed", true).catch(
+            (error) => {
+              console.error(
+                `Failed to assign target for ship ${otherShipId}:`,
+                error
+              );
+            }
+          );
         }
       }
 
@@ -950,7 +1188,14 @@ export class Sector {
     if (!asteroid) {
       // Target asteroid no longer exists, find a new one (but only if not vector-matched)
       if (!ship.isVectorMatched) {
-        this.assignTarget(ship, "target asteroid missing", true);
+        this.assignTarget(ship, "target asteroid missing", true).catch(
+          (error) => {
+            console.error(
+              `Failed to assign target for ship ${ship.id}:`,
+              error
+            );
+          }
+        );
       }
       return;
     }
@@ -971,7 +1216,14 @@ export class Sector {
         this.debugLog(
           `Ship ${ship.id} reached asteroid ${asteroid.id} but ship ${miningShipId} is already mining it`
         );
-        this.assignTarget(ship, "asteroid already being mined", true);
+        this.assignTarget(ship, "asteroid already being mined", true).catch(
+          (error) => {
+            console.error(
+              `Failed to assign target for ship ${ship.id}:`,
+              error
+            );
+          }
+        );
         return;
       }
 
@@ -1016,7 +1268,14 @@ export class Sector {
             `Found ship ${otherShipId} also targeting ${asteroid.id}, retargeting...`
           );
           // Retarget ships that were targeting the mined asteroid
-          this.assignTarget(otherShip, "target asteroid was mined", true);
+          this.assignTarget(otherShip, "target asteroid was mined", true).catch(
+            (error) => {
+              console.error(
+                `Failed to assign target for ship ${otherShipId}:`,
+                error
+              );
+            }
+          );
         }
       }
 
@@ -1097,16 +1356,18 @@ export class Sector {
     this.notifyWaitingShips();
   }
 
-  private spawnShip(): void {
+  private async spawnShip(): Promise<void> {
     if (this.asteroids.size === 0) return;
 
     // All managers are required - no fallbacks
 
     // Select an available pilot
-    const selectedPilot = this.characterManager.selectRandomAvailablePilot(
-      this.pilotManager,
-      this.getRandom()
-    );
+    const selectedPilot =
+      await this.characterManager.selectRandomAvailablePilot(
+        this.pilotManager,
+        this.blockchainManager,
+        this.getRandom()
+      );
 
     if (!selectedPilot) {
       const totalPilots = this.characterManager.getCharacterCount();
@@ -1136,6 +1397,7 @@ export class Sector {
       velocity: { x: 0, y: 0 },
       targetAsteroidId: null,
       targetShipId: null,
+      targetStationId: null,
       state: "flying",
       spawnTime: Date.now(),
       spawnAngle: angle,
@@ -1167,7 +1429,9 @@ export class Sector {
     });
 
     // Assign initial target for newly spawned ship
-    this.assignTarget(ship, "initial spawn targeting", false);
+    // CRITICAL: Await this to ensure ship state (e.g., "refueling") is set BEFORE ship enters game loop
+    // This prevents race condition where low-fuel ships get forced to exit before refueling state is set
+    await this.assignTarget(ship, "initial spawn targeting", false);
 
     this.ships.set(ship.id, ship);
     this.broadcastEvent({
@@ -1183,6 +1447,7 @@ export class Sector {
         velocity: ship.velocity,
         targetAsteroidId: ship.targetAsteroidId,
         targetShipId: ship.targetShipId,
+        targetStationId: ship.targetStationId,
         state: ship.state,
         spawnTime: ship.spawnTime,
         spawnAngle: ship.spawnAngle,
@@ -1193,7 +1458,7 @@ export class Sector {
     });
   }
 
-  private updateShips(): void {
+  private async updateShips(): Promise<void> {
     const currentTime = Date.now();
     const shipsToRemove: string[] = [];
 
@@ -1209,42 +1474,89 @@ export class Sector {
         ship.fuel = Math.max(0, ship.fuel - fuelConsumed);
       }
 
-      // Check if ship needs to exit due to low fuel
+      // Check if ship is refueling and has vector matched at station
       if (
-        ship.fuel < SECTOR_CONFIG.LOW_FUEL_THRESHOLD &&
-        ship.state !== "exiting"
+        ship.state === "refueling" &&
+        ship.isVectorMatched &&
+        ship.targetStationId
       ) {
-        console.log(
-          `Ship ${ship.id} low on fuel (${Math.round(
-            ship.fuel
-          )}%), heading to exit`
-        );
-        ship.state = "exiting";
-        ship.targetAsteroidId = null;
-        ship.targetShipId = null;
         const currentShipPos = PositionUtils.calculatePosition(
           ship,
           currentTime
         );
-        ship.velocity = ShipAI.calculateExitVelocity(currentShipPos, ship);
-        ship.position = currentShipPos;
-        ship.spawnTime = currentTime;
-        ship.lastCourseUpdate = this.gameLoopCounter;
+        const centerX = SECTOR_CONFIG.WIDTH / 2;
+        const centerY = SECTOR_CONFIG.HEIGHT / 2;
+        const distanceToCenter = Math.sqrt(
+          Math.pow(currentShipPos.x - centerX, 2) +
+            Math.pow(currentShipPos.y - centerY, 2)
+        );
 
-        // Broadcast fuel exit event
-        this.broadcastEvent({
-          type: "ship_retarget",
-          timestamp: currentTime,
-          data: {
-            shipId: ship.id,
-            position: currentShipPos,
-            velocity: ship.velocity,
-            targetAsteroidId: null,
-            targetShipId: null,
-            state: "exiting",
-            fuel: ship.fuel,
-          },
-        });
+        // Check if ship is close enough to the station (should be, since they vector matched)
+        if (distanceToCenter < SECTOR_CONFIG.REFUEL_ARRIVAL_DISTANCE) {
+          this.debugLog(
+            `Ship ${
+              ship.id
+            } vector matched at station for refueling (distance: ${Math.round(
+              distanceToCenter
+            )})`
+          );
+          // Complete refueling (async, but don't await to avoid blocking game loop)
+          this.completeRefueling(ship).catch((error) => {
+            console.error(
+              `Failed to complete refueling for ship ${ship.id}:`,
+              error
+            );
+          });
+        }
+      }
+      // Check if ship needs to exit due to low fuel
+      else if (
+        ship.fuel < SECTOR_CONFIG.LOW_FUEL_THRESHOLD &&
+        ship.state !== "exiting" &&
+        ship.state !== "refueling"
+      ) {
+        // CRITICAL: Check if ship can refuel before forcing exit
+        if (await this.shouldShipRefuel(ship)) {
+          console.log(
+            `Ship ${ship.id} low on fuel (${Math.round(
+              ship.fuel
+            )}%) but has credential - heading to station instead of exiting`
+          );
+          this.initiateRefueling(ship);
+        } else {
+          // No credential - must exit
+          console.log(
+            `Ship ${ship.id} low on fuel (${Math.round(
+              ship.fuel
+            )}%) and no credential - heading to exit`
+          );
+          ship.state = "exiting";
+          ship.targetAsteroidId = null;
+          ship.targetShipId = null;
+          const currentShipPos = PositionUtils.calculatePosition(
+            ship,
+            currentTime
+          );
+          ship.velocity = ShipAI.calculateExitVelocity(currentShipPos, ship);
+          ship.position = currentShipPos;
+          ship.spawnTime = currentTime;
+          ship.lastCourseUpdate = this.gameLoopCounter;
+
+          // Broadcast fuel exit event
+          this.broadcastEvent({
+            type: "ship_retarget",
+            timestamp: currentTime,
+            data: {
+              shipId: ship.id,
+              position: currentShipPos,
+              velocity: ship.velocity,
+              targetAsteroidId: null,
+              targetShipId: null,
+              state: "exiting",
+              fuel: ship.fuel,
+            },
+          });
+        }
       } else if (ship.state === "flying" && !ship.isVectorMatched) {
         // Recalculate course every N game loops to adjust for moving targets (but not for vector-matched ships)
         // This ensures performance regardless of UPDATE_INTERVAL setting
@@ -1529,7 +1841,13 @@ export class Sector {
       // Find ships targeting this deleted asteroid and give them new targets
       for (const [shipId, ship] of this.ships) {
         if (ship.targetAsteroidId === asteroidId && ship.state === "flying") {
-          this.assignTarget(ship, "target asteroid drifted off map", true);
+          this.assignTarget(
+            ship,
+            "target asteroid drifted off map",
+            true
+          ).catch((error) => {
+            console.error(`Failed to assign target for ship ${shipId}:`, error);
+          });
         }
       }
     });
@@ -1538,7 +1856,7 @@ export class Sector {
   /**
    * Inner loop update - fast operations (ship movement, mining, battles)
    */
-  public updateInnerLoop(): void {
+  public async updateInnerLoop(): Promise<void> {
     // Increment game loop counter for performance tracking
     this.gameLoopCounter++;
 
@@ -1546,7 +1864,7 @@ export class Sector {
     this.checkArrival();
 
     // Update entities (movement, fuel consumption, retargeting)
-    this.updateShips();
+    await this.updateShips();
     this.updateAsteroids();
 
     this.lastUpdate = Date.now();
@@ -1555,7 +1873,7 @@ export class Sector {
   /**
    * Outer loop update - heavy operations (spawning new entities)
    */
-  public updateOuterLoop(): void {
+  public async updateOuterLoop(): Promise<void> {
     // Roll dice for spawning new entities
     const roll = this.getRandom();
     if (roll < SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE) {
@@ -1564,7 +1882,15 @@ export class Sector {
       roll <
       SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE + SECTOR_CONFIG.SHIP_SPAWN_CHANCE
     ) {
-      this.spawnShip();
+      try {
+        await this.spawnShip();
+      } catch (error: any) {
+        console.error(
+          `Error spawning ship in sector ${this.id}:`,
+          error.message
+        );
+        this.debugLog("Ship spawn error details:", error);
+      }
     }
   }
 
@@ -1572,9 +1898,9 @@ export class Sector {
    * Legacy update method for backward compatibility
    * @deprecated Use updateInnerLoop() and updateOuterLoop() instead
    */
-  public update(): void {
+  public async update(): Promise<void> {
     this.updateInnerLoop();
-    this.updateOuterLoop();
+    await this.updateOuterLoop();
   }
 
   public getSnapshot(): SectorSnapshot {
@@ -2007,7 +2333,7 @@ export class Sector {
     targetId: string,
     position: Vector2D,
     velocity: Vector2D,
-    targetType: "asteroid" | "ship" = "asteroid"
+    targetType: "asteroid" | "ship" | "station" = "asteroid"
   ): void {
     const ship = this.ships.get(shipId);
 
@@ -2041,6 +2367,7 @@ export class Sector {
           shipId: ship.id,
           asteroidId: asteroid.id,
           targetShipId: null,
+          targetStationId: null,
           position: ship.position,
           velocity: ship.velocity,
         },
@@ -2070,6 +2397,37 @@ export class Sector {
           shipId: ship.id,
           asteroidId: null,
           targetShipId: targetShip.id,
+          targetStationId: null,
+          position: ship.position,
+          velocity: ship.velocity,
+        },
+      });
+    } else if (targetType === "station") {
+      // Validate that ship is in refueling state and targeting the station
+      if (ship.state !== "refueling" || ship.targetStationId !== targetId) {
+        return; // Invalid station request
+      }
+
+      console.log(
+        `Backend: Ship ${shipId} vector matched with station ${targetId}`
+      );
+
+      // Update ship state
+      ship.isVectorMatched = true;
+      ship.vectorMatchTime = Date.now();
+      ship.position = position;
+      ship.velocity = velocity; // Should be {x: 0, y: 0} for stationary station
+      ship.spawnTime = Date.now();
+
+      // Broadcast the vector matching event to all subscribers
+      this.broadcastEvent({
+        type: "ship_vector_matched",
+        timestamp: Date.now(),
+        data: {
+          shipId: ship.id,
+          asteroidId: null,
+          targetShipId: null,
+          targetStationId: targetId,
           position: ship.position,
           velocity: ship.velocity,
         },
@@ -2087,7 +2445,11 @@ export class Sector {
           Date.now()
         );
         // Check if ship should switch to a better target
-        this.assignTarget(ship, "checking for better targets", false);
+        this.assignTarget(ship, "checking for better targets", false).catch(
+          (error) => {
+            console.error(`Failed to assign target for ship ${shipId}:`, error);
+          }
+        );
       }
     }
   }
@@ -2102,7 +2464,11 @@ export class Sector {
           Date.now()
         );
         // Force retarget to check for cargo ships (highest priority)
-        this.assignTarget(ship, "new cargo ship available", true);
+        this.assignTarget(ship, "new cargo ship available", true).catch(
+          (error) => {
+            console.error(`Failed to assign target for ship ${shipId}:`, error);
+          }
+        );
       }
     }
   }

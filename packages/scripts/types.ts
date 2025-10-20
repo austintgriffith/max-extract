@@ -28,7 +28,8 @@ export interface Ship {
   velocity: Vector2D;
   targetAsteroidId: string | null;
   targetShipId: string | null; // New field for targeting other ships
-  state: "flying" | "mining" | "exiting";
+  targetStationId: string | null; // New field for targeting station (for refueling)
+  state: "flying" | "mining" | "exiting" | "refueling";
   spawnTime: number;
   spawnAngle: number;
   score: number;
@@ -82,7 +83,8 @@ export interface SectorEvent {
     | "pilot_death" // New event for when a pilot is killed
     | "pilot_tip" // New event for when a pilot tips a player
     | "credential_minted" // New event for when a pilot mints a sector credential
-    | "credential_mint_failed"; // New event for when credential minting fails (contract issues)
+    | "credential_mint_failed" // New event for when credential minting fails (contract issues)
+    | "ship_refuel"; // New event for when a ship refuels at a station
   timestamp: number;
   data: any;
 }
@@ -119,6 +121,8 @@ export const SECTOR_CONFIG = {
   SHIP_SPAWN_CHANCE: 0.4,
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
+  REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station
+  REFUEL_ARRIVAL_DISTANCE: 50, // Distance threshold for arriving at station center
   COURSE_RECALC_CYCLES: 3, // Recalculate course every N game loops (performance optimization)
   SHIP_COMBAT_RANGE: 15, // Tighter range for ship-to-ship vector matching and combat
   CARGO_SPEED_MULTIPLIER: 0.5, // Speed multiplier when ship has full cargo (50% of original speed)

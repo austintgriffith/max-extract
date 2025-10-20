@@ -187,6 +187,7 @@ export const useSectorWebSocket = ({
                       isVectorMatched: false, // Ensure new ships start without vector matching
                       vectorMatchTime: null,
                       targetShipId: sectorEvent.data.targetShipId || null, // Handle ship targeting
+                      targetStationId: sectorEvent.data.targetStationId || null, // Handle station targeting (refueling)
                       fullCargo: sectorEvent.data.fullCargo || false, // Handle cargo status
                     };
                     break;
@@ -221,6 +222,7 @@ export const useSectorWebSocket = ({
                       newData.ships[sectorEvent.data.shipId].velocity = sectorEvent.data.velocity;
                       newData.ships[sectorEvent.data.shipId].targetAsteroidId = sectorEvent.data.targetAsteroidId;
                       newData.ships[sectorEvent.data.shipId].targetShipId = sectorEvent.data.targetShipId;
+                      newData.ships[sectorEvent.data.shipId].targetStationId = sectorEvent.data.targetStationId;
                       newData.ships[sectorEvent.data.shipId].state = sectorEvent.data.state;
                       newData.ships[sectorEvent.data.shipId].spawnTime = sectorEvent.timestamp;
                       if (sectorEvent.data.fuel !== undefined) {
