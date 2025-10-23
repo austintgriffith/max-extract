@@ -8,7 +8,7 @@ import { BlockchainManager } from "./BlockchainManager";
 export interface Character {
   firstname: string;
   lastname: string;
-  ship: "small" | "medium" | "large";
+  ship: number; // Ship number 1-12
   fuel: number;
   cargo: number;
   aggression: number;
@@ -303,18 +303,16 @@ export class CharacterManager {
       1,
       this.lastNames.length
     );
-    const shipIndex = this.generateDeterministicIndex(seed, 2, 3); // 0, 1, or 2 for small, medium, large
+    const shipNumber = this.generateDeterministicIndex(seed, 2, 12); // 0-11 mapped to 1-12
 
     const firstname = this.firstNames[firstNameIndex];
     const lastname = this.lastNames[lastNameIndex];
-    const ship = ["small", "medium", "large"][shipIndex] as
-      | "small"
-      | "medium"
-      | "large";
+    const ship = shipNumber + 1; // Convert 0-11 to 1-12
 
     // Generate stats (0-100) using public seed for deterministic traits
-    // Fuel starts at 23% for testing low fuel refueling logic (below LOW_FUEL_THRESHOLD of 20%)
-    const fuel = 23;
+    // Fuel starts at a random value between 30-100%
+    const fuelRandom = this.generateDeterministicRandom(seed, 3); // 0-99
+    const fuel = 30 + Math.floor((fuelRandom / 100) * 70); // Scale to 30-100 range
     const cargo = this.generateDeterministicRandom(seed, 4);
     const aggression = this.generateDeterministicRandom(seed, 5);
     const intelligence = this.generateDeterministicRandom(seed, 6);

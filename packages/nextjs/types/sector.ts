@@ -21,7 +21,7 @@ export interface Ship {
   address: string;
   pilotAddress: string; // Reference to the actual pilot
   pilotName: string; // For display purposes
-  shipType: "small" | "medium" | "large"; // Ship size from character
+  shipType: number; // Ship number 1-12
   position: Vector2D;
   velocity: Vector2D;
   targetAsteroidId: string | null;
@@ -133,7 +133,7 @@ export interface Pilot {
   name: string;
   firstname: string;
   lastname: string;
-  shipType: "small" | "medium" | "large";
+  shipType: number; // Ship number 1-12
   stats: PilotStats;
   assignment: PilotAssignment;
   death: PilotDeath;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { Address } from "~~/components/scaffold-eth";
@@ -18,21 +19,7 @@ interface PlayerData {
   score?: number;
 }
 
-const PilotRow = ({ pilot, index }: { pilot: Pilot; index: number }) => {
-  // Get ship type badge color
-  const getShipTypeBadgeColor = (shipType: string) => {
-    switch (shipType) {
-      case "small":
-        return "badge-info";
-      case "medium":
-        return "badge-warning";
-      case "large":
-        return "badge-error";
-      default:
-        return "badge-ghost";
-    }
-  };
-
+const PilotRow = ({ pilot }: { pilot: Pilot }) => {
   // Get stat color based on value (0-100)
   const getStatColor = (value: number) => {
     if (value >= 75) return "text-success";
@@ -43,7 +30,18 @@ const PilotRow = ({ pilot, index }: { pilot: Pilot; index: number }) => {
 
   return (
     <tr>
-      <td className="text-xs">{index + 1}</td>
+      <td>
+        <div className="flex items-center justify-center">
+          <Image
+            src={`/ships/ship${pilot.shipType}.png`}
+            alt={`Ship ${pilot.shipType}`}
+            width={32}
+            height={32}
+            className="object-contain rotate-90"
+            title={`Ship #${pilot.shipType}`}
+          />
+        </div>
+      </td>
       <td>
         <span className="text-sm font-medium">{pilot.name}</span>
       </td>
@@ -63,11 +61,6 @@ const PilotRow = ({ pilot, index }: { pilot: Pilot; index: number }) => {
             {parseFloat(pilot.ethBalance).toFixed(4)}
           </span>
         </div>
-      </td>
-      <td>
-        <span className={`badge badge-sm ${getShipTypeBadgeColor(pilot.shipType)}`}>
-          {pilot.shipType === "small" ? "S" : pilot.shipType === "medium" ? "M" : "L"}
-        </span>
       </td>
       <td>
         {pilot.death.isDead ? (
@@ -612,10 +605,9 @@ const Dashboard: NextPage = () => {
                   <table className="table table-sm">
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th></th>
                         <th>Pilot Name</th>
                         <th>Address</th>
-                        <th>Ship</th>
                         <th>Status</th>
                         <th title="Fuel">⛽</th>
                         <th title="Cargo">📦</th>
@@ -627,8 +619,8 @@ const Dashboard: NextPage = () => {
                     <tbody>
                       {pilotsData.pilots
                         .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((pilot, index) => (
-                          <PilotRow key={pilot.address} pilot={pilot} index={index} />
+                        .map(pilot => (
+                          <PilotRow key={pilot.address} pilot={pilot} />
                         ))}
                     </tbody>
                   </table>

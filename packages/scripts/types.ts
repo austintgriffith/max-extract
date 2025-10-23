@@ -23,7 +23,7 @@ export interface Ship {
   privateKey: string;
   pilotAddress: string; // Reference to the actual pilot
   pilotName: string; // For display purposes
-  shipType: "small" | "medium" | "large"; // Ship size from character
+  shipType: number; // Ship number 1-12
   position: Vector2D;
   velocity: Vector2D;
   targetAsteroidId: string | null;

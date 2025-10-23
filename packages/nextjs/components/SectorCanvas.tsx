@@ -35,7 +35,7 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
   const baseCanvasRef = useRef<HTMLCanvasElement>(null);
   const foregroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  const shipImageRef = useRef<HTMLImageElement | null>(null);
+  const shipImagesRef = useRef<Record<number, HTMLImageElement>>({});
   const baseImageRef = useRef<HTMLImageElement | null>(null);
   const asteroidImagesRef = useRef<{
     small: HTMLImageElement | null;
@@ -58,13 +58,20 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
     scrap4: null,
   });
 
-  // Load ship image
+  // Load ship images (1-12)
   useEffect(() => {
-    const img = new Image();
-    img.src = "/ships/ship1.png";
-    img.onload = () => {
-      shipImageRef.current = img;
+    const loadShipImage = (shipNumber: number) => {
+      const img = new Image();
+      img.src = `/ships/ship${shipNumber}.png`;
+      img.onload = () => {
+        shipImagesRef.current[shipNumber] = img;
+      };
     };
+
+    // Load all 12 ship images
+    for (let i = 1; i <= 12; i++) {
+      loadShipImage(i);
+    }
   }, []);
 
   // Load base image
@@ -414,11 +421,12 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
         ctx.lineWidth = 1;
 
         // Draw ship PNG image (centered)
-        if (shipImageRef.current) {
+        const shipImage = shipImagesRef.current[ship.shipType];
+        if (shipImage) {
           const shipSize = 72 * scale; // Size of the ship image (50% bigger than doubled: 48 * 1.5)
 
           ctx.drawImage(
-            shipImageRef.current,
+            shipImage,
             -shipSize / 2, // Center horizontally
             -shipSize / 2, // Center vertically
             shipSize,

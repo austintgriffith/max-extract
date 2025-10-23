@@ -1413,9 +1413,9 @@ export class Sector {
     };
 
     console.log(
-      `🚀 Spawning ship ${ship.id} with pilot ${ship.pilotName} (${
+      `🚀 Spawning ship ${ship.id} with pilot ${ship.pilotName} (ship ${
         selectedPilot.ship
-      } ship) at (${Math.round(position.x)}, ${Math.round(
+      }) at (${Math.round(position.x)}, ${Math.round(
         position.y
       )}) with ${Math.round(startingFuel)}% fuel (pilot's current fuel)`
     );

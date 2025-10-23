@@ -60,7 +60,7 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                     </div>
                     <div className="mt-1 text-xs text-base-content/70">
                       {event.type === "ship_spawn" &&
-                        `${event.data.pilotName || `Ship ${event.data.address.slice(0, 8)}...`} spawned${event.data.shipType ? ` (${event.data.shipType} ship)` : ""}`}
+                        `${event.data.pilotName || `Ship ${event.data.address.slice(0, 8)}...`} spawned${event.data.shipType ? ` (ship #${event.data.shipType})` : ""}`}
                       {event.type === "asteroid_spawn" && `Asteroid spawned (size: ${Math.round(event.data.size)})`}
                       {event.type === "asteroid_depleted" && `Asteroid mined (score: ${event.data.score})`}
                       {event.type === "asteroid_exit" && `Asteroid drifted off map`}
