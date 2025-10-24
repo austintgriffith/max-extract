@@ -142,14 +142,16 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
           className="flex items-center justify-center bg-black"
           style={{ width: containerSize, height: containerSize }}
         >
-          <Image
-            src={`/bases/base${baseType}.png`}
-            alt={`Base ${baseType}`}
-            width={baseSize}
-            height={baseSize}
-            className="object-contain"
-            title={`Base #${baseType}`}
-          />
+          {sectorId ? (
+            <Image
+              src={`/bases/base${baseType}.png`}
+              alt={`Base ${baseType}`}
+              width={baseSize}
+              height={baseSize}
+              className="object-contain"
+              title={`Base #${baseType}`}
+            />
+          ) : null}
         </div>
       </td>
       <td>
@@ -283,6 +285,25 @@ const Dashboard: NextPage = () => {
   const [playerNames, setPlayerNames] = useState<Map<string, string>>(new Map());
   const [playerSocials, setPlayerSocials] = useState<Map<string, string>>(new Map());
   const [playerScores, setPlayerScores] = useState<Map<string, number>>(new Map());
+
+  // Generate stable star positions once
+  const [stars] = useState(() => ({
+    large: Array.from({ length: 16 }, () => ({
+      top: Math.random() * 100,
+      duration: 8 + Math.random() * 7,
+      delay: -Math.random() * 12,
+    })),
+    medium: Array.from({ length: 24 }, () => ({
+      top: Math.random() * 100,
+      duration: 15 + Math.random() * 10,
+      delay: -Math.random() * 15,
+    })),
+    small: Array.from({ length: 24 }, () => ({
+      top: Math.random() * 100,
+      duration: 25 + Math.random() * 15,
+      delay: -Math.random() * 20,
+    })),
+  }));
 
   // Get game server stats
   const { stats: gameServerStats, status: gameServerStatus, error: gameServerError } = useGameServerStats();
@@ -444,12 +465,51 @@ const Dashboard: NextPage = () => {
   return (
     <div className="flex items-center flex-col grow pt-10">
       <div className="px-5 w-full max-w-4xl">
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
+        <div className="card bg-black shadow-xl border border-gray-800 relative overflow-hidden">
+          {/* Animated stars background - parallax effect */}
+          <div className="absolute inset-0 pointer-events-none z-0">
+            {/* Large stars (close) - fast movement */}
+            {stars.large.map((star, i) => (
+              <div
+                key={`large-${i}`}
+                className="absolute w-1 h-1 bg-white rounded-full opacity-80"
+                style={{
+                  top: `${star.top}%`,
+                  animation: `slide-left ${star.duration}s linear infinite`,
+                  animationDelay: `${star.delay}s`,
+                }}
+              />
+            ))}
+            {/* Medium stars (mid-distance) - medium speed */}
+            {stars.medium.map((star, i) => (
+              <div
+                key={`medium-${i}`}
+                className="absolute w-0.5 h-0.5 bg-white rounded-full opacity-60"
+                style={{
+                  top: `${star.top}%`,
+                  animation: `slide-left ${star.duration}s linear infinite`,
+                  animationDelay: `${star.delay}s`,
+                }}
+              />
+            ))}
+            {/* Small stars (far) - slow movement */}
+            {stars.small.map((star, i) => (
+              <div
+                key={`small-${i}`}
+                className="absolute w-px h-px bg-white opacity-40"
+                style={{
+                  top: `${star.top}%`,
+                  animation: `slide-left ${star.duration}s linear infinite`,
+                  animationDelay: `${star.delay}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="card-body relative z-10">
             {/* Game Status */}
             <div className="space-y-4 mb-8">
               {/* Game State and Basic Info */}
-              <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-base-200 rounded-lg">
+              <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-black rounded-lg border border-gray-800">
                 <div
                   className={`badge badge-lg ${
                     gameInfo && Number(gameInfo[0]) === 2
@@ -496,7 +556,7 @@ const Dashboard: NextPage = () => {
             </div>
 
             {/* Game Server Status */}
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 p-2 bg-base-300 rounded-lg">
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 p-4 bg-black rounded-lg border border-gray-800">
               <div
                 className={`badge badge-lg ${gameServerStatus === "online" ? "badge-success" : gameServerStatus === "offline" ? "badge-error" : "badge-warning"}`}
               >
@@ -535,7 +595,7 @@ const Dashboard: NextPage = () => {
 
             <div className="divider">Universe Entropy</div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-4 bg-black rounded-lg border border-gray-800 mb-8">
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm opacity-70">Commit:</span>

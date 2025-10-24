@@ -11,6 +11,7 @@ export class SimulationManager {
   private characterManager: CharacterManager;
   private pilotManager: PilotManager;
   private gameSettled: boolean = false;
+  private isStopped: boolean = false;
 
   constructor(
     private sectors: Map<string, Sector>,
@@ -19,7 +20,9 @@ export class SimulationManager {
     private loadSectorsFromContract: () => Promise<void>,
     characterManager: CharacterManager,
     debugMode: boolean = false,
-    private stopGameServer?: () => void
+    private stopGameServer?: () => void,
+    private checkContractChanges?: () => Promise<void>,
+    private onGameSettled?: () => Promise<void>
   ) {
     this.debugMode = debugMode;
     this.characterManager = characterManager;
@@ -49,26 +52,33 @@ export class SimulationManager {
       `Outer loop interval: ${SECTOR_CONFIG.OUTER_LOOP_INTERVAL}ms`
     );
 
+    // Mark as running
+    this.isStopped = false;
+
     // Start inner loop (fast operations)
     const runInnerLoop = async () => {
       await this.runInnerLoopCycle();
 
-      // Schedule next inner loop update
-      this.innerLoopInterval = setTimeout(
-        runInnerLoop,
-        SECTOR_CONFIG.INNER_LOOP_INTERVAL
-      );
+      // Only schedule next iteration if not stopped
+      if (!this.isStopped) {
+        this.innerLoopInterval = setTimeout(
+          runInnerLoop,
+          SECTOR_CONFIG.INNER_LOOP_INTERVAL
+        );
+      }
     };
 
     // Start outer loop (heavy operations)
     const runOuterLoop = async () => {
       await this.runOuterLoopCycle();
 
-      // Schedule next outer loop update
-      this.outerLoopInterval = setTimeout(
-        runOuterLoop,
-        SECTOR_CONFIG.OUTER_LOOP_INTERVAL
-      );
+      // Only schedule next iteration if not stopped
+      if (!this.isStopped) {
+        this.outerLoopInterval = setTimeout(
+          runOuterLoop,
+          SECTOR_CONFIG.OUTER_LOOP_INTERVAL
+        );
+      }
     };
 
     // Start both loops
@@ -80,6 +90,9 @@ export class SimulationManager {
    * Stop both simulation loops
    */
   public stop(): void {
+    // Mark as stopped to prevent re-scheduling
+    this.isStopped = true;
+
     if (this.innerLoopInterval) {
       clearTimeout(this.innerLoopInterval);
       this.innerLoopInterval = null;
@@ -91,14 +104,16 @@ export class SimulationManager {
       this.outerLoopInterval = null;
       this.debugLog("Outer loop stopped");
     }
+
+    console.log("🛑 Simulation loops stopped");
   }
 
   /**
    * Run inner loop cycle - fast operations (ship movement, mining, battles)
    */
   private async runInnerLoopCycle(): Promise<void> {
-    // If game is settled, don't run inner loop
-    if (this.gameSettled) {
+    // If stopped or game is settled, don't run inner loop
+    if (this.isStopped || this.gameSettled) {
       return;
     }
 
@@ -115,11 +130,21 @@ export class SimulationManager {
    * Run outer loop cycle - heavy operations (blockchain interactions, spawning)
    */
   private async runOuterLoopCycle(): Promise<void> {
+    // If stopped, don't run outer loop
+    if (this.isStopped) {
+      return;
+    }
+
     this.debugLog("Running outer loop cycle");
 
     // Check if game is settled - if so, stop the loops
     if (await this.checkGameSettlement()) {
       return; // Early exit - loops will be stopped
+    }
+
+    // Check for contract changes (will trigger restart if detected)
+    if (this.checkContractChanges) {
+      await this.checkContractChanges();
     }
 
     // Get and print GOD account balance
@@ -128,8 +153,14 @@ export class SimulationManager {
     // Check universe entropy status periodically
     await this.checkUniverseEntropyStatus();
 
-    // Perform rolling commit-reveal for entropy generation
-    await this.entropyManager.performRollingCommitReveal();
+    // Only perform rolling commit-reveal if universe entropy is already set
+    // (Don't interfere with initial entropy setup by GameCycleManager)
+    const entropyStatus =
+      await this.entropyManager.checkUniverseEntropyStatus();
+    if (entropyStatus.isSet) {
+      // Perform rolling commit-reveal for entropy generation
+      await this.entropyManager.performRollingCommitReveal();
+    }
 
     // Reload sectors from contract periodically
     await this.loadSectorsFromContract();
@@ -323,6 +354,11 @@ export class SimulationManager {
       this.gameSettled = true;
       this.stop();
 
+      // Notify GameCycleManager that game has settled
+      if (this.onGameSettled) {
+        await this.onGameSettled();
+      }
+
       // Stop the entire game server if callback is provided
       if (this.stopGameServer) {
         console.log("🛑 Shutting down entire game server...");
@@ -335,6 +371,17 @@ export class SimulationManager {
       // Still mark as settled and stop loops
       this.gameSettled = true;
       this.stop();
+
+      // Notify GameCycleManager even on error
+      if (this.onGameSettled) {
+        try {
+          await this.onGameSettled();
+        } catch (settledError: any) {
+          console.error(
+            `❌ Error notifying game settled: ${settledError.message}`
+          );
+        }
+      }
 
       // Stop the entire game server even on error
       if (this.stopGameServer) {

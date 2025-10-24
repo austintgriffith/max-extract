@@ -141,4 +141,7 @@ export const SECTOR_CONFIG = {
     STANDARD: { HIGH: 3, MEDIUM: 2, LOW: 1 }, // Standard tips for players without about contract
     ENHANCED: { HIGH: 4, MEDIUM: 3, LOW: 2 }, // Enhanced tips (+1 bonus) for players with about contract
   },
+  // Game cycle configuration
+  COUNTDOWN_SECONDS: parseInt(process.env.COUNTDOWN_SECONDS || "10"), // Countdown before game starts (buy-in period)
+  AUTO_GAME_CYCLE: process.env.AUTO_GAME_CYCLE !== "false", // Enable/disable automated game cycles (default: true)
 };

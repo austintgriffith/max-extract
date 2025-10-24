@@ -31,6 +31,7 @@ export class BlockchainManager {
   private selectedChain: any;
   private config: BlockchainConfig;
   private debugMode: boolean;
+  private contractsCache: Map<string, ContractInfo> = new Map();
 
   constructor(config: BlockchainConfig, debugMode: boolean = false) {
     this.config = config;
@@ -100,8 +101,17 @@ export class BlockchainManager {
 
   /**
    * Get the deployed contract info for a given contract name
+   * Checks runtime cache first, then falls back to static import
    */
   public getContract(contractName: string): ContractInfo | null {
+    // Check cache first
+    if (this.contractsCache.has(contractName)) {
+      const cached = this.contractsCache.get(contractName)!;
+      this.debugLog(`Using cached contract ${contractName}: ${cached.address}`);
+      return cached;
+    }
+
+    // Fall back to static import
     const contracts =
       deployedContracts[this.config.chainId as keyof typeof deployedContracts];
 
@@ -120,6 +130,141 @@ export class BlockchainManager {
       address: contract.address,
       abi: contract.abi,
     };
+  }
+
+  /**
+   * Reload contracts from the API and update the cache
+   * This allows the game server to use newly deployed contracts without restarting
+   */
+  public async reloadContractsFromAPI(apiUrl: string): Promise<void> {
+    try {
+      this.debugLog(`Reloading contracts from API: ${apiUrl}`);
+
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        throw new Error("Invalid API response format");
+      }
+
+      const chainData = data.data[this.config.chainId.toString()];
+      if (!chainData || !chainData.contracts) {
+        throw new Error(`No contracts found for chain ${this.config.chainId}`);
+      }
+
+      // Clear the cache
+      this.contractsCache.clear();
+
+      // Update cache with new contract addresses
+      for (const contract of chainData.contracts) {
+        this.contractsCache.set(contract.name, {
+          address: contract.address,
+          abi: contract.abi,
+        });
+        this.debugLog(`Cached contract ${contract.name}: ${contract.address}`);
+      }
+
+      console.log(
+        `✅ Reloaded ${chainData.contracts.length} contracts from API`
+      );
+    } catch (error: any) {
+      console.error(`❌ Failed to reload contracts from API: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Call setMaxExtract on the Game contract to update the MaxExtract address
+   */
+  public async setMaxExtractAddress(
+    maxExtractAddress: string
+  ): Promise<string> {
+    try {
+      this.debugLog(
+        `Setting MaxExtract address in Game contract to: ${maxExtractAddress}`
+      );
+
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      console.log(
+        `🔗 Calling setMaxExtract on Game contract ${gameContract.address}...`
+      );
+
+      const hash = await this.writeContract(
+        gameContract.address,
+        gameContract.abi,
+        "setMaxExtract",
+        [maxExtractAddress]
+      );
+
+      this.debugLog(`setMaxExtract transaction sent: ${hash}`);
+
+      // Wait for transaction to be mined
+      const receipt = await this.waitForTransactionReceipt(hash);
+      this.debugLog(
+        `setMaxExtract transaction mined in block ${receipt.blockNumber}`
+      );
+
+      console.log(
+        `✅ MaxExtract address set to ${maxExtractAddress} in Game contract (tx: ${hash.slice(
+          0,
+          10
+        )}...)`
+      );
+
+      return hash;
+    } catch (error: any) {
+      console.error(
+        `❌ Failed to set MaxExtract address: ${
+          error.shortMessage || error.message
+        }`
+      );
+      this.debugLog("setMaxExtract error details:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Set the game state (Open = 0, Active = 1, Settled = 2)
+   */
+  public async setGameState(state: number): Promise<string> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      const stateNames = ["Open", "Active", "Settled"];
+      const stateName = stateNames[state] || "Unknown";
+
+      this.debugLog(`Setting game state to ${state} (${stateName})`);
+
+      const hash = await this.writeContract(
+        gameContract.address,
+        gameContract.abi,
+        "setState",
+        [state]
+      );
+
+      this.debugLog(`setState transaction sent: ${hash}`);
+
+      // Wait for transaction to be mined
+      const receipt = await this.waitForTransactionReceipt(hash);
+      this.debugLog(
+        `setState transaction mined in block ${receipt.blockNumber}`
+      );
+
+      return hash;
+    } catch (error: any) {
+      console.error(
+        `❌ Failed to set game state: ${error.shortMessage || error.message}`
+      );
+      this.debugLog("setState error details:", error);
+      throw error;
+    }
   }
 
   /**

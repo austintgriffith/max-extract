@@ -460,4 +460,93 @@ export class EntropyManager {
   public getLatestRound(): number {
     return this.revealManager.getLatestRound();
   }
+
+  /**
+   * Reset the entropy manager state when contracts are reloaded
+   * This clears the RevealManager and rolling entropy for fresh contracts
+   */
+  public reset(): void {
+    this.debugLog("Resetting EntropyManager for fresh contracts");
+    this.revealManager = new RevealManager();
+    this.currentRollingEntropy = null;
+    console.log("🔄 EntropyManager reset for fresh contracts");
+  }
+
+  /**
+   * Generate and commit entropy automatically for game cycle
+   * Returns the random number for later reveal
+   */
+  public async autoCommitEntropy(): Promise<bigint> {
+    this.debugLog("Auto-generating entropy for commit");
+
+    // Generate random number (256-bit)
+    const randomBytes = new Uint8Array(32);
+    crypto.getRandomValues(randomBytes);
+    const randomHex = Array.from(randomBytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const randomBigInt = BigInt("0x" + randomHex);
+
+    this.debugLog("Generated random number", randomBigInt.toString());
+
+    // Import keccak256 and toBytes from viem
+    const { keccak256, toBytes } = await import("viem");
+
+    // Calculate commitment hash
+    const hash = keccak256(toBytes(randomBigInt));
+    this.debugLog("Calculated commitment hash", hash);
+
+    // Get Universe contract
+    const universeContract = this.blockchainManager.getContract("Universe");
+    if (!universeContract) {
+      throw new Error("Universe contract not found");
+    }
+
+    // Call commit on Universe contract
+    this.debugLog(
+      "Calling commit on Universe contract",
+      universeContract.address
+    );
+    const txHash = await this.blockchainManager.writeContract(
+      universeContract.address,
+      universeContract.abi,
+      "commit",
+      [hash]
+    );
+
+    // Wait for transaction
+    await this.blockchainManager.waitForTransactionReceipt(txHash);
+    this.debugLog("Commit transaction mined", txHash);
+
+    return randomBigInt;
+  }
+
+  /**
+   * Reveal previously committed entropy for game cycle
+   */
+  public async autoRevealEntropy(randomNumber: bigint): Promise<void> {
+    this.debugLog("Auto-revealing entropy", randomNumber.toString());
+
+    // Get Universe contract
+    const universeContract = this.blockchainManager.getContract("Universe");
+    if (!universeContract) {
+      throw new Error("Universe contract not found");
+    }
+
+    // Call reveal on Universe contract
+    this.debugLog(
+      "Calling reveal on Universe contract",
+      universeContract.address
+    );
+    const txHash = await this.blockchainManager.writeContract(
+      universeContract.address,
+      universeContract.abi,
+      "reveal",
+      [randomNumber]
+    );
+
+    // Wait for transaction
+    await this.blockchainManager.waitForTransactionReceipt(txHash);
+    this.debugLog("Reveal transaction mined", txHash);
+  }
 }

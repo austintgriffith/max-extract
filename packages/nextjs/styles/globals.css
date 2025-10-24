@@ -187,3 +187,13 @@ body {
     opacity: 0;
   }
 }
+
+/* Star panning animation for dashboard */
+@keyframes slide-left {
+  0% {
+    left: 100%;
+  }
+  100% {
+    left: -100px;
+  }
+}
