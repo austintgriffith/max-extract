@@ -9,6 +9,7 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
 import { usePilotsData } from "~~/hooks/usePilotsData";
 import { Pilot } from "~~/types/sector";
+import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS } from "~~/utils/shipConstants";
 
 interface PlayerData {
   address: string;
@@ -28,15 +29,22 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
     return "text-error";
   };
 
+  // Get ship scale factor (shipType is 1-12, array is 0-11)
+  const shipScale = SHIP_SCALE_FACTORS[pilot.shipType - 1];
+  // Fixed container size to ensure consistent row heights
+  const containerSize = 48;
+  // Scale ship size based on factor
+  const shipSize = Math.round(containerSize * shipScale);
+
   return (
     <tr>
       <td>
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center" style={{ width: containerSize, height: containerSize }}>
           <Image
             src={`/ships/ship${pilot.shipType}.png`}
             alt={`Ship ${pilot.shipType}`}
-            width={32}
-            height={32}
+            width={shipSize}
+            height={shipSize}
             className="object-contain rotate-90"
             title={`Ship #${pilot.shipType}`}
           />
@@ -107,7 +115,7 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
   );
 };
 
-const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: number; sectorId?: string }) => {
+const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string }) => {
   // Only allow social links that start with https://
   const isValidSocialUrl = player.social && player.social.startsWith("https://");
 
@@ -119,9 +127,31 @@ const PlayerRow = ({ player, index, sectorId }: { player: PlayerData; index: num
     return name;
   };
 
+  // For now, everyone starts with base1 (will be dynamic per player later)
+  const baseType = 1;
+  const baseScale = BASE_SCALE_FACTORS[baseType - 1];
+  // Container size for consistent row heights
+  const containerSize = 50;
+  // Scale base size based on factor (multiply by 2.8 for bigger image with minimal padding)
+  const baseSize = Math.round(containerSize * baseScale * 1.8);
+
   return (
     <tr>
-      <td className="text-xs">{index + 1}</td>
+      <td>
+        <div
+          className="flex items-center justify-center bg-black"
+          style={{ width: containerSize, height: containerSize }}
+        >
+          <Image
+            src={`/bases/base${baseType}.png`}
+            alt={`Base ${baseType}`}
+            width={baseSize}
+            height={baseSize}
+            className="object-contain"
+            title={`Base #${baseType}`}
+          />
+        </div>
+      </td>
       <td>
         {player.name ? (
           isValidSocialUrl ? (
@@ -549,7 +579,7 @@ const Dashboard: NextPage = () => {
                   <table className="table table-sm">
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th></th>
                         <th>Station Name</th>
                         <th>Address</th>
                         <th>Sector</th>
@@ -568,8 +598,8 @@ const Dashboard: NextPage = () => {
                           return { ...player, registryAddress, name, social, score, sectorId };
                         })
                         .sort((a, b) => (b.score || 0) - (a.score || 0)) // Sort by score, highest first
-                        .map((player, index) => (
-                          <PlayerRow key={player.address} player={player} index={index} sectorId={player.sectorId} />
+                        .map(player => (
+                          <PlayerRow key={player.address} player={player} sectorId={player.sectorId} />
                         ))}
                     </tbody>
                   </table>

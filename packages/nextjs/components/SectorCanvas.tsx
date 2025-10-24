@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Starfield } from "./Starfield";
 import { Asteroid, Particle, SECTOR_CONFIG, SectorSnapshot, Ship, Vector2D } from "~~/types/sector";
+import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS } from "~~/utils/shipConstants";
 
 interface SectorCanvasProps {
   sectorData: SectorSnapshot | null;
@@ -58,6 +59,9 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
     scrap4: null,
   });
 
+  // For now, everyone starts with base1 (will be dynamic per sector/player later)
+  const baseIndex = 1;
+
   // Load ship images (1-12)
   useEffect(() => {
     const loadShipImage = (shipNumber: number) => {
@@ -77,7 +81,7 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
   // Load base image
   useEffect(() => {
     const img = new Image();
-    img.src = "/bases/base1.png";
+    img.src = `/bases/base${baseIndex}.png`;
     img.onload = () => {
       baseImageRef.current = img;
     };
@@ -211,13 +215,16 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
     const canvasCenterY = centerY * scale;
 
     // Draw base image centered at the middle of the sector
-    const baseSize = 128 * scale; // Adjust size as needed
+    // Use natural image dimensions scaled by canvas scale factor and custom base scale
+    const customScale = BASE_SCALE_FACTORS[baseIndex - 1]; // baseIndex is 1-6, array is 0-5
+    const baseWidth = baseImageRef.current.naturalWidth * scale * customScale;
+    const baseHeight = baseImageRef.current.naturalHeight * scale * customScale;
     ctx.drawImage(
       baseImageRef.current,
-      canvasCenterX - baseSize / 2, // Center horizontally
-      canvasCenterY - baseSize / 2, // Center vertically
-      baseSize,
-      baseSize,
+      canvasCenterX - baseWidth / 2, // Center horizontally
+      canvasCenterY - baseHeight / 2, // Center vertically
+      baseWidth,
+      baseHeight,
     );
 
     ctx.restore();
@@ -423,7 +430,8 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
         // Draw ship PNG image (centered)
         const shipImage = shipImagesRef.current[ship.shipType];
         if (shipImage) {
-          const shipSize = 72 * scale; // Size of the ship image (50% bigger than doubled: 48 * 1.5)
+          const customShipScale = SHIP_SCALE_FACTORS[ship.shipType - 1]; // shipType is 1-12, array is 0-11
+          const shipSize = 72 * scale * customShipScale; // Apply custom scale for this ship type
 
           ctx.drawImage(
             shipImage,
