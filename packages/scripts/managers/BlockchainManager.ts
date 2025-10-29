@@ -228,6 +228,58 @@ export class BlockchainManager {
   }
 
   /**
+   * Call setAuditorContract on the Game contract to update the Auditor address
+   */
+  public async setAuditorContract(auditorAddress: string): Promise<string> {
+    try {
+      this.debugLog(
+        `Setting Auditor contract address in Game contract to: ${auditorAddress}`
+      );
+
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      console.log(
+        `🔗 Calling setAuditorContract on Game contract ${gameContract.address}...`
+      );
+
+      const hash = await this.writeContract(
+        gameContract.address,
+        gameContract.abi,
+        "setAuditorContract",
+        [auditorAddress]
+      );
+
+      this.debugLog(`setAuditorContract transaction sent: ${hash}`);
+
+      // Wait for transaction to be mined
+      const receipt = await this.waitForTransactionReceipt(hash);
+      this.debugLog(
+        `setAuditorContract transaction mined in block ${receipt.blockNumber}`
+      );
+
+      console.log(
+        `✅ Auditor contract address set to ${auditorAddress} in Game contract (tx: ${hash.slice(
+          0,
+          10
+        )}...)`
+      );
+
+      return hash;
+    } catch (error: any) {
+      console.error(
+        `❌ Failed to set Auditor contract address: ${
+          error.shortMessage || error.message
+        }`
+      );
+      this.debugLog("setAuditorContract error details:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Set the game state (Open = 0, Active = 1, Settled = 2)
    */
   public async setGameState(state: number): Promise<string> {

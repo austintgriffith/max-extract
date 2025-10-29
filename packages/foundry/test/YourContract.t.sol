@@ -20,7 +20,7 @@ contract MaxExtractTest is Test {
         testUser = vm.addr(2);
         universe = new Universe();
         credits = new Credits(testOwner);
-        game = new Game(address(universe), 0.01 ether);
+        game = new Game(address(universe));
         maxExtract = new MaxExtract(address(universe), address(game));
         
         // Set up universe entropy for testing using commit-reveal
@@ -60,8 +60,8 @@ contract MaxExtractTest is Test {
         // Test initial state
         assertEq(maxExtract.getActiveSectorCount(), 0);
         assertEq(maxExtract.getActiveSectors().length, 0);
-        assertEq(maxExtract.getSectorRegistry(1), address(0));
-        assertFalse(maxExtract.isSectorClaimed(1));
+        assertEq(maxExtract.sectors(1), address(0));
+        // assertFalse(maxExtract.isSectorClaimed(1)); // Function doesn't exist
     }
 
     function testBroadcastRequirements() public {

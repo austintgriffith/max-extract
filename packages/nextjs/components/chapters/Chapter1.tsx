@@ -1,6 +1,10 @@
 "use client";
 
+import { Address } from "~~/components/scaffold-eth";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+
 export const Chapter1 = () => {
+  const { data: maxExtractContract } = useDeployedContractInfo("MaxExtract");
   return (
     <div className="bg-base-300 rounded-3xl p-8 mb-6">
       <h2 className="text-3xl font-bold mb-6 text-primary">Chapter 1: The Signal</h2>
@@ -16,7 +20,13 @@ export const Chapter1 = () => {
           <p className="mb-4">
             To participate in the Max Extract Protocol, you need to deploy a <strong>Registry Contract</strong> that
             calls the <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast</code> function on the
-            MaxExtract contract [TODO: link to contract].
+            MaxExtract contract (
+            {maxExtractContract && (
+              <span className="inline-flex">
+                <Address address={maxExtractContract.address} />
+              </span>
+            )}
+            ).
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Your Registry Contract</h3>
@@ -94,14 +104,10 @@ export const Chapter1 = () => {
 
           <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">Registry Updates</h3>
           <p className="mb-4">
-            Update your registry to a new contract at any time by calling the following function on the Max Extract
-            contract from your new registry contract [TODO: link to contract]:
+            Need to deploy a new registry? Update your registry address at any time by calling the{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">updateRegistry()</code> function on the MaxExtract
+            contract from your new registry contract.
           </p>
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`function updateRegistry() external`}</code>
-            </pre>
-          </div>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Implementation Steps</h3>
           <div className="space-y-4 mb-6">
@@ -135,12 +141,19 @@ export const Chapter1 = () => {
             </div>
           </div>
 
-          {/* Factory Contract TODO */}
-          <div className="bg-warning/10 border border-warning rounded-lg p-4 mt-6">
-            <p className="text-warning font-semibold text-sm">
-              [TODO: make factory contract that will deploy a registry for anyone who sends eth to the factory (so noobs
-              can bet and setup a registry without knowing any solidity, but naming their player/station will mean
-              deploying their first contract)]
+          <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">Your Sector Goes Live</h3>
+          <div className="bg-accent/10 border border-accent rounded-lg p-6">
+            <p className="mb-3">
+              <strong>As soon as you call the broadcast function</strong>, your sector becomes active and pilots can
+              start entering your airspace!
+            </p>
+            <p className="mb-3">
+              A <strong>link to your sector</strong> will appear in your title bar, allowing you to monitor activity and
+              see which pilots are exploring your space.
+            </p>
+            <p>
+              Remember: your sector starts as <strong>class 0 airspace</strong> - the most dangerous classification.
+              Only the most skilled and daring pilots will venture into your sector at first.
             </p>
           </div>
         </div>

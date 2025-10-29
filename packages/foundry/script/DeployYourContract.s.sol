@@ -6,6 +6,7 @@ import "../contracts/Universe.sol";
 import "../contracts/Credits.sol";
 import "../contracts/MaxExtract.sol";
 import "../contracts/Game.sol";
+import "../contracts/Auditor.sol";
 
 /**
  * @notice Deploy script for Max Extract Protocol contracts
@@ -37,6 +38,23 @@ contract DeployYourContract is ScaffoldETHDeploy {
         // Deploy Game contract (buy-in price and end time are hardcoded in contract)
         Game game = new Game(address(universe));
         
+        // Hardcoded auditor address
+        address auditorAddress = 0x3FB7c3260e8Dcd7F8019c814799049648C5c0116;
+        
+        // Deploy Auditor contract with Game and auditor address set in constructor
+        Auditor auditor = new Auditor(address(universe), address(game), auditorAddress);
+        
+        // Stop broadcasting to wire up Game contract as GOD
+        vm.stopBroadcast();
+        
+        // Set Auditor contract in Game (must be called as GOD)
+        address god = universe.GOD();
+        vm.prank(god);
+        game.setAuditorContract(address(auditor));
+        
+        // Resume broadcasting for final deployment
+        vm.startBroadcast();
+        
         // Deploy MaxExtract with both Universe and Game contract addresses
         MaxExtract maxExtract = new MaxExtract(address(universe), address(game));
         
@@ -45,8 +63,10 @@ contract DeployYourContract is ScaffoldETHDeploy {
         console.log("Credits deployed at:", address(credits));
         console.log("MaxExtract deployed at:", address(maxExtract));
         console.log("Game deployed at:", address(game));
+        console.log("Auditor deployed at:", address(auditor));
         console.log("Game ends at timestamp:", game.gameEndTime());
         console.log("Buy-in price:", game.BUY_IN_PRICE());
+        console.log("Auditor address set to:", auditorAddress);
         
         // DEVELOPMENT MODE: Auto-setup entropy
         // For production, comment out the line below and manually run commit-reveal

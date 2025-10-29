@@ -1,0 +1,43 @@
+CHAPTER 2: About Contract Audit Requirements
+
+This chapter requires deploying an "About Contract" that serves as a canonical information source for your station/team.
+
+STRICT REQUIREMENTS:
+
+1. The contract MUST have exactly these two constant fields:
+   - string public constant name = "YourStationName";
+   - string public constant social = "https://...";
+
+2. Both fields MUST be declared as "constant" - not just "public", but "public constant"
+   - If either field is missing the "constant" keyword, the audit FAILS
+   - If fields are declared as variables (without constant), the audit FAILS
+
+3. The social field value MUST start with "https://"
+   - This is required for displaying clickable links
+   - If it doesn't start with "https://", the audit FAILS
+
+4. The contract MUST NOT contain any other state variables
+   - Only these two constant fields are allowed
+   - Any additional state variables cause the audit to FAIL
+
+5. The contract MAY contain minimal constructor or helper functions if needed
+   - But no complex logic or additional functionality
+   - The contract should be simple and immutable
+
+PASS CONDITIONS:
+- Exactly two constant fields: name and social
+- Both declared as "public constant"
+- Social starts with "https://"
+- No other state variables present
+- Simple, minimal implementation
+
+FAIL CONDITIONS:
+- Missing "constant" keyword on either field
+- Social doesn't start with "https://"
+- Additional state variables present
+- Complex functionality beyond simple constants
+- Missing either required field
+- Any overcomplexity or obfuscation attempt 
+
+When auditing, be STRICT about the "constant" keyword requirement. This is critical because the values must be immutable after deployment. Any contract without proper constant declarations must FAIL the audit.
+

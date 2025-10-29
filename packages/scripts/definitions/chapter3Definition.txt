@@ -1,0 +1,69 @@
+CHAPTER 3: Soulbound Credential NFT Contract Audit Requirements
+
+This chapter requires deploying a soulbound ERC-721 NFT contract that serves as access credentials for your sector.
+
+STRICT REQUIREMENTS:
+
+1. The contract MUST be an ERC-721 NFT implementation
+   - Must inherit from or implement ERC-721 standard
+   - Must have standard ERC-721 functions (balanceOf, ownerOf, etc.)
+   - If audit FAILS to detect ERC-721 implementation, contract FAILS
+
+2. The contract MUST be soulbound (non-transferable after minting)
+   - MUST override these transfer functions to revert:
+     * transferFrom(address, address, uint256)
+     * safeTransferFrom(address, address, uint256)
+     * safeTransferFrom(address, address, uint256, bytes)
+   - Each override MUST revert/throw an error (using revert(), require(false), or custom error)
+   - If any transfer function allows transfers, the audit FAILS
+   - The revert message should indicate the NFT is soulbound (e.g., "Soulbound", "Cannot transfer", etc.)
+
+3. The contract MUST have a public issue() function
+   - Function name must be exactly "issue"
+   - Must be external or public (callable by anyone)
+   - Must NOT take any parameters (function signature: issue())
+   - If function is missing or has wrong signature, audit FAILS
+
+4. The issue() function MUST mint NFT to tx.origin
+   - Must use tx.origin (not msg.sender) to mint the NFT
+   - This ensures the NFT goes to the actual pilot, not an intermediary contract
+   - Look for _mint(tx.origin, ...) or equivalent minting to tx.origin
+   - If minting to msg.sender instead of tx.origin, audit FAILS
+
+5. The issue() function MUST call game.pilotMintSectorCredential()
+   - Must call a Game contract's pilotMintSectorCredential function
+   - Must pass a player address as the parameter
+   - The call pattern should look like: game.pilotMintSectorCredential(someAddress)
+   - If this call is missing, audit FAILS
+
+6. The contract MAY have additional helper functions
+   - Constructor, tokenURI, and other standard NFT functions are allowed
+   - Owner-only administrative functions are acceptable
+   - Price/payment mechanisms are allowed
+
+PASS CONDITIONS:
+- Is a valid ERC-721 NFT implementation
+- All three transfer functions are overridden and revert
+- Has a public issue() function with no parameters
+- issue() mints to tx.origin
+- issue() calls game.pilotMintSectorCredential(playerAddress)
+- Transfer functions clearly prevent transfers (revert/throw)
+
+FAIL CONDITIONS:
+- Not an ERC-721 implementation
+- Missing any of the three transfer function overrides
+- Transfer functions allow transfers instead of reverting
+- Missing issue() function or wrong signature
+- issue() mints to msg.sender instead of tx.origin
+- issue() doesn't call game.pilotMintSectorCredential()
+- issue() function takes parameters (should be parameterless)
+- Any overcomplexity or obfuscation attempt 
+
+IMPORTANT NOTES:
+- The soulbound requirement is CRITICAL - NFTs must not be transferable
+- Using tx.origin is REQUIRED for this specific use case (despite general security warnings)
+- The Game contract call is what awards points to the player
+- Be strict about function signatures and implementations
+
+When auditing, verify ALL requirements are met. If even one requirement is missing or incorrect, the audit must FAIL with a clear explanation of what's wrong.
+

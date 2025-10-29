@@ -121,7 +121,10 @@ export class GameServer {
   /**
    * Fetch contracts from the API
    */
-  private async fetchContractsFromAPI(): Promise<string | null> {
+  private async fetchContractsFromAPI(): Promise<{
+    maxExtract: string | null;
+    auditor: string | null;
+  }> {
     try {
       const apiUrl = "http://localhost:3000/api/contracts.json";
       this.debugLog(`Fetching contracts from API: ${apiUrl}`);
@@ -145,6 +148,11 @@ export class GameServer {
         (c: any) => c.name === "MaxExtract"
       );
 
+      // Find Auditor contract
+      const auditorContract = chainData.contracts.find(
+        (c: any) => c.name === "Auditor"
+      );
+
       if (!maxExtractContract) {
         throw new Error("MaxExtract contract not found in API response");
       }
@@ -152,11 +160,23 @@ export class GameServer {
       this.debugLog(
         `Found MaxExtract address from API: ${maxExtractContract.address}`
       );
-      return maxExtractContract.address;
+
+      if (auditorContract) {
+        this.debugLog(
+          `Found Auditor address from API: ${auditorContract.address}`
+        );
+      } else {
+        console.log("⚠️  Warning: Auditor contract not found in API response");
+      }
+
+      return {
+        maxExtract: maxExtractContract.address,
+        auditor: auditorContract?.address || null,
+      };
     } catch (error: any) {
       console.error(`❌ Failed to fetch contracts from API: ${error.message}`);
       this.debugLog("API fetch error details:", error);
-      return null;
+      return { maxExtract: null, auditor: null };
     }
   }
 
@@ -165,16 +185,16 @@ export class GameServer {
    */
   public async checkForContractChanges(): Promise<void> {
     try {
-      const newMaxExtractAddress = await this.fetchContractsFromAPI();
+      const contracts = await this.fetchContractsFromAPI();
 
       // If we couldn't fetch, skip this check
-      if (!newMaxExtractAddress) {
+      if (!contracts.maxExtract) {
         return;
       }
 
       // If this is the first check, just store the address
       if (this.currentMaxExtractAddress === null) {
-        this.currentMaxExtractAddress = newMaxExtractAddress;
+        this.currentMaxExtractAddress = contracts.maxExtract;
         this.debugLog(
           `Initial MaxExtract address set: ${this.currentMaxExtractAddress}`
         );
@@ -183,22 +203,25 @@ export class GameServer {
 
       // Check if address has changed
       if (
-        newMaxExtractAddress.toLowerCase() !==
+        contracts.maxExtract.toLowerCase() !==
         this.currentMaxExtractAddress.toLowerCase()
       ) {
         console.log("\n🔄 MaxExtract contract change detected!");
         console.log(`   Old: ${this.currentMaxExtractAddress}`);
-        console.log(`   New: ${newMaxExtractAddress}`);
+        console.log(`   New: ${contracts.maxExtract}`);
         console.log("   Initiating game server restart...\n");
 
         // Cancel current game cycle if in progress
         this.gameCycleManager.cancelCycle();
 
         // Update stored address
-        this.currentMaxExtractAddress = newMaxExtractAddress;
+        this.currentMaxExtractAddress = contracts.maxExtract;
 
         // Trigger restart
-        await this.restartWithNewContracts(newMaxExtractAddress);
+        await this.restartWithNewContracts(
+          contracts.maxExtract,
+          contracts.auditor
+        );
 
         // Start new game cycle after restart
         if (SECTOR_CONFIG.AUTO_GAME_CYCLE) {
@@ -221,7 +244,8 @@ export class GameServer {
    * Perform full internal restart with new contracts
    */
   private async restartWithNewContracts(
-    newMaxExtractAddress: string
+    newMaxExtractAddress: string,
+    newAuditorAddress: string | null
   ): Promise<void> {
     try {
       console.log("🛑 Stopping game server components...");
@@ -300,6 +324,19 @@ export class GameServer {
           `⚠️  Warning: Failed to set MaxExtract address in Game contract: ${error.message}`
         );
         console.log("   Continuing with restart anyway...");
+      }
+
+      // Set Auditor contract address in Game contract
+      if (newAuditorAddress) {
+        console.log("🔗 Setting Auditor contract address in Game contract...");
+        try {
+          await this.blockchainManager.setAuditorContract(newAuditorAddress);
+        } catch (error: any) {
+          console.error(
+            `⚠️  Warning: Failed to set Auditor contract address in Game contract: ${error.message}`
+          );
+          console.log("   Continuing with restart anyway...");
+        }
       }
 
       console.log("▶️  Starting simulation...");
@@ -395,14 +432,12 @@ export class GameServer {
   public async start(port: number = 8000): Promise<void> {
     console.log("\n🌌 Max Extract Protocol Game Server\n");
 
-    // Initialize contract monitoring by fetching initial MaxExtract address
+    // Initialize contract monitoring by fetching initial contract addresses
     console.log("🔍 Initializing contract monitoring...");
-    const initialMaxExtractAddress = await this.fetchContractsFromAPI();
-    if (initialMaxExtractAddress) {
-      this.currentMaxExtractAddress = initialMaxExtractAddress;
-      console.log(
-        `📡 Monitoring MaxExtract contract: ${initialMaxExtractAddress}`
-      );
+    const contracts = await this.fetchContractsFromAPI();
+    if (contracts.maxExtract) {
+      this.currentMaxExtractAddress = contracts.maxExtract;
+      console.log(`📡 Monitoring MaxExtract contract: ${contracts.maxExtract}`);
     } else {
       console.log(
         "⚠️  Warning: Could not fetch initial MaxExtract address from API"
@@ -410,15 +445,26 @@ export class GameServer {
     }
 
     // Set MaxExtract address in Game contract
-    if (initialMaxExtractAddress) {
+    if (contracts.maxExtract) {
       console.log("🔗 Setting MaxExtract address in Game contract...");
       try {
-        await this.blockchainManager.setMaxExtractAddress(
-          initialMaxExtractAddress
-        );
+        await this.blockchainManager.setMaxExtractAddress(contracts.maxExtract);
       } catch (error: any) {
         console.error(
           `⚠️  Warning: Failed to set MaxExtract address in Game contract: ${error.message}`
+        );
+        console.log("   Continuing with startup anyway...");
+      }
+    }
+
+    // Set Auditor contract address in Game contract
+    if (contracts.auditor) {
+      console.log("🔗 Setting Auditor contract address in Game contract...");
+      try {
+        await this.blockchainManager.setAuditorContract(contracts.auditor);
+      } catch (error: any) {
+        console.error(
+          `⚠️  Warning: Failed to set Auditor contract address in Game contract: ${error.message}`
         );
         console.log("   Continuing with startup anyway...");
       }

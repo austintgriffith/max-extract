@@ -37,6 +37,9 @@ contract Game {
     // Reference to the MaxExtract contract for credential verification
     IMaxExtract public maxExtract;
     
+    // Reference to the Auditor contract
+    address public auditorContract;
+    
     // Game states
     enum GameState {
         Open,    // 0 - Players can buy in
@@ -74,6 +77,7 @@ contract Game {
     event PilotDied(address indexed pilot, address indexed killer, address indexed playerPenalized, uint256 scorePenalty, uint256 ethForwarded);
     event GameSettled(address[] winners, uint256 winningScore, uint256 totalPayout, uint256 payoutPerWinner);
     event CredentialMinted(address indexed pilot, address indexed player, address indexed credentialContract);
+    event PointsDeducted(address indexed player, uint256 amount, uint256 newScore);
     
     // Errors
     error OnlyGod();
@@ -93,6 +97,7 @@ contract Game {
     error CredentialNotRegistered();
     error MaxExtractNotSet();
     error PilotAlreadyMintedFromPlayer();
+    error OnlyAuditor();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -674,5 +679,43 @@ contract Game {
         scores[_player] += 5;
         
         emit CredentialMinted(tx.origin, _player, msg.sender);
+    }
+    
+    /**
+     * Deduct points from a player's score
+     * Only callable by the Auditor contract
+     * Used when players request contract audits or other point-deducting actions
+     * @param _player The player address to deduct points from
+     * @param _amount The number of points to deduct
+     */
+    function deductPoints(address _player, uint256 _amount) external {
+        if (msg.sender != auditorContract) revert OnlyAuditor();
+        
+        // Check if the player exists
+        bool isValidPlayer = false;
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == _player) {
+                isValidPlayer = true;
+                break;
+            }
+        }
+        if (!isValidPlayer) revert NotAPlayer();
+        
+        // Deduct points (can go to 0 but not below)
+        uint256 currentScore = scores[_player];
+        uint256 deduction = currentScore >= _amount ? _amount : currentScore;
+        scores[_player] = currentScore - deduction;
+        
+        emit PointsDeducted(_player, deduction, scores[_player]);
+    }
+    
+    /**
+     * Set the Auditor contract address
+     * Only callable by the God address
+     * @param _auditor Address of the Auditor contract
+     */
+    function setAuditorContract(address _auditor) external onlyGod {
+        require(_auditor != address(0), "Invalid address");
+        auditorContract = _auditor;
     }
 }
