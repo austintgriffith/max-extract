@@ -119,7 +119,7 @@ export const GameBuyIn = () => {
 
         {players && players.length > 0 ? (
           <div className="space-y-2 max-h-60 overflow-y-auto">
-            {players.map((player, index) => (
+            {players.map((player: string, index: number) => (
               <div key={player} className="flex items-center justify-between p-3 bg-base-100 rounded-lg">
                 <div className="flex items-center space-x-2">
                   <span className="badge badge-outline">#{index + 1}</span>

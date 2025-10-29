@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import deployedContracts from "~~/contracts/deployedContracts";
 
+export const dynamic = "force-static";
+
 export async function GET() {
   try {
     // Transform the deployed contracts data into a more API-friendly format
