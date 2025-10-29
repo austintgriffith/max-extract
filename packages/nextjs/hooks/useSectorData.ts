@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SectorSnapshot } from "~~/types/sector";
+import { getGameServerHttpUrl } from "~~/utils/scaffold-eth/getGameServerUrl";
 
 interface UseSectorDataProps {
   sectorId: string;
@@ -21,7 +22,7 @@ export const useSectorData = ({ sectorId }: UseSectorDataProps): UseSectorDataRe
 
     const loadSectorData = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/sector/${sectorId}`);
+        const response = await fetch(`${getGameServerHttpUrl()}/sector/${sectorId}`);
         if (!response.ok) {
           throw new Error(`Sector ${sectorId} not found`);
         }

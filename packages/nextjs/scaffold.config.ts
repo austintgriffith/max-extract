@@ -7,6 +7,7 @@ export type BaseConfig = {
   rpcOverrides?: Record<number, string>;
   walletConnectProjectId: string;
   onlyLocalBurnerWallet: boolean;
+  gameServerHost: string;
 };
 
 export type ScaffoldConfig = BaseConfig;
@@ -17,7 +18,7 @@ const scaffoldConfig = {
   // The networks on which your DApp is live
   targetNetworks: [chains.arbitrum],
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
-  pollingInterval: 4000,
+  pollingInterval: 3000,
   // This is ours Alchemy's default API key.
   // You can get your own at https://dashboard.alchemyapi.io
   // It's recommended to store it in an env variable:
@@ -35,6 +36,10 @@ const scaffoldConfig = {
   // .env.local for local testing, and in the Vercel/system env config for live apps.
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "3a8170812b534d0ff9d794f19a901d64",
   onlyLocalBurnerWallet: false,
+  // Game server host for backend API and WebSocket connections
+  // You can configure it in an env variable:
+  // .env.local for local testing, and in the Vercel/system env config for live apps.
+  gameServerHost: process.env.NEXT_PUBLIC_GAME_SERVER_HOST || "localhost:8000",
 } as const satisfies ScaffoldConfig;
 
 export default scaffoldConfig;

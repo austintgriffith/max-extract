@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ConnectionStatus, Particle, ScrapType, SectorEvent, SectorSnapshot, Vector2D } from "~~/types/sector";
+import { getGameServerWsUrl } from "~~/utils/scaffold-eth/getGameServerUrl";
 
 interface UseSectorWebSocketProps {
   sectorId: string;
@@ -136,7 +137,7 @@ export const useSectorWebSocket = ({
         // Add a small delay to ensure everything is ready
         setTimeout(() => {
           if (!isComponentMounted) return;
-          const ws = new WebSocket("ws://localhost:8000");
+          const ws = new WebSocket(getGameServerWsUrl());
           wsRef.current = ws;
 
           ws.onopen = () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PilotsResponse } from "~~/types/sector";
+import { getGameServerHttpUrl } from "~~/utils/scaffold-eth/getGameServerUrl";
 
 interface UsePilotsDataReturn {
   pilots: PilotsResponse | null;
@@ -16,7 +17,7 @@ export const usePilotsData = (refreshInterval: number = 10000): UsePilotsDataRet
   const fetchPilots = async () => {
     try {
       setError(null);
-      const response = await fetch("http://localhost:8000/api/pilots");
+      const response = await fetch(`${getGameServerHttpUrl()}/api/pilots`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

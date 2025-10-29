@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getGameServerHttpUrl } from "~~/utils/scaffold-eth/getGameServerUrl";
 
 export type GameServerStatus = "checking" | "online" | "offline";
 
@@ -49,7 +50,7 @@ export const useGameServerStatus = () => {
   useEffect(() => {
     const checkGameServer = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/health");
+        const response = await fetch(`${getGameServerHttpUrl()}/api/health`);
         if (response.ok) {
           setGameServerStatus("online");
         } else {
@@ -76,7 +77,7 @@ export const useGameServerStats = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/stats");
+        const response = await fetch(`${getGameServerHttpUrl()}/api/stats`);
         if (response.ok) {
           const data = await response.json();
           setStats(data);

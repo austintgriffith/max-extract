@@ -2814,7 +2814,7 @@ const deployedContracts = {
   },
   42161: {
     Universe: {
-      address: "0x3817cba719582a237ca55a050364e3ea93bab2d4",
+      address: "0x862dafee28f4bd85cf0be705338fab2584a1d3fc",
       abi: [
         {
           type: "constructor",
@@ -3174,10 +3174,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 388596650,
+      deployedOnBlock: 394789427,
     },
     Credits: {
-      address: "0xbd46f170d5cacb9e266d9228b8c28d03600affca",
+      address: "0xf70af41faad98d7488ca952e41f0b124729df4ea",
       abi: [
         {
           type: "constructor",
@@ -3659,10 +3659,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 388596655,
+      deployedOnBlock: 394789432,
     },
     Game: {
-      address: "0x360fe87bbf340a0f4e66e1e81aa1f8794cb925d4",
+      address: "0x0bd9840107218fe000618325c40d0a7e78561a16",
       abi: [
         {
           type: "constructor",
@@ -4713,10 +4713,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 388596661,
+      deployedOnBlock: 394789437,
     },
     MaxExtract: {
-      address: "0xd50d82bc274fb6a4e752a0ffbd2e29be4f3e42bb",
+      address: "0x0b016afc0521e2b87e923279e394bed9327113d0",
       abi: [
         {
           type: "constructor",
@@ -5074,7 +5074,549 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 388596666,
+      deployedOnBlock: 394789447,
+    },
+    Auditor: {
+      address: "0xb9f905b25052a3098794aff07cedbc88d707a9cc",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_universe",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_game",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "auditRequests",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "contractAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "requester",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "chapterNumber",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "blockExplorerUrl",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "timestamp",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "status",
+              type: "uint8",
+              internalType: "enum Auditor.AuditStatus",
+            },
+            {
+              name: "failureReason",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "auditorAddress",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "auditsByAddress",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "gameContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract Game",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAuditRequest",
+          inputs: [
+            {
+              name: "_index",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple",
+              internalType: "struct Auditor.AuditRequest",
+              components: [
+                {
+                  name: "contractAddress",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "requester",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "chapterNumber",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "blockExplorerUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "status",
+                  type: "uint8",
+                  internalType: "enum Auditor.AuditStatus",
+                },
+                {
+                  name: "failureReason",
+                  type: "string",
+                  internalType: "string",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAuditRequestCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAuditsByAddress",
+          inputs: [
+            {
+              name: "_address",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPendingAudits",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isAudited",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "lastAuditResult",
+          inputs: [
+            {
+              name: "_address",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple",
+              internalType: "struct Auditor.AuditRequest",
+              components: [
+                {
+                  name: "contractAddress",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "requester",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "chapterNumber",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "blockExplorerUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "status",
+                  type: "uint8",
+                  internalType: "enum Auditor.AuditStatus",
+                },
+                {
+                  name: "failureReason",
+                  type: "string",
+                  internalType: "string",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "markAudited",
+          inputs: [
+            {
+              name: "_requestId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "markFailed",
+          inputs: [
+            {
+              name: "_requestId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_reason",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "requestAudit",
+          inputs: [
+            {
+              name: "_contract",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_chapter",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "_url",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setAuditorAddress",
+          inputs: [
+            {
+              name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setGameContract",
+          inputs: [
+            {
+              name: "_game",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "universe",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract Universe",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "AuditAlreadyCompleted",
+          inputs: [
+            {
+              name: "contractAddress",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "requester",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "AuditCompleted",
+          inputs: [
+            {
+              name: "requestId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "contractAddress",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "AuditFailed",
+          inputs: [
+            {
+              name: "requestId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "contractAddress",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "reason",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "AuditRequested",
+          inputs: [
+            {
+              name: "requestId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "contractAddress",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "requester",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "chapterNumber",
+              type: "uint8",
+              indexed: false,
+              internalType: "uint8",
+            },
+            {
+              name: "blockExplorerUrl",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "AuditorAddressSet",
+          inputs: [
+            {
+              name: "newAuditor",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GameContractSet",
+          inputs: [
+            {
+              name: "newGame",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "InvalidRequest",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidStatus",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyAuditor",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyGod",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 394789442,
     },
   },
 } as const;
