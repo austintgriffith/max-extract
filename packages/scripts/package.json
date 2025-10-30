@@ -11,6 +11,7 @@
     "backend": "tsx backend.ts",
     "backend:dev": "tsx --watch backend.ts",
     "auditor": "tsx Auditor.ts",
+    "sweep": "tsx sweep.ts",
     "build": "tsc"
   },
   "dependencies": {
