@@ -163,14 +163,23 @@ export class SimulationManager {
       await this.entropyManager.performRollingCommitReveal();
     }
 
+    // Update all sectors with current rolling entropy BEFORE doing operations
+    await this.updateSectorEntropy();
+
     // Reload sectors from contract periodically
     await this.loadSectorsFromContract();
 
-    // Update all sectors with spawning and heavy operations
-    await this.updateSectorsOuterLoop();
-
-    // Update all sectors with current rolling entropy
-    await this.updateSectorEntropy();
+    // Only update sectors if we have rolling entropy
+    // (sectors need deterministic dice for spawning operations)
+    const currentEntropy = this.entropyManager.getCurrentRollingEntropy();
+    if (currentEntropy) {
+      // Update all sectors with spawning and heavy operations
+      await this.updateSectorsOuterLoop();
+    } else {
+      this.debugLog(
+        "Skipping sector outer loop updates - no rolling entropy available yet"
+      );
+    }
   }
 
   /**

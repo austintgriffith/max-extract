@@ -100,7 +100,7 @@ export const SECTOR_CONFIG = {
   HEIGHT: 2000,
   // Character generation
   CHARACTER_COUNT: 5,
-  CHARACTER_ETH: 0.0001,
+  CHARACTER_ETH: 0.00002, // Initial ETH for each pilot (reduced to prevent excessive accumulation)
   PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {
@@ -132,7 +132,7 @@ export const SECTOR_CONFIG = {
   EXIT_TARGET_BUFFER: 200, // Buffer for where ships aim when exiting (used in calculateExitVelocity)
   ASTEROID_EDGE_BUFFER: 100, // Buffer for asteroid edge calculations
   // Tipping system configuration
-  TIP_GAS_AMOUNT: "0.003", // ETH amount to fund pilots for gas
+  TIP_GAS_AMOUNT: "0.000001", // ETH amount to fund pilots for gas (reduced to prevent excessive accumulation)
   TIP_SCORE_THRESHOLDS: {
     HIGH: 240, // Score >= 240 (large asteroids: 240-360+ with fuel bonus)
     MEDIUM: 150, // Score >= 150 (medium asteroids: 150-225+ with fuel bonus)
