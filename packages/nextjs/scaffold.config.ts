@@ -42,7 +42,7 @@ const scaffoldConfig = {
   // .env.local for local testing, and in the Vercel/system env config for live apps.
   gameServerHost:
     process.env.NEXT_PUBLIC_GAME_SERVER_HOST ||
-    (process.env.NODE_ENV === "production" || process.env.VERCEL ? "backend.extract.fi" : "localhost:8000"),
+    (process.env.NODE_ENV === "production" || process.env.VERCEL ? "backend.extract.fi:8000" : "localhost:8000"),
   // Game server connection method (http_ws for local, https_wss for production with SSL)
   gameServerMethod:
     (process.env.NEXT_PUBLIC_GAME_SERVER_METHOD as "http_ws" | "https_wss") ||
