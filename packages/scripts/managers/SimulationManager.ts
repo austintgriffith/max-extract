@@ -12,6 +12,7 @@ export class SimulationManager {
   private pilotManager: PilotManager;
   private gameSettled: boolean = false;
   private isStopped: boolean = false;
+  private entropySetMessageShown: boolean = false;
 
   constructor(
     private sectors: Map<string, Sector>,
@@ -193,10 +194,27 @@ export class SimulationManager {
   private async checkUniverseEntropyStatus(): Promise<void> {
     try {
       const status = await this.entropyManager.checkUniverseEntropyStatus();
+      const universeAddress = status.universeContract?.address || "unknown";
+      
       if (!status.isSet) {
+        const entropy = await this.entropyManager.getUniverseEntropy();
+        
         console.log(
-          "⚠️  Universe entropy still not set - game functions limited"
+          `⚠️  Universe entropy still not set - game functions limited`
         );
+        console.log(`   Universe contract: ${universeAddress}`);
+        console.log(`   Entropy value: ${entropy || "(not set)"}`);
+        console.log(`   Commitment made: ${status.commitmentMade}`);
+        console.log(`   Can reveal: ${status.canReveal}`);
+      } else {
+        // Only show this once per session by checking if this is first time seeing isSet=true
+        if (!this.entropySetMessageShown) {
+          const entropy = await this.entropyManager.getUniverseEntropy();
+          console.log(`✅ Universe entropy is set`);
+          console.log(`   Universe contract: ${universeAddress}`);
+          console.log(`   Entropy: ${entropy?.slice(0, 20)}...`);
+          this.entropySetMessageShown = true;
+        }
       }
     } catch (error: any) {
       this.debugLog("Failed to check universe entropy status", error);

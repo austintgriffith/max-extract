@@ -1,5 +1,8 @@
 packages/scripts/.env
 packages/scripts/data
+packages/scripts/server.cert
+packages/scripts/server.key
+pilot-backups
 # dependencies
 node_modules
 

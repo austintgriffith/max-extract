@@ -104,28 +104,30 @@ export class BlockchainManager {
    * Checks runtime cache first, then falls back to static import
    */
   public getContract(contractName: string): ContractInfo | null {
-    // Check cache first
+    // Check cache first (loaded from API)
     if (this.contractsCache.has(contractName)) {
       const cached = this.contractsCache.get(contractName)!;
       this.debugLog(`Using cached contract ${contractName}: ${cached.address}`);
       return cached;
     }
 
-    // Fall back to static import
+    // Fall back to static import (local deployedContracts.ts)
+    this.debugLog(`Contract ${contractName} not in cache, checking local deployedContracts.ts`);
     const contracts =
       deployedContracts[this.config.chainId as keyof typeof deployedContracts];
 
     if (!contracts || !contracts[contractName as keyof typeof contracts]) {
-      this.debugLog(`Contract ${contractName} not found`);
+      this.debugLog(`Contract ${contractName} not found in local deployedContracts.ts`);
       return null;
     }
 
     const contract = contracts[contractName as keyof typeof contracts] as any;
     if (!contract.address) {
-      this.debugLog(`Contract ${contractName} address is undefined`);
+      this.debugLog(`Contract ${contractName} address is undefined in local deployedContracts.ts`);
       return null;
     }
 
+    this.debugLog(`Using local contract ${contractName}: ${contract.address}`);
     return {
       address: contract.address,
       abi: contract.abi,
@@ -156,16 +158,18 @@ export class BlockchainManager {
       this.contractsCache.clear();
 
       // Update cache with new contract addresses
+      console.log(`📦 Loading contracts for chain ${this.config.chainId}:`);
       for (const contract of chainData.contracts) {
         this.contractsCache.set(contract.name, {
           address: contract.address,
           abi: contract.abi,
         });
+        console.log(`   ✓ ${contract.name}: ${contract.address}`);
         this.debugLog(`Cached contract ${contract.name}: ${contract.address}`);
       }
 
       console.log(
-        `✅ Reloaded ${chainData.contracts.length} contracts from API`
+        `✅ Loaded ${chainData.contracts.length} contracts from API`
       );
     } catch (error: any) {
       console.error(`❌ Failed to reload contracts from API: ${error.message}`);
@@ -803,6 +807,30 @@ export class BlockchainManager {
     try {
       console.log("🧹 Starting pilot ETH cleanup...");
 
+      // Check if characterManager has any characters
+      let characterCount = characterManager.getCharacterCount();
+      
+      if (characterCount === 0) {
+        console.log("⚠️  No characters found in memory");
+        console.log("🔍 Attempting to load pilots from backup file...");
+        
+        // Try to load from backup file
+        const loaded = characterManager.loadCharactersFromFile ? 
+          characterManager.loadCharactersFromFile() : false;
+        
+        if (!loaded) {
+          console.log("❌ Could not load pilots from backup file");
+          console.log("   Pilots from previous sessions cannot be cleaned up (private keys unavailable)");
+          console.log("   Skipping ETH cleanup - pilots will keep their ETH");
+          return;
+        }
+        
+        characterCount = characterManager.getCharacterCount();
+        console.log(`✅ Loaded ${characterCount} pilots from backup file for cleanup`);
+      }
+
+      console.log(`🧹 Found ${characterCount} characters to check for cleanup`);
+
       // Get all pilots and their balances
       const { pilots } = await this.getAllPilotsAndBalances();
 
@@ -855,7 +883,7 @@ export class BlockchainManager {
               `⏭️  Skipping ${pilot.address.slice(
                 0,
                 8
-              )}... - character not found`
+              )}... - character not found in this session`
             );
             continue;
           }

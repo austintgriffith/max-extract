@@ -1,5 +1,8 @@
 import express from "express";
-import { createServer } from "http";
+import { createServer as createHttpServer } from "http";
+import { createServer as createHttpsServer } from "https";
+import * as fs from "fs";
+import * as path from "path";
 import { Sector } from "./Sector";
 import { SECTOR_CONFIG } from "./types";
 import {
@@ -23,6 +26,8 @@ export class GameServer {
   private sectors: Map<string, Sector> = new Map();
   private debugMode: boolean;
   private currentMaxExtractAddress: string | null = null;
+  private contractsApiUrl: string;
+  private sslEnabled: boolean = false;
 
   // Managers
   private blockchainManager: BlockchainManager;
@@ -36,12 +41,45 @@ export class GameServer {
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
 
-    // Initialize Express app and server
+    // Initialize Express app
     this.app = express();
-    this.server = createServer(this.app);
+
+    // Check for SSL certificate files
+    const certPath = path.join(__dirname, "server.cert");
+    const keyPath = path.join(__dirname, "server.key");
+    
+    if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+      // SSL certificates found - create HTTPS server
+      try {
+        const sslOptions = {
+          cert: fs.readFileSync(certPath),
+          key: fs.readFileSync(keyPath),
+        };
+        this.server = createHttpsServer(sslOptions, this.app);
+        this.sslEnabled = true;
+        console.log("🔒 SSL certificates found - HTTPS/WSS enabled");
+      } catch (error: any) {
+        console.log(`⚠️  Failed to load SSL certificates: ${error.message}`);
+        console.log("   Falling back to HTTP/WS");
+        this.server = createHttpServer(this.app);
+        this.sslEnabled = false;
+      }
+    } else {
+      // No SSL certificates - create HTTP server
+      this.server = createHttpServer(this.app);
+      this.sslEnabled = false;
+      console.log("🔓 No SSL certificates found - HTTP/WS enabled");
+    }
 
     // Setup middleware
     this.setupMiddleware();
+
+    // Load contracts API URL from environment
+    this.contractsApiUrl = process.env.LOAD_CONTRACTS_FROM || "http://localhost:3000/api/contracts.json";
+    
+    if (this.debugMode) {
+      console.log(`🔗 Contracts API URL: ${this.contractsApiUrl}`);
+    }
 
     // Initialize blockchain configuration
     const blockchainConfig: BlockchainConfig = {
@@ -126,10 +164,9 @@ export class GameServer {
     auditor: string | null;
   }> {
     try {
-      const apiUrl = "http://localhost:3000/api/contracts.json";
-      this.debugLog(`Fetching contracts from API: ${apiUrl}`);
+      this.debugLog(`Fetching contracts from API: ${this.contractsApiUrl}`);
 
-      const response = await fetch(apiUrl);
+      const response = await fetch(this.contractsApiUrl);
       const data = await response.json();
 
       if (!data.success || !data.data) {
@@ -266,7 +303,7 @@ export class GameServer {
 
       // Reload contracts in BlockchainManager
       await this.blockchainManager.reloadContractsFromAPI(
-        "http://localhost:3000/api/contracts.json"
+        this.contractsApiUrl
       );
 
       // Reset EntropyManager state for fresh contracts
@@ -433,7 +470,17 @@ export class GameServer {
     console.log("\n🌌 Max Extract Protocol Game Server\n");
 
     // Initialize contract monitoring by fetching initial contract addresses
-    console.log("🔍 Initializing contract monitoring...");
+    console.log("🔍 Initializing contracts from API...");
+    
+    // Load ALL contracts from API into BlockchainManager cache
+    try {
+      await this.blockchainManager.reloadContractsFromAPI(this.contractsApiUrl);
+      console.log("✅ Contracts loaded from API");
+    } catch (error: any) {
+      console.log(`⚠️  Warning: Failed to load contracts from API: ${error.message}`);
+      console.log("   Falling back to local deployedContracts.ts");
+    }
+    
     const contracts = await this.fetchContractsFromAPI();
     if (contracts.maxExtract) {
       this.currentMaxExtractAddress = contracts.maxExtract;
@@ -472,8 +519,10 @@ export class GameServer {
 
     // Start Express server
     this.server.listen(port, () => {
+      const protocol = this.sslEnabled ? "https" : "http";
+      const wsProtocol = this.sslEnabled ? "wss" : "ws";
       console.log(
-        `🚀 Game Server started on port ${port} | Inner: ${SECTOR_CONFIG.INNER_LOOP_INTERVAL}ms | Outer: ${SECTOR_CONFIG.OUTER_LOOP_INTERVAL}ms`
+        `🚀 Game Server started on ${protocol}://0.0.0.0:${port} (${wsProtocol}://0.0.0.0:${port}) | Inner: ${SECTOR_CONFIG.INNER_LOOP_INTERVAL}ms | Outer: ${SECTOR_CONFIG.OUTER_LOOP_INTERVAL}ms`
       );
     });
 

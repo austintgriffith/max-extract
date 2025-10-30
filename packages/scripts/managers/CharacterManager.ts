@@ -425,6 +425,111 @@ export class CharacterManager {
   }
 
   /**
+   * Save all characters to a JSON file
+   * This allows recovery of pilots after server restart
+   */
+  private saveCharactersToFile(): void {
+    try {
+      const characters = this.listCharacters();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `pilots-${timestamp}.json`;
+      const filepath = path.join(process.cwd(), "pilot-backups", filename);
+
+      // Create backup directory if it doesn't exist
+      const backupDir = path.join(process.cwd(), "pilot-backups");
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+
+      // Also save to a "latest" file for easy recovery
+      const latestFilepath = path.join(backupDir, "pilots-latest.json");
+
+      const data = {
+        timestamp: new Date().toISOString(),
+        characterCount: characters.length,
+        characters: characters.map((char) => ({
+          firstname: char.firstname,
+          lastname: char.lastname,
+          ship: char.ship,
+          fuel: char.fuel,
+          cargo: char.cargo,
+          aggression: char.aggression,
+          intelligence: char.intelligence,
+          dexterity: char.dexterity,
+          privateKey: char.privateKey,
+          publicAddress: char.publicAddress,
+        })),
+      };
+
+      // Save timestamped version
+      fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+      console.log(`💾 Saved ${characters.length} pilots to ${filename}`);
+
+      // Save latest version
+      fs.writeFileSync(latestFilepath, JSON.stringify(data, null, 2));
+      console.log(`💾 Updated pilots-latest.json`);
+
+      this.debugLog(`Characters saved to ${filepath}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to save characters to file: ${error.message}`);
+      this.debugLog("Save characters error:", error);
+    }
+  }
+
+  /**
+   * Load characters from the latest backup file
+   * Returns true if characters were loaded, false otherwise
+   */
+  public loadCharactersFromFile(): boolean {
+    try {
+      const latestFilepath = path.join(
+        process.cwd(),
+        "pilot-backups",
+        "pilots-latest.json"
+      );
+
+      if (!fs.existsSync(latestFilepath)) {
+        this.debugLog("No pilot backup file found");
+        return false;
+      }
+
+      const fileContent = fs.readFileSync(latestFilepath, "utf-8");
+      const data = JSON.parse(fileContent);
+
+      if (!data.characters || !Array.isArray(data.characters)) {
+        console.warn("⚠️  Invalid pilot backup file format");
+        return false;
+      }
+
+      // Load characters into memory
+      for (const charData of data.characters) {
+        const character: Character = {
+          firstname: charData.firstname,
+          lastname: charData.lastname,
+          ship: charData.ship,
+          fuel: charData.fuel,
+          cargo: charData.cargo,
+          aggression: charData.aggression,
+          intelligence: charData.intelligence,
+          dexterity: charData.dexterity,
+          privateKey: charData.privateKey as `0x${string}`,
+          publicAddress: charData.publicAddress as `0x${string}`,
+        };
+        this.characters.set(character.publicAddress, character);
+      }
+
+      console.log(`📂 Loaded ${data.characters.length} pilots from backup file`);
+      console.log(`   Backup timestamp: ${data.timestamp}`);
+      this.debugLog(`Characters loaded from ${latestFilepath}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to load characters from file: ${error.message}`);
+      this.debugLog("Load characters error:", error);
+      return false;
+    }
+  }
+
+  /**
    * Get available pilots (characters not currently assigned to sectors)
    */
   public getAvailablePilots(pilotManager: PilotManager): Character[] {
@@ -496,11 +601,11 @@ export class CharacterManager {
     try {
       this.debugLog("Starting character initialization...");
 
-      // Check if we already have characters
+      // Check if we already have characters in memory
       const existingCharacterCount = this.getCharacterCount();
 
       if (existingCharacterCount > 0) {
-        console.log(`🎭 Found existing ${existingCharacterCount} characters`);
+        console.log(`🎭 Found existing ${existingCharacterCount} characters in memory`);
 
         // Even with existing characters, check if they need to be added as pilots
         await this.addCharactersAsPilots(blockchainManager);
@@ -509,8 +614,22 @@ export class CharacterManager {
         return;
       }
 
-      // No characters exist, generate new ones
-      this.debugLog("No characters found, generating new character list...");
+      // Try to load characters from backup file
+      console.log("🔍 Checking for pilot backup file...");
+      const loadedFromFile = this.loadCharactersFromFile();
+
+      if (loadedFromFile) {
+        console.log(`✅ Successfully loaded pilots from backup`);
+        
+        // Check if they need to be added as pilots to the contract
+        await this.addCharactersAsPilots(blockchainManager);
+        
+        this.debugLog("Using characters loaded from backup file");
+        return;
+      }
+
+      // No characters exist in memory or file, generate new ones
+      console.log("📝 No backup found, generating new character list...");
       await this.generateAndRegisterCharacters(
         blockchainManager,
         entropyManager
@@ -560,6 +679,9 @@ export class CharacterManager {
       `🎭 Generated ${characters.length} new characters in ${generationTime}ms`
     );
 
+    // Save characters to backup file
+    this.saveCharactersToFile();
+
     // Add all character addresses as pilots to the Game contract
     await this.addCharactersAsPilots(blockchainManager);
   }
@@ -605,10 +727,11 @@ export class CharacterManager {
         `🎯 Adding ${newPilotAddresses.length} new character addresses as pilots to Game contract...`
       );
 
-      // Add pilots in batches using configurable batch size
+      // Add pilots in batches using configurable batch size and ETH amount
       await blockchainManager.addPilotsToGame(
         newPilotAddresses,
-        SECTOR_CONFIG.PILOT_BATCH_SIZE
+        SECTOR_CONFIG.PILOT_BATCH_SIZE,
+        SECTOR_CONFIG.CHARACTER_ETH.toString()
       );
 
       // Verify the final count

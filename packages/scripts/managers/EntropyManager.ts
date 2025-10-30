@@ -1,6 +1,7 @@
 import { BlockchainManager } from "./BlockchainManager";
 import { RevealManager } from "../utils/RevealManager";
 import { createSectorDice } from "../utils/DeterministicDice";
+import { UniverseEntropyPersistence } from "../utils/UniverseEntropyPersistence";
 
 export interface UniverseEntropyStatus {
   isSet: boolean;
@@ -12,6 +13,7 @@ export interface UniverseEntropyStatus {
 export class EntropyManager {
   private blockchainManager: BlockchainManager;
   private revealManager: RevealManager;
+  private entropyPersistence: UniverseEntropyPersistence;
   private currentRollingEntropy: string | null = null;
   private debugMode: boolean;
 
@@ -24,6 +26,11 @@ export class EntropyManager {
     // Initialize RevealManager without contract address initially
     // Will be updated once we know the Universe contract address
     this.revealManager = new RevealManager();
+    // Initialize entropy persistence system
+    this.entropyPersistence = new UniverseEntropyPersistence(
+      "./data/universe-entropy",
+      debugMode
+    );
   }
 
   private debugLog(message: string, data?: any): void {
@@ -473,11 +480,56 @@ export class EntropyManager {
   }
 
   /**
+   * Check if there's a pending commitment that needs to be revealed
+   * Returns the pending commitment data if found
+   */
+  public checkPendingCommitment(): { randomNumber: bigint; commitBlock: number } | null {
+    const universeContract = this.blockchainManager.getContract("Universe");
+    if (!universeContract) {
+      return null;
+    }
+
+    const pending = this.entropyPersistence.getPendingCommitment(
+      universeContract.address
+    );
+
+    if (pending) {
+      console.log("\n🔍 FOUND PENDING COMMITMENT FROM PREVIOUS RUN!");
+      console.log(`   Contract: ${pending.contractAddress}`);
+      console.log(`   Commit Block: ${pending.commitBlock}`);
+      console.log(`   Timestamp: ${new Date(pending.commitTimestamp).toISOString()}`);
+      console.log(`   Will attempt to reveal instead of committing again...\n`);
+
+      return {
+        randomNumber: BigInt(pending.randomNumber),
+        commitBlock: pending.commitBlock,
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Generate and commit entropy automatically for game cycle
    * Returns the random number for later reveal
    */
   public async autoCommitEntropy(): Promise<bigint> {
     this.debugLog("Auto-generating entropy for commit");
+
+    // Get Universe contract
+    const universeContract = this.blockchainManager.getContract("Universe");
+    if (!universeContract) {
+      throw new Error("Universe contract not found");
+    }
+
+    // Check if there's already a pending commitment
+    const pending = this.entropyPersistence.getPendingCommitment(
+      universeContract.address
+    );
+    if (pending) {
+      console.log("⚠️  Found existing commitment on disk - using saved random number");
+      return BigInt(pending.randomNumber);
+    }
 
     // Generate random number (256-bit)
     const randomBytes = new Uint8Array(32);
@@ -496,12 +548,6 @@ export class EntropyManager {
     const hash = keccak256(toBytes(randomBigInt));
     this.debugLog("Calculated commitment hash", hash);
 
-    // Get Universe contract
-    const universeContract = this.blockchainManager.getContract("Universe");
-    if (!universeContract) {
-      throw new Error("Universe contract not found");
-    }
-
     // Call commit on Universe contract
     this.debugLog(
       "Calling commit on Universe contract",
@@ -515,8 +561,16 @@ export class EntropyManager {
     );
 
     // Wait for transaction
-    await this.blockchainManager.waitForTransactionReceipt(txHash);
+    const receipt = await this.blockchainManager.waitForTransactionReceipt(txHash);
     this.debugLog("Commit transaction mined", txHash);
+
+    // Save commitment to disk AFTER successful transaction
+    this.entropyPersistence.saveCommitment(
+      universeContract.address,
+      randomBigInt,
+      hash,
+      Number(receipt.blockNumber)
+    );
 
     return randomBigInt;
   }
@@ -548,5 +602,12 @@ export class EntropyManager {
     // Wait for transaction
     await this.blockchainManager.waitForTransactionReceipt(txHash);
     this.debugLog("Reveal transaction mined", txHash);
+
+    // Mark as revealed in persistence (and optionally clear the file)
+    this.entropyPersistence.markAsRevealed(universeContract.address);
+    
+    // Optionally clear the commitment file after successful reveal
+    // Uncomment if you want to clean up after successful reveals
+    // this.entropyPersistence.clearCommitment(universeContract.address);
   }
 }

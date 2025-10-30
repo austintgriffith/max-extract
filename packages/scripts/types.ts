@@ -99,7 +99,8 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 25,
+  CHARACTER_COUNT: 5,
+  CHARACTER_ETH: 0.0001,
   PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {
@@ -116,7 +117,7 @@ export const SECTOR_CONFIG = {
   SHIP_SPEED: 80,
   // Dual-loop system configuration
   INNER_LOOP_INTERVAL: parseInt(process.env.INNER_LOOP_INTERVAL || "2000"), // Fast loop for ship movement, mining, battles
-  OUTER_LOOP_INTERVAL: parseInt(process.env.OUTER_LOOP_INTERVAL || "10000"), // Slow loop for heavy operations
+  OUTER_LOOP_INTERVAL: parseInt(process.env.OUTER_LOOP_INTERVAL || "20000"), // Slow loop for heavy operations (including rolling commit-reveal)
   ASTEROID_SPAWN_CHANCE: 0.4,
   SHIP_SPAWN_CHANCE: 0.4,
   FUEL_CONSUMPTION_RATE: 0.7,
@@ -143,5 +144,6 @@ export const SECTOR_CONFIG = {
   },
   // Game cycle configuration
   COUNTDOWN_SECONDS: parseInt(process.env.COUNTDOWN_SECONDS || "10"), // Countdown before game starts (buy-in period)
+  ENTROPY_REVEAL_DELAY_SECONDS: parseInt(process.env.ENTROPY_REVEAL_DELAY_SECONDS || "5"), // Wait time before revealing entropy (Universe contract minimum)
   AUTO_GAME_CYCLE: process.env.AUTO_GAME_CYCLE !== "false", // Enable/disable automated game cycles (default: true)
 };
