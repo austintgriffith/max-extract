@@ -8,6 +8,7 @@ export type BaseConfig = {
   walletConnectProjectId: string;
   onlyLocalBurnerWallet: boolean;
   gameServerHost: string;
+  gameServerMethod: "http_ws" | "https_wss";
 };
 
 export type ScaffoldConfig = BaseConfig;
@@ -40,6 +41,8 @@ const scaffoldConfig = {
   // You can configure it in an env variable:
   // .env.local for local testing, and in the Vercel/system env config for live apps.
   gameServerHost: process.env.NEXT_PUBLIC_GAME_SERVER_HOST || "localhost:8000",
+  // Game server connection method (http_ws for local, https_wss for production with SSL)
+  gameServerMethod: (process.env.NEXT_PUBLIC_GAME_SERVER_METHOD as "http_ws" | "https_wss") || "http_ws",
 } as const satisfies ScaffoldConfig;
 
 export default scaffoldConfig;
