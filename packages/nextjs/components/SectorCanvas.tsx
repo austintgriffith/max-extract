@@ -9,6 +9,9 @@ interface SectorCanvasProps {
   sectorData: SectorSnapshot | null;
   particles: Particle[];
   sectorId: string;
+  showGrid?: boolean;
+  showDebug?: boolean;
+  showTargeting?: boolean;
 }
 
 // Utility functions
@@ -31,7 +34,14 @@ const calculateParticlePosition = (particle: Particle, currentTime: number): Vec
   };
 };
 
-export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasProps) => {
+export const SectorCanvas = ({
+  sectorData,
+  particles,
+  sectorId,
+  showGrid = true,
+  showDebug = false,
+  showTargeting = false,
+}: SectorCanvasProps) => {
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const baseCanvasRef = useRef<HTMLCanvasElement>(null);
   const foregroundCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -135,29 +145,31 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
     // Clear entire canvas (transparent since starfield is underneath)
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    // Draw 10x10 grid to show boundaries
-    ctx.strokeStyle = "#444422"; // Lighter with yellow tint
-    ctx.lineWidth = 1;
-    const gridSize = 10;
-    const cellWidth = sectorWidth / gridSize;
-    const cellHeight = sectorHeight / gridSize;
+    // Draw 10x10 grid to show boundaries (if enabled)
+    if (showGrid) {
+      ctx.strokeStyle = "#444422"; // Lighter with yellow tint
+      ctx.lineWidth = 1;
+      const gridSize = 10;
+      const cellWidth = sectorWidth / gridSize;
+      const cellHeight = sectorHeight / gridSize;
 
-    // Draw vertical grid lines
-    for (let i = 0; i <= gridSize; i++) {
-      const x = padding + i * cellWidth;
-      ctx.beginPath();
-      ctx.moveTo(x, padding);
-      ctx.lineTo(x, padding + sectorHeight);
-      ctx.stroke();
-    }
+      // Draw vertical grid lines
+      for (let i = 0; i <= gridSize; i++) {
+        const x = padding + i * cellWidth;
+        ctx.beginPath();
+        ctx.moveTo(x, padding);
+        ctx.lineTo(x, padding + sectorHeight);
+        ctx.stroke();
+      }
 
-    // Draw horizontal grid lines
-    for (let i = 0; i <= gridSize; i++) {
-      const y = padding + i * cellHeight;
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(padding + sectorWidth, y);
-      ctx.stroke();
+      // Draw horizontal grid lines
+      for (let i = 0; i <= gridSize; i++) {
+        const y = padding + i * cellHeight;
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(padding + sectorWidth, y);
+        ctx.stroke();
+      }
     }
 
     // Draw sector border (thicker than grid)
@@ -178,12 +190,14 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
     );
     ctx.setLineDash([]); // Reset to solid lines
 
-    // Draw stats (outside the translated context)
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "14px monospace";
-    ctx.fillText(`Asteroids: ${Object.keys(sectorData.asteroids).length}`, 10, 25);
-    ctx.fillText(`Ships: ${Object.keys(sectorData.ships).length}`, 10, 45);
-  }, [sectorData]);
+    // Draw stats (outside the translated context) - only if debug mode is on
+    if (showDebug) {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "20px monospace";
+      ctx.fillText(`Asteroids: ${Object.keys(sectorData.asteroids).length}`, 10, 30);
+      ctx.fillText(`Ships: ${Object.keys(sectorData.ships).length}`, 10, 55);
+    }
+  }, [sectorData, showGrid, showDebug]);
 
   const drawBase = useCallback(() => {
     const canvas = baseCanvasRef.current;
@@ -370,7 +384,12 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
         ctx.translate(pos.x * scale, pos.y * scale);
 
         // Draw target line BEFORE rotating canvas - so it's not affected by ship rotation
-        if (ship.state === "flying" && ship.targetAsteroidId && sectorData.asteroids[ship.targetAsteroidId]) {
+        if (
+          showTargeting &&
+          ship.state === "flying" &&
+          ship.targetAsteroidId &&
+          sectorData.asteroids[ship.targetAsteroidId]
+        ) {
           const target = sectorData.asteroids[ship.targetAsteroidId];
           const targetPos = calculatePosition(target, currentTime);
 
@@ -457,7 +476,7 @@ export const SectorCanvas = ({ sectorData, particles, sectorId }: SectorCanvasPr
 
     // Restore context after drawing entities
     ctx.restore();
-  }, [sectorData, particles]);
+  }, [sectorData, particles, showTargeting]);
 
   // Animation loop
   useEffect(() => {

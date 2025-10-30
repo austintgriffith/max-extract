@@ -19,6 +19,9 @@ const SectorPage = () => {
   const sectorId = params?.sectorId as string;
   const [particles, setParticles] = useState<Particle[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [showTargeting, setShowTargeting] = useState(false);
 
   // Custom hooks for data management
   const { sectorData, setSectorData, error } = useSectorData({ sectorId });
@@ -32,6 +35,22 @@ const SectorPage = () => {
   // Game logic hooks
   useVectorMatching({ sectorData, setSectorData, wsRef, sectorId });
   useParticleCleanup({ particles, setParticles, setSectorData });
+
+  // Keyboard shortcuts for toggling grid, debug, and targeting
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "g" || e.key === "G") {
+        setShowGrid(prev => !prev);
+      } else if (e.key === "d" || e.key === "D") {
+        setShowDebug(prev => !prev);
+      } else if (e.key === "t" || e.key === "T") {
+        setShowTargeting(prev => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, []);
 
   // Auto-reload functionality when there's an error
   useEffect(() => {
@@ -121,7 +140,7 @@ const SectorPage = () => {
               <div className="skeleton h-6 w-48"></div>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-2 text-sm">
               {auditStatus === "audited" && sectorName ? (
                 <span className="font-bold">{sectorName}</span>
               ) : auditStatus === "pending" ? (
@@ -143,7 +162,27 @@ const SectorPage = () => {
               )}
             </div>
           )}
-          <SectorCanvas sectorData={sectorData} particles={particles} sectorId={sectorId} />
+          <SectorCanvas
+            sectorData={sectorData}
+            particles={particles}
+            sectorId={sectorId}
+            showGrid={showGrid}
+            showDebug={showDebug}
+            showTargeting={showTargeting}
+          />
+          <div className="text-xs text-center mt-2">
+            <span style={{ opacity: showGrid ? 1 : 0.77 }}>
+              <kbd className="kbd kbd-xs">G</kbd> Grid
+            </span>
+            {" • "}
+            <span style={{ opacity: showDebug ? 1 : 0.77 }}>
+              <kbd className="kbd kbd-xs">D</kbd> Debug
+            </span>
+            {" • "}
+            <span style={{ opacity: showTargeting ? 1 : 0.77 }}>
+              <kbd className="kbd kbd-xs">T</kbd> Targeting
+            </span>
+          </div>
         </div>
       </div>
 
