@@ -6,8 +6,10 @@ import { useParams } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { SectorCanvas } from "~~/components/SectorCanvas";
 import { SectorEvents } from "~~/components/SectorEvents";
+import { Address } from "~~/components/scaffold-eth";
 import { useParticleCleanup } from "~~/hooks/useParticleCleanup";
 import { useSectorData } from "~~/hooks/useSectorData";
+import { useSectorOwner } from "~~/hooks/useSectorOwner";
 import { useSectorWebSocket } from "~~/hooks/useSectorWebSocket";
 import { useVectorMatching } from "~~/hooks/useVectorMatching";
 import { Particle } from "~~/types/sector";
@@ -25,6 +27,7 @@ const SectorPage = () => {
     setSectorData,
     setParticles,
   });
+  const { ownerAddress, score, sectorName, auditStatus, isLoading: ownerLoading } = useSectorOwner(sectorId);
 
   // Game logic hooks
   useVectorMatching({ sectorData, setSectorData, wsRef, sectorId });
@@ -106,14 +109,40 @@ const SectorPage = () => {
           >
             {connectionStatus}
           </div>
-          <h1 className="text-xl font-bold">Sector {sectorId}</h1>
+          <h1 className="text-xl font-bold">Sector {sectorId.slice(0, 8)}...</h1>
         </div>
       </div>
 
       {/* Sector Visualization */}
       <div className="card bg-base-100 shadow-xl mb-6">
         <div className="card-body">
-          <h2 className="card-title">Sector View</h2>
+          {ownerLoading ? (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="skeleton h-6 w-48"></div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
+              {auditStatus === "audited" && sectorName ? (
+                <span className="font-bold">{sectorName}</span>
+              ) : auditStatus === "pending" ? (
+                <span className="font-bold opacity-60">(audit pending)</span>
+              ) : (
+                <span className="font-bold opacity-50">Unnamed Sector</span>
+              )}
+              {ownerAddress && (
+                <>
+                  <span className="opacity-50">•</span>
+                  <Address address={ownerAddress} />
+                </>
+              )}
+              {score !== undefined && (
+                <>
+                  <span className="opacity-50">•</span>
+                  <span className="font-semibold">Score: {score.toLocaleString()}</span>
+                </>
+              )}
+            </div>
+          )}
           <SectorCanvas sectorData={sectorData} particles={particles} sectorId={sectorId} />
         </div>
       </div>

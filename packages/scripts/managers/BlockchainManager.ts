@@ -112,18 +112,24 @@ export class BlockchainManager {
     }
 
     // Fall back to static import (local deployedContracts.ts)
-    this.debugLog(`Contract ${contractName} not in cache, checking local deployedContracts.ts`);
+    this.debugLog(
+      `Contract ${contractName} not in cache, checking local deployedContracts.ts`
+    );
     const contracts =
       deployedContracts[this.config.chainId as keyof typeof deployedContracts];
 
     if (!contracts || !contracts[contractName as keyof typeof contracts]) {
-      this.debugLog(`Contract ${contractName} not found in local deployedContracts.ts`);
+      this.debugLog(
+        `Contract ${contractName} not found in local deployedContracts.ts`
+      );
       return null;
     }
 
     const contract = contracts[contractName as keyof typeof contracts] as any;
     if (!contract.address) {
-      this.debugLog(`Contract ${contractName} address is undefined in local deployedContracts.ts`);
+      this.debugLog(
+        `Contract ${contractName} address is undefined in local deployedContracts.ts`
+      );
       return null;
     }
 
@@ -168,9 +174,7 @@ export class BlockchainManager {
         this.debugLog(`Cached contract ${contract.name}: ${contract.address}`);
       }
 
-      console.log(
-        `✅ Loaded ${chainData.contracts.length} contracts from API`
-      );
+      console.log(`✅ Loaded ${chainData.contracts.length} contracts from API`);
     } catch (error: any) {
       console.error(`❌ Failed to reload contracts from API: ${error.message}`);
       throw error;
@@ -596,63 +600,6 @@ export class BlockchainManager {
   }
 
   /**
-   * Ensure a pilot has enough gas for transactions (offchain check and transfer)
-   * This is a simple balance check + direct ETH transfer - no contract interaction needed
-   */
-  public async makeSurePilotHasEnoughGas(
-    pilotAddress: string,
-    minRequired: string = "0.005" // Default minimum 0.005 ETH
-  ): Promise<string | null> {
-    this.debugLog(
-      `Checking gas for pilot ${pilotAddress}, min required: ${minRequired} ETH`
-    );
-
-    try {
-      const minRequiredWei = parseEther(minRequired);
-
-      // Check pilot's current balance
-      const currentBalance = await this.publicClient.getBalance({
-        address: pilotAddress as `0x${string}`,
-      });
-
-      this.debugLog(
-        `Pilot ${pilotAddress} has ${formatEther(currentBalance)} ETH, needs ${minRequired} ETH`
-      );
-
-      // If pilot already has enough, no action needed
-      if (currentBalance >= minRequiredWei) {
-        this.debugLog(`Pilot has sufficient gas, no funding needed`);
-        return null;
-      }
-
-      // Calculate how much ETH to send
-      const needed = minRequiredWei - currentBalance;
-      this.debugLog(`Sending ${formatEther(needed)} ETH to pilot`);
-
-      // Send ETH directly to pilot (offchain)
-      const hash = await this.walletClient.sendTransaction({
-        to: pilotAddress as `0x${string}`,
-        value: needed,
-        account: this.godAccount,
-        chain: this.selectedChain,
-      });
-
-      this.debugLog(`ETH transfer transaction sent: ${hash}`);
-
-      // Wait for transaction to be mined
-      const receipt = await this.waitForTransactionReceipt(hash);
-      this.debugLog(
-        `ETH transfer transaction mined in block ${receipt.blockNumber}`
-      );
-
-      return hash;
-    } catch (error: any) {
-      this.debugLog(`Failed to check/fund pilot gas:`, error);
-      throw new Error(`Gas check failed: ${error.message}`);
-    }
-  }
-
-  /**
    * Check if a pilot is dead in the Game contract
    */
   public async isPilotDead(pilotAddress: string): Promise<boolean> {
@@ -806,24 +753,29 @@ export class BlockchainManager {
 
       // Check if characterManager has any characters
       let characterCount = characterManager.getCharacterCount();
-      
+
       if (characterCount === 0) {
         console.log("⚠️  No characters found in memory");
         console.log("🔍 Attempting to load pilots from backup file...");
-        
+
         // Try to load from backup file
-        const loaded = characterManager.loadCharactersFromFile ? 
-          characterManager.loadCharactersFromFile() : false;
-        
+        const loaded = characterManager.loadCharactersFromFile
+          ? characterManager.loadCharactersFromFile()
+          : false;
+
         if (!loaded) {
           console.log("❌ Could not load pilots from backup file");
-          console.log("   Pilots from previous sessions cannot be cleaned up (private keys unavailable)");
+          console.log(
+            "   Pilots from previous sessions cannot be cleaned up (private keys unavailable)"
+          );
           console.log("   Skipping ETH cleanup - pilots will keep their ETH");
           return;
         }
-        
+
         characterCount = characterManager.getCharacterCount();
-        console.log(`✅ Loaded ${characterCount} pilots from backup file for cleanup`);
+        console.log(
+          `✅ Loaded ${characterCount} pilots from backup file for cleanup`
+        );
       }
 
       console.log(`🧹 Found ${characterCount} characters to check for cleanup`);
@@ -1247,10 +1199,10 @@ export class BlockchainManager {
             functionName: "isAudited",
             args: [aboutAddress as `0x${string}`],
           })) as number;
-          
+
           // Enhanced tips only for Chapter 2 about contract audits
           isAudited = auditedChapter === 2;
-          
+
           this.debugLog(
             `Audit check for about contract ${aboutAddress}: chapter=${auditedChapter}, isChapter2=${isAudited}`
           );

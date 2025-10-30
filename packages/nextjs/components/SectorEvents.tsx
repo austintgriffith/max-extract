@@ -11,15 +11,14 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
     <div className="w-full max-w-4xl mx-auto">
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body p-4">
-          <h3 className="card-title text-sm">Recent Events</h3>
-          <div className="max-h-64 overflow-y-auto space-y-2">
+          <h3 className="card-title text-sm">Recent Events ({events.length})</h3>
+          <div className="max-h-[600px] overflow-y-auto space-y-2">
             {events.length === 0 ? (
               <p className="text-base-content/50 text-xs">No events yet...</p>
             ) : (
               events
                 .slice()
-                .reverse()
-                .slice(0, 8) // Show only last 8 events to keep it compact
+                .reverse() // Show all events, newest first
                 .map((event, index) => (
                   <div key={index} className="text-xs p-2 bg-base-200/60 rounded">
                     <div className="flex justify-between items-start">

@@ -127,6 +127,9 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
     return name;
   };
 
+  // Check if station name contains "(pending audit)"
+  const isPendingAudit = player.name && player.name.includes("(pending audit)");
+
   // For now, everyone starts with base1 (will be dynamic per player later)
   const baseType = 1;
   const baseScale = BASE_SCALE_FACTORS[baseType - 1];
@@ -162,11 +165,14 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
               target="_blank"
               rel="noopener noreferrer"
               className="link link-primary text-sm hover:link-primary-focus font-medium"
+              style={isPendingAudit ? { opacity: 0.5 } : {}}
             >
               {truncateName(player.name)}
             </a>
           ) : (
-            <span className="text-sm font-medium">{truncateName(player.name)}</span>
+            <span className="text-sm font-medium" style={isPendingAudit ? { opacity: 0.5 } : {}}>
+              {truncateName(player.name)}
+            </span>
           )
         ) : (
           <span className="text-xs opacity-50">-</span>

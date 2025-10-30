@@ -686,12 +686,6 @@ export class Sector {
     stationName: string
   ): Promise<void> {
     try {
-      // Ensure pilot has enough gas for the tip transaction
-      await this.blockchainManager.makeSurePilotHasEnoughGas(
-        ship.pilotAddress,
-        SECTOR_CONFIG.TIP_GAS_AMOUNT
-      );
-
       // Execute the tip transaction (+3 points for refueling)
       const txHash = await this.blockchainManager.executePilotTip(
         ship.privateKey,
@@ -1950,12 +1944,6 @@ export class Sector {
         return;
       }
 
-      // Ensure pilot has enough gas for the deadMansSwitch transaction
-      await this.blockchainManager.makeSurePilotHasEnoughGas(
-        victimShip.pilotAddress,
-        "0.005" // Minimum 0.005 ETH for deadMansSwitch
-      );
-
       // Calculate remaining ETH to send (victim's remaining fuel as a percentage of gas funding)
       const remainingFuelPercentage = victimShip.fuel / 100;
       const ethToSend = (remainingFuelPercentage * 0.001).toString(); // Small amount based on fuel
@@ -2234,18 +2222,6 @@ export class Sector {
         this.debugLog(
           `Could not find sector owner for ${this.id}, skipping tip`
         );
-        return;
-      }
-
-      // Ensure pilot has enough gas for the tip transaction
-      try {
-        await this.blockchainManager.makeSurePilotHasEnoughGas(
-          ship.pilotAddress,
-          SECTOR_CONFIG.TIP_GAS_AMOUNT
-        );
-        this.debugLog(`Ensured pilot ${ship.pilotAddress} has enough gas`);
-      } catch (error: any) {
-        this.debugLog(`Failed to ensure pilot has gas: ${error.message}`);
         return;
       }
 

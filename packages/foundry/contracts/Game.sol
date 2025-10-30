@@ -340,38 +340,6 @@ contract Game {
         
         return (pilotAddresses, ethBalances, isDead);
     }
-    
-    /**
-     * Ensure a pilot has enough gas for transactions
-     * Tops up pilot with minimum required ETH if balance is too low
-     * Only callable by the God address
-     * @param _pilot Address of the pilot to check and fund if needed
-     * @param _minRequired Minimum ETH balance required (in wei)
-     */
-    function makeSurePilotHasEnoughGas(address _pilot, uint256 _minRequired) external payable onlyGod {
-        require(isPilot(_pilot) || deadPilots[_pilot], "Not a pilot");
-        
-        uint256 currentBalance = _pilot.balance;
-        
-        if (currentBalance < _minRequired) {
-            uint256 needed = _minRequired - currentBalance;
-            require(msg.value >= needed, "Insufficient ETH sent");
-            
-            (bool success, ) = payable(_pilot).call{value: needed}("");
-            require(success, "ETH transfer failed");
-            
-            // Refund excess ETH to GOD
-            uint256 excess = msg.value - needed;
-            if (excess > 0) {
-                payable(universe.GOD()).transfer(excess);
-            }
-        } else {
-            // Pilot already has enough, refund all ETH to GOD
-            if (msg.value > 0) {
-                payable(universe.GOD()).transfer(msg.value);
-            }
-        }
-    }
 
     /**
      * Dead man's switch - called when a pilot is killed

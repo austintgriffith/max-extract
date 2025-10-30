@@ -274,7 +274,7 @@ contract MaxExtract {
             scores[i] = game.getPlayerScore(owner);
             
             // Try to get name and social from about contract
-            (string memory playerName, string memory playerSocial) = _getAboutInfo(sectors[sectorId]);
+            (string memory playerName, string memory playerSocial) = getAboutInfo(sectors[sectorId]);
             names[i] = playerName;
             socials[i] = playerSocial;
         }
@@ -283,12 +283,35 @@ contract MaxExtract {
     }
     
     /**
-     * Internal function to get name and social from a registry's about module
+     * Get all information for a specific sector in one call
+     * @param sectorId The sector ID to get information for
+     * @return owner The owner address of the sector
+     * @return registry The registry contract address for the sector
+     * @return score The player's score from the game contract
+     * @return name The sector name from about contract (empty string or "(pending audit)" if not available)
+     * @return social The social link from about contract (empty string if not available)
+     */
+    function getSectorInfo(uint256 sectorId) external view returns (
+        address owner,
+        address registry,
+        uint256 score,
+        string memory name,
+        string memory social
+    ) {
+        owner = sectorToOwner[sectorId];
+        registry = sectors[sectorId];
+        score = game.getPlayerScore(owner);
+        (name, social) = getAboutInfo(registry);
+        return (owner, registry, score, name, social);
+    }
+
+    /**
+     * Get name and social from a registry's about module
      * @param registryAddress The registry contract address
      * @return name The player name (empty string if not available)
      * @return social The player social link (empty string if not available)
      */
-    function _getAboutInfo(address registryAddress) internal view returns (string memory name, string memory social) {
+    function getAboutInfo(address registryAddress) public view returns (string memory name, string memory social) {
         // Default to empty strings
         name = "";
         social = "";

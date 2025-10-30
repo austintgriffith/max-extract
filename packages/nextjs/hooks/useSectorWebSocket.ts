@@ -170,7 +170,7 @@ export const useSectorWebSocket = ({
 
               // Handle sector events
               const sectorEvent = message as SectorEvent;
-              setEvents(prev => [...prev.slice(-19), sectorEvent]); // Keep last 20 events
+              setEvents(prev => [...prev.slice(-199), sectorEvent]); // Keep last 200 events
 
               // Update sector data based on event
               setSectorData((prev: SectorSnapshot | null) => {

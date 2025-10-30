@@ -1292,24 +1292,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "makeSurePilotHasEnoughGas",
-          inputs: [
-            {
-              name: "_pilot",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_minRequired",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
-        },
-        {
-          type: "function",
           name: "maxExtract",
           inputs: [],
           outputs: [
@@ -2031,6 +2013,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getAboutInfo",
+          inputs: [
+            {
+              name: "registryAddress",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "social",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getActiveSectorCount",
           inputs: [],
           outputs: [
@@ -2108,6 +2114,45 @@ const deployedContracts = {
               name: "sectorId",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSectorInfo",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "owner",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "registry",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "score",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "social",
+              type: "string",
+              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -2832,7 +2877,7 @@ const deployedContracts = {
   },
   42161: {
     Universe: {
-      address: "0xba42362c9c9db8bd35b952eba24eda4a37d605aa",
+      address: "0xc5a325692d021dcc5826c114faed5634ca50cc4d",
       abi: [
         {
           type: "constructor",
@@ -3192,10 +3237,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 395096549,
+      deployedOnBlock: 395120533,
     },
     Credits: {
-      address: "0xc89e6e2114b07dd3bcb348da7d6a6c0138e8363c",
+      address: "0xc68ebc207b2f6b993665f09076bb7c37709803d5",
       abi: [
         {
           type: "constructor",
@@ -3677,10 +3722,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 395096553,
+      deployedOnBlock: 395120537,
     },
     Game: {
-      address: "0x94e7cfa5a40e4f48d96de6af0f60b6c12ca095ae",
+      address: "0x28d4158045b22cdf43c97230c2b9a91418cab59a",
       abi: [
         {
           type: "constructor",
@@ -4114,24 +4159,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "makeSurePilotHasEnoughGas",
-          inputs: [
-            {
-              name: "_pilot",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_minRequired",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -4731,10 +4758,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 395096557,
+      deployedOnBlock: 395120541,
     },
     MaxExtract: {
-      address: "0xef8817779ab4302de95f0fe0f1250a78610401e4",
+      address: "0xf5599d5c6d39eae8efa75edb00028bb4e006904b",
       abi: [
         {
           type: "constructor",
@@ -4856,6 +4883,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getAboutInfo",
+          inputs: [
+            {
+              name: "registryAddress",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "social",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getActiveSectorCount",
           inputs: [],
           outputs: [
@@ -4933,6 +4984,45 @@ const deployedContracts = {
               name: "sectorId",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSectorInfo",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "owner",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "registry",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "score",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "social",
+              type: "string",
+              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -5110,10 +5200,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 395096565,
+      deployedOnBlock: 395120549,
     },
     Auditor: {
-      address: "0x3ba3e830ba6b8e3b07bc59788eb11302707997df",
+      address: "0x4c2ec8ba12a3e8a66fe0a78e00d57bf7e9c1d181",
       abi: [
         {
           type: "constructor",
@@ -5652,7 +5742,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 395096561,
+      deployedOnBlock: 395120545,
     },
   },
 } as const;
