@@ -596,7 +596,8 @@ export class BlockchainManager {
   }
 
   /**
-   * Ensure a pilot has enough gas for transactions using the smart contract
+   * Ensure a pilot has enough gas for transactions (offchain check and transfer)
+   * This is a simple balance check + direct ETH transfer - no contract interaction needed
    */
   public async makeSurePilotHasEnoughGas(
     pilotAddress: string,
@@ -607,30 +608,41 @@ export class BlockchainManager {
     );
 
     try {
-      const gameContract = this.getContract("Game");
-      if (!gameContract) {
-        throw new Error("Game contract not found. Run: yarn deploy");
-      }
-
       const minRequiredWei = parseEther(minRequired);
 
-      // Execute the makeSurePilotHasEnoughGas transaction
-      const hash = await this.walletClient.writeContract({
-        address: gameContract.address as `0x${string}`,
-        abi: gameContract.abi,
-        functionName: "makeSurePilotHasEnoughGas",
-        args: [pilotAddress, minRequiredWei],
-        value: minRequiredWei, // Send the minimum required amount (will be refunded if not needed)
+      // Check pilot's current balance
+      const currentBalance = await this.publicClient.getBalance({
+        address: pilotAddress as `0x${string}`,
+      });
+
+      this.debugLog(
+        `Pilot ${pilotAddress} has ${formatEther(currentBalance)} ETH, needs ${minRequired} ETH`
+      );
+
+      // If pilot already has enough, no action needed
+      if (currentBalance >= minRequiredWei) {
+        this.debugLog(`Pilot has sufficient gas, no funding needed`);
+        return null;
+      }
+
+      // Calculate how much ETH to send
+      const needed = minRequiredWei - currentBalance;
+      this.debugLog(`Sending ${formatEther(needed)} ETH to pilot`);
+
+      // Send ETH directly to pilot (offchain)
+      const hash = await this.walletClient.sendTransaction({
+        to: pilotAddress as `0x${string}`,
+        value: needed,
         account: this.godAccount,
         chain: this.selectedChain,
       });
 
-      this.debugLog(`Gas check transaction sent: ${hash}`);
+      this.debugLog(`ETH transfer transaction sent: ${hash}`);
 
       // Wait for transaction to be mined
       const receipt = await this.waitForTransactionReceipt(hash);
       this.debugLog(
-        `Gas check transaction mined in block ${receipt.blockNumber}`
+        `ETH transfer transaction mined in block ${receipt.blockNumber}`
       );
 
       return hash;
@@ -638,21 +650,6 @@ export class BlockchainManager {
       this.debugLog(`Failed to check/fund pilot gas:`, error);
       throw new Error(`Gas check failed: ${error.message}`);
     }
-  }
-
-  /**
-   * Legacy function - now uses the new gas management system
-   * @deprecated Use makeSurePilotHasEnoughGas instead
-   */
-  public async fundPilotForGas(
-    pilotAddress: string,
-    amount: string
-  ): Promise<string> {
-    this.debugLog(
-      `Legacy fundPilotForGas called, using new gas management system`
-    );
-    const result = await this.makeSurePilotHasEnoughGas(pilotAddress, amount);
-    return result || "no-funding-needed";
   }
 
   /**
@@ -1238,15 +1235,50 @@ export class BlockchainManager {
         stationName && stationName.trim().length > 0
       );
 
+      // Check if the about contract has been audited for Chapter 2
+      let isAudited = false;
+      let auditedChapter = 0;
+      try {
+        const auditorContract = this.getContract("Auditor");
+        if (auditorContract) {
+          auditedChapter = (await this.publicClient.readContract({
+            address: auditorContract.address as `0x${string}`,
+            abi: auditorContract.abi,
+            functionName: "isAudited",
+            args: [aboutAddress as `0x${string}`],
+          })) as number;
+          
+          // Enhanced tips only for Chapter 2 about contract audits
+          isAudited = auditedChapter === 2;
+          
+          this.debugLog(
+            `Audit check for about contract ${aboutAddress}: chapter=${auditedChapter}, isChapter2=${isAudited}`
+          );
+        } else {
+          this.debugLog("Auditor contract not found, skipping audit check");
+        }
+      } catch (error: any) {
+        this.debugLog(
+          `Failed to check audit status for about contract ${aboutAddress}:`,
+          error
+        );
+        // Continue without audit check - treat as not audited
+      }
+
+      // About contract is only considered valid if it has a name AND is audited for Chapter 2
+      const hasAboutContract = hasValidName && isAudited;
+
       this.debugLog(
-        `About contract check for sector ${sectorId}: name="${stationName}", valid=${hasValidName}`
+        `About contract check for sector ${sectorId}: name="${stationName}", hasValidName=${hasValidName}, isAudited=${isAudited}, hasAboutContract=${hasAboutContract}`
       );
 
       return {
-        hasAboutContract: hasValidName,
+        hasAboutContract,
         stationName: stationName || "",
         registryAddress,
         aboutAddress,
+        isAudited,
+        auditedChapter,
       };
     } catch (error: any) {
       this.debugLog(
