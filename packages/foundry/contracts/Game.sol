@@ -25,8 +25,8 @@ interface IMaxExtract {
  */
 contract Game {
     // Game configuration - hardcoded values
-    uint256 public constant BUY_IN_PRICE = 0.001 ether;
-    uint256 public immutable gameEndTime = block.timestamp + 90 minutes;
+    uint256 public constant BUY_IN_PRICE = 0.000001 ether;
+    uint256 public immutable gameEndTime = block.timestamp + 900 minutes;
     
     // WETH contract address (Ethereum mainnet - update for other networks)
     address public constant WETH_ADDRESS = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;

@@ -52,7 +52,7 @@ contract Universe {
     error OnlyGod();
     error EntropyAlreadySet();
     error NoCommitmentMade();
-    error RevealTooEarly();
+    error BlockhashUnavailable();
     error InvalidReveal();
     error CommitmentAlreadyMade();
 
@@ -90,14 +90,14 @@ contract Universe {
      */
     function reveal(uint256 randomNumber) external onlyGod entropyNotSet {
         if (!commitmentMade) revert NoCommitmentMade();
-        if (block.number <= commitBlock) revert RevealTooEarly();
+        
+        // Get the commit block hash for additional entropy
+        bytes32 commitBlockHash = blockhash(commitBlock);
+        if (commitBlockHash == 0) revert BlockhashUnavailable();
         
         // Verify the reveal matches the commitment
         bytes32 expectedCommitment = keccak256(abi.encodePacked(randomNumber));
         if (expectedCommitment != commitmentHash) revert InvalidReveal();
-        
-        // Get the commit block hash for additional entropy
-        bytes32 commitBlockHash = blockhash(commitBlock);
         
         // Generate final entropy by combining random number with commit block hash
         entropy = keccak256(abi.encodePacked(randomNumber, commitBlockHash));

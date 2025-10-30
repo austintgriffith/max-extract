@@ -34,6 +34,7 @@ Examples:
 }
 
 // Parse arguments
+const extraFlags = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--network" && args[i + 1]) {
     network = args[i + 1];
@@ -44,6 +45,9 @@ for (let i = 0; i < args.length; i++) {
   } else if (args[i] === "--keystore" && args[i + 1]) {
     keystoreArg = args[i + 1];
     i++; // Skip next arg since we used it
+  } else {
+    // Collect unknown flags to pass through to forge
+    extraFlags.push(args[i]);
   }
 }
 
@@ -152,6 +156,7 @@ The default account (scaffold-eth-default) can only be used for localhost deploy
 process.env.DEPLOY_SCRIPT = `script/${fileName}`;
 process.env.RPC_URL = network;
 process.env.ETH_KEYSTORE_ACCOUNT = selectedKeystore;
+process.env.EXTRA_FLAGS = extraFlags.join(" ");
 
 const result = spawnSync("make", ["deploy-and-generate-abis"], {
   stdio: "inherit",
