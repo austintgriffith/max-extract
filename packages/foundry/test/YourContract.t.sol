@@ -6,22 +6,27 @@ import "../contracts/Universe.sol";
 import "../contracts/Credits.sol";
 import "../contracts/MaxExtract.sol";
 import "../contracts/Game.sol";
+import "../contracts/Auditor.sol";
 
 contract MaxExtractTest is Test {
     Universe public universe;
     Credits public credits;
     MaxExtract public maxExtract;
     Game public game;
+    Auditor public auditor;
     address public testOwner;
     address public testUser;
+    address public auditorAddress;
 
     function setUp() public {
         testOwner = vm.addr(1);
         testUser = vm.addr(2);
+        auditorAddress = vm.addr(3);
         universe = new Universe();
         credits = new Credits(testOwner);
         game = new Game(address(universe));
-        maxExtract = new MaxExtract(address(universe), address(game));
+        auditor = new Auditor(address(universe), address(game), auditorAddress);
+        maxExtract = new MaxExtract(address(universe), address(game), address(auditor));
         
         // Set up universe entropy for testing using commit-reveal
         address god = universe.GOD();

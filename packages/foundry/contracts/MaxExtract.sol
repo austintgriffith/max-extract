@@ -19,6 +19,11 @@ interface IGame {
     function getPlayerScore(address player) external view returns (uint256);
 }
 
+// Interface for the Auditor contract to check if contracts are audited
+interface IAuditor {
+    function isAudited(address contractAddress) external view returns (uint8);
+}
+
 /**
  * MaxExtract Contract - The canonical Extract Protocol
  * 
@@ -45,6 +50,9 @@ contract MaxExtract {
     
     // Game contract for player and chapter validation
     IGame public immutable game;
+    
+    // Auditor contract for checking if about contracts are audited
+    IAuditor public immutable auditor;
     
     // Nonce for unique sector ID generation
     uint256 private nonce;
@@ -80,10 +88,11 @@ contract MaxExtract {
     );
 
     // Constructor - Max's final act
-    constructor(address _universe, address _game) {
+    constructor(address _universe, address _game, address _auditor) {
         // The Extract Protocol is now live - Max's legacy etched into the blockchain
         universe = IUniverse(_universe);
         game = IGame(_game);
+        auditor = IAuditor(_auditor);
     }
 
     /**
@@ -298,6 +307,15 @@ contract MaxExtract {
             
             // Check if about address is set (not zero address)
             if (aboutAddress != address(0)) {
+                // Check if the about contract is audited for chapter 2
+                uint8 auditedChapter = auditor.isAudited(aboutAddress);
+                
+                // If not audited for chapter 2, return pending audit message
+                if (auditedChapter != 2) {
+                    return ("(pending audit)", "");
+                }
+                
+                // About contract is audited, proceed to read name and social
                 // Try to read name from about contract
                 (bool nameSuccess, bytes memory nameData) = aboutAddress.staticcall(
                     abi.encodeWithSignature("name()")

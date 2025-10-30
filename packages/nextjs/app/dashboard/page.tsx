@@ -66,7 +66,7 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
             }`}
             title="ETH Balance"
           >
-            {parseFloat(pilot.ethBalance).toFixed(4)}
+            {parseFloat(pilot.ethBalance).toFixed(6)}
           </span>
         </div>
       </td>

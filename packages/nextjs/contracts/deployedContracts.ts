@@ -1924,6 +1924,11 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+            {
+              name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
           ],
           stateMutability: "nonpayable",
         },
@@ -1981,6 +1986,19 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "auditor",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IAuditor",
             },
           ],
           stateMutability: "view",
@@ -4731,6 +4749,11 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+            {
+              name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
           ],
           stateMutability: "nonpayable",
         },
@@ -4788,6 +4811,19 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "auditor",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IAuditor",
             },
           ],
           stateMutability: "view",

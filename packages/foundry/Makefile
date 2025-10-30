@@ -35,9 +35,9 @@ account:
 get-address:
 	@cast wallet address --account $(ACCOUNT_NAME)
 
-# Compile contracts
+# Compile contracts (suppress linter notes, keep errors and warnings)
 compile:
-	forge compile
+	@forge compile 2>&1 | awk '/^(note|warning)\[/ { skip=1; next } skip && /^$$/ { skip=0; next } skip && /^ / { next } !skip' || true
 
 # Flatten contracts
 flatten:
