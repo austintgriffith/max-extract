@@ -16,11 +16,9 @@ const ETHERSCAN_API_BASE = "https://api.etherscan.io/v2/api";
 // Anthropic API configuration
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 
-// Deployment configuration
-const BROADCAST_PATH = path.join(
-  __dirname,
-  "../foundry/broadcast/Deploy.s.sol/31337/run-latest.json"
-);
+// API configuration
+const CONTRACTS_API_URL = process.env.LOAD_CONTRACTS_FROM || "http://localhost:3000/api/contracts.json";
+
 const POLL_INTERVAL = 2000;
 
 // Track processed audit requests
@@ -146,7 +144,7 @@ interface EtherscanBytecodeResponse {
 class AuditorService {
   private publicClient: any;
   private walletClient: any;
-  private auditorContract: Address;
+  private auditorContract!: Address; // Initialized in start() method
   private account: any;
   private currentAuditorAddress: string | null = null;
   private isRestarting: boolean = false;
@@ -161,13 +159,17 @@ class AuditorService {
       console.log("🐛 DEBUG MODE ENABLED\n");
     }
 
-    // Load deployment info
-    const deploymentInfo = this.loadDeploymentInfo();
-    this.auditorContract = deploymentInfo.auditorAddress as Address;
-
-    // Setup blockchain clients
-    const chain = foundry; // Change to arbitrum for production
-    const rpcUrl = process.env.RPC_URL || "http://localhost:8545";
+    // Setup blockchain clients - use environment configuration
+    const chainId = process.env.CHAINID ? parseInt(process.env.CHAINID) : 31337;
+    const rpcUrl = process.env.RPC || process.env.RPC_URL || "http://localhost:8545";
+    
+    // Determine chain based on chainId
+    let chain;
+    if (chainId === 42161) {
+      chain = arbitrum;
+    } else {
+      chain = foundry;
+    }
 
     this.publicClient = createPublicClient({
       chain,
@@ -213,9 +215,11 @@ class AuditorService {
     });
 
     console.log("🔍 Auditor Service Initialized");
-    console.log("📋 Auditor Contract:", this.auditorContract);
     console.log("👤 Auditor Address:", this.account.address);
+    console.log("⛓️  Chain ID:", chainId);
+    console.log("🌐 Chain Name:", chain.name);
     console.log("🔗 RPC URL:", rpcUrl);
+    console.log("📡 Contracts API:", CONTRACTS_API_URL);
     console.log(
       "🔑 Etherscan API Key:",
       ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"
@@ -240,49 +244,71 @@ class AuditorService {
     }
   }
 
-  private loadDeploymentInfo(): { auditorAddress: string } {
+  /**
+   * Fetch Auditor contract address from API
+   */
+  private async fetchAuditorAddressFromAPI(): Promise<string | null> {
     try {
-      // Try to read from environment variable first
-      if (process.env.AUDITOR_CONTRACT_ADDRESS) {
-        return {
-          auditorAddress: process.env.AUDITOR_CONTRACT_ADDRESS,
-        };
+      this.debugLog(`Fetching contracts from API: ${CONTRACTS_API_URL}`);
+
+      const response = await fetch(CONTRACTS_API_URL);
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        throw new Error("Invalid API response format");
       }
 
-      // Otherwise, read from broadcast JSON
-      const broadcastData = JSON.parse(
-        fs.readFileSync(BROADCAST_PATH, "utf-8")
+      const chainId = this.publicClient.chain?.id || 31337;
+      const chainData = data.data[chainId.toString()];
+
+      if (!chainData || !chainData.contracts) {
+        throw new Error(`No contracts found for chain ${chainId}`);
+      }
+
+      // Find Auditor contract
+      const auditorContract = chainData.contracts.find(
+        (c: any) => c.name === "Auditor"
       );
 
-      // Find the Auditor contract in the transactions
-      let auditorAddress: string | null = null;
-
-      for (const tx of broadcastData.transactions) {
-        if (tx.contractName === "Auditor" && tx.contractAddress) {
-          auditorAddress = tx.contractAddress;
-          break;
-        }
+      if (!auditorContract) {
+        throw new Error("Auditor contract not found in API response");
       }
 
-      if (!auditorAddress) {
-        throw new Error("Auditor contract not found in broadcast data");
-      }
+      this.debugLog(
+        `Found Auditor address from API: ${auditorContract.address}`
+      );
 
-      return {
-        auditorAddress,
-      };
+      return auditorContract.address;
     } catch (error: any) {
-      console.error("Error loading deployment info:", error.message);
-      console.log("\n💡 Make sure contracts are deployed:");
-      console.log("   yarn deploy");
-      console.log("\n💡 Or set AUDITOR_CONTRACT_ADDRESS in your .env file");
-      throw error;
+      console.error(`❌ Failed to fetch Auditor address from API: ${error.message}`);
+      this.debugLog("API fetch error details:", error);
+      return null;
     }
   }
 
   async start() {
     console.log("\n🚀 Starting Auditor Service...");
     console.log(`⏰ Polling every ${POLL_INTERVAL}ms\n`);
+
+    // Load Auditor contract address
+    if (process.env.AUDITOR_CONTRACT_ADDRESS) {
+      this.auditorContract = process.env.AUDITOR_CONTRACT_ADDRESS as Address;
+      console.log("📋 Auditor Contract (from env):", this.auditorContract);
+    } else {
+      console.log("🔍 Fetching Auditor contract address from API...");
+      const auditorAddress = await this.fetchAuditorAddressFromAPI();
+      
+      if (!auditorAddress) {
+        console.error("\n❌ Error: Could not load Auditor contract address");
+        console.log("\n💡 Please either:");
+        console.log("   1. Set AUDITOR_CONTRACT_ADDRESS in your .env file");
+        console.log(`   2. Ensure ${CONTRACTS_API_URL} is accessible and contains the Auditor contract`);
+        process.exit(1);
+      }
+      
+      this.auditorContract = auditorAddress as Address;
+      console.log("📋 Auditor Contract (from API):", this.auditorContract);
+    }
 
     // Initialize current address
     this.currentAuditorAddress = this.auditorContract.toLowerCase();
@@ -311,43 +337,34 @@ class AuditorService {
    */
   private async checkForContractChanges(): Promise<void> {
     try {
-      // Read the latest broadcast file
-      const broadcastData = JSON.parse(
-        fs.readFileSync(BROADCAST_PATH, "utf-8")
-      );
-
-      // Find the Auditor contract in the transactions
-      let newAuditorAddress: string | null = null;
-
-      for (const tx of broadcastData.transactions) {
-        if (tx.contractName === "Auditor" && tx.contractAddress) {
-          newAuditorAddress = tx.contractAddress.toLowerCase();
-          break;
-        }
-      }
+      // Fetch latest address from API
+      const newAuditorAddress = await this.fetchAuditorAddressFromAPI();
 
       if (!newAuditorAddress) {
-        return; // No Auditor contract found, skip check
+        return; // Could not fetch from API, skip check
       }
+
+      const newAuditorAddressLower = newAuditorAddress.toLowerCase();
 
       // If this is the first check, just store the address
       if (this.currentAuditorAddress === null) {
-        this.currentAuditorAddress = newAuditorAddress;
+        this.currentAuditorAddress = newAuditorAddressLower;
         return;
       }
 
       // Check if address has changed
-      if (newAuditorAddress !== this.currentAuditorAddress) {
+      if (newAuditorAddressLower !== this.currentAuditorAddress) {
         console.log("\n🔄 Auditor contract change detected!");
         console.log(`   Old: ${this.currentAuditorAddress}`);
-        console.log(`   New: ${newAuditorAddress}`);
+        console.log(`   New: ${newAuditorAddressLower}`);
         console.log("   Restarting auditor service...\n");
 
-        await this.restartWithNewContract(newAuditorAddress);
+        await this.restartWithNewContract(newAuditorAddressLower);
       }
     } catch (error: any) {
-      // Silently fail if broadcast file doesn't exist or can't be read
+      // Silently fail if API is not accessible
       // This is normal during development
+      this.debugLog("Error checking for contract changes:", error);
     }
   }
 
@@ -411,10 +428,15 @@ class AuditorService {
         lastProcessedIndex = totalCount - 1;
         this.debugLog(`Updated last processed index to: ${lastProcessedIndex}`);
       } else {
-        this.debugLog("No new audit requests found");
+        // Show a dot to indicate polling is active (only if not in debug mode)
+        if (!this.debugMode) {
+          process.stdout.write(".");
+        } else {
+          this.debugLog("No new audit requests found");
+        }
       }
     } catch (error: any) {
-      console.error("Error polling audits:", error.message);
+      console.error("\nError polling audits:", error.message);
       this.debugLog("Poll error details", error);
     }
   }

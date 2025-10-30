@@ -16,6 +16,7 @@ export class EntropyManager {
   private entropyPersistence: UniverseEntropyPersistence;
   private currentRollingEntropy: string | null = null;
   private debugMode: boolean;
+  private missingRevealWarningShown: boolean = false;
 
   constructor(
     blockchainManager: BlockchainManager,
@@ -219,10 +220,18 @@ export class EntropyManager {
 
       const currentRoundNumber = Number(rollingState[1]);
       const lastCommit = rollingState[2];
+      const contractRollingEntropy = rollingState[0];
 
       this.debugLog(
         `Contract state - Round: ${currentRoundNumber}, LastCommit: ${lastCommit}`
       );
+
+      // Always read the current rolling entropy from contract
+      // This ensures sectors can spawn even if we can't advance rounds
+      if (contractRollingEntropy && contractRollingEntropy !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
+        this.currentRollingEntropy = contractRollingEntropy;
+        this.debugLog(`Initial rolling entropy: ${this.currentRollingEntropy}`);
+      }
 
       // Check if we have the reveal for the current round
       if (
@@ -235,7 +244,10 @@ export class EntropyManager {
           }. Cannot continue rolling commit-reveal.`
         );
         console.log(
-          `⚠️  You may need to reset the contract or manually add the missing reveal.`
+          `   However, using existing rolling entropy: ${contractRollingEntropy.slice(0, 18)}...`
+        );
+        console.log(
+          `   Game will continue with spawning enabled (entropy won't advance).`
         );
         return;
       }
@@ -249,16 +261,6 @@ export class EntropyManager {
           `Generated initial commitment for round 0: ${commitHash}`
         );
       }
-
-      // Get initial rolling entropy
-      const initialRollingState = (await this.blockchainManager.readContract(
-        universeContract.address,
-        universeContract.abi,
-        "getRollingState"
-      )) as [string, bigint, string];
-
-      this.currentRollingEntropy = initialRollingState[0];
-      this.debugLog(`Initial rolling entropy: ${this.currentRollingEntropy}`);
 
       console.log(
         `🎲 Rolling commit-reveal initialized - Round ${currentRoundNumber}`
@@ -293,8 +295,19 @@ export class EntropyManager {
         "getRollingState"
       )) as [string, bigint, string]; // [rollingEntropy, roundNumber, lastCommit]
 
+      const contractRollingEntropy = rollingState[0];
       const currentRoundNumber = Number(rollingState[1]);
       this.debugLog(`Current contract round number: ${currentRoundNumber}`);
+      this.debugLog(`Current contract rolling entropy: ${contractRollingEntropy}`);
+
+      // Always use the contract's current rolling entropy for sectors
+      // even if we can't advance to the next round
+      if (contractRollingEntropy && contractRollingEntropy !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
+        if (this.currentRollingEntropy !== contractRollingEntropy) {
+          this.currentRollingEntropy = contractRollingEntropy;
+          this.debugLog(`Updated local rolling entropy from contract: ${contractRollingEntropy}`);
+        }
+      }
 
       // Determine what reveal to use
       let revealToUse: string;
@@ -310,9 +323,28 @@ export class EntropyManager {
           currentRoundNumber - 1
         );
         if (!previousRoundReveal) {
-          console.error(
-            `❌ Missing reveal for round ${currentRoundNumber - 1}`
-          );
+          // Only show the warning once to avoid log spam
+          if (!this.missingRevealWarningShown) {
+            console.error(`\n${"=".repeat(70)}`);
+            console.error(`⚠️  ROLLING COMMIT-REVEAL PAUSED - Missing reveal for round ${currentRoundNumber - 1}`);
+            console.error(`${"=".repeat(70)}`);
+            console.error(`The contract is at round ${currentRoundNumber}, but the local reveals`);
+            console.error(`file doesn't contain the reveal for round ${currentRoundNumber - 1}.`);
+            console.error(``);
+            console.error(`This can happen when:`);
+            console.error(`  • The server was restarted and lost its reveal history`);
+            console.error(`  • The reveals file was deleted or corrupted`);
+            console.error(`  • The contract is from a previous deployment`);
+            console.error(``);
+            console.error(`✅ GOOD NEWS: Using existing rolling entropy from contract!`);
+            console.error(`   Current entropy: ${contractRollingEntropy.slice(0, 18)}...`);
+            console.error(`   The game will continue normally with spawning enabled.`);
+            console.error(``);
+            console.error(`⚠️  However, entropy won't advance to new rounds until this is resolved.`);
+            console.error(`   Same entropy will be reused each cycle (deterministic but not advancing).`);
+            console.error(`${"=".repeat(70)}\n`);
+            this.missingRevealWarningShown = true;
+          }
           return;
         }
         revealToUse = previousRoundReveal;
