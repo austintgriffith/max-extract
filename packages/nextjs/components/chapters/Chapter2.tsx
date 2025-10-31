@@ -1,8 +1,12 @@
 "use client";
 
 import { Address } from "~~/components/scaffold-eth";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 
 export const Chapter2 = () => {
+  const { data: auditorContract } = useDeployedContractInfo({ contractName: "Auditor" });
+  const auditorAddress = auditorContract?.address;
+
   return (
     <div className="bg-base-300 rounded-3xl p-8 mb-6">
       <h2 className="text-3xl font-bold mb-6 text-primary">Chapter 2: The Announcement (and Audit)</h2>
@@ -36,9 +40,11 @@ export const Chapter2 = () => {
                     <strong>Part 2:</strong> Navigate the official audit system to get your contract verified by the
                     Pirate Council. This is an onchain audit system powered by an AI pirate auditor system. You will
                     request audits by spending points, view audit progress by reading from the Auditor contract (
-                    <span className="inline-flex">
-                      <Address address="0xc624801dd98bef87c0718ddb43ad3a566cc51ecc" />
-                    </span>
+                    {auditorAddress && (
+                      <span className="inline-flex">
+                        <Address address={auditorAddress} />
+                      </span>
+                    )}
                     ), and pirates will only use successfully audited contracts.
                   </li>
                 </ol>
@@ -185,9 +191,11 @@ export const Chapter2 = () => {
                   <p className="text-xs text-base-content/70 mb-2">
                     Call the <code className="bg-base-200 px-1 rounded">requestAudit</code> function on the Auditor
                     contract (
-                    <span className="inline-flex">
-                      <Address address="0xc624801dd98bef87c0718ddb43ad3a566cc51ecc" />
-                    </span>
+                    {auditorAddress && (
+                      <span className="inline-flex">
+                        <Address address={auditorAddress} />
+                      </span>
+                    )}
                     ) with the arguments: your contract address, the chapter number, optional block explorer url.
                   </p>
                 </div>
@@ -205,9 +213,11 @@ export const Chapter2 = () => {
                 <p className="text-sm text-base-content mb-3">
                   The easiest way to check your most recent audit is to use the{" "}
                   <code className="bg-base-100 px-1 rounded">lastAuditResult</code> function on the Auditor contract (
-                  <span className="inline-flex">
-                    <Address address="0xc624801dd98bef87c0718ddb43ad3a566cc51ecc" />
-                  </span>
+                  {auditorAddress && (
+                    <span className="inline-flex">
+                      <Address address={auditorAddress} />
+                    </span>
+                  )}
                   ).
                 </p>
               </div>

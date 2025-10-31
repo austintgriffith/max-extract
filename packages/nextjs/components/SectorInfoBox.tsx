@@ -256,18 +256,80 @@ export const SectorInfoBox = ({
           </div>
 
           {/* Registered Modules - Indented under Registry */}
-          {(station.aboutAddress || station.social) && (
+          {(station.aboutAddress || station.credentialAddress) && (
             <div className="ml-4 space-y-2 border-l-2 border-cyan-800 pl-3">
-              {station.aboutAddress && station.aboutAddress !== station.registryAddress && (
+              {station.aboutAddress && (
                 <div>
-                  <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">About Module</div>
-                  <Address address={station.aboutAddress} />
+                  <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
+                    About Module
+                    {station.aboutAuditedChapter === 2 ? (
+                      <span className="text-green-400">✓</span>
+                    ) : (
+                      <span className="text-yellow-400">⚠️</span>
+                    )}
+                    {station.aboutAuditedChapter && (
+                      <span className="text-gray-500 text-[9px] font-normal">
+                        {station.aboutAuditedChapter === 2 ? "Ch.2" : `Ch.${station.aboutAuditedChapter}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Address address={station.aboutAddress} />
+                    <Link
+                      href={`https://abi.ninja/${station.aboutAddress}/${targetNetwork.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      <Image
+                        src="/abininja.svg"
+                        alt="View on ABI Ninja"
+                        width={24}
+                        height={24}
+                        className="opacity-80"
+                      />
+                    </Link>
+                  </div>
                   {station.social && (
                     <div className="mt-1">
                       <div className="text-gray-500 text-[9px] mb-0.5">Social</div>
                       <div className="font-mono text-blue-300 text-[10px] break-all">{station.social}</div>
                     </div>
                   )}
+                </div>
+              )}
+              {station.credentialAddress && (
+                <div>
+                  <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
+                    Credential Module
+                    {station.credentialAuditedChapter === 3 ? (
+                      <span className="text-green-400">✓</span>
+                    ) : (
+                      <span className="text-yellow-400">⚠️</span>
+                    )}
+                    {station.credentialAuditedChapter && (
+                      <span className="text-gray-500 text-[9px] font-normal">
+                        {station.credentialAuditedChapter === 3 ? "Ch.3" : `Ch.${station.credentialAuditedChapter}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Address address={station.credentialAddress} />
+                    <Link
+                      href={`https://abi.ninja/${station.credentialAddress}/${targetNetwork.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      <Image
+                        src="/abininja.svg"
+                        alt="View on ABI Ninja"
+                        width={24}
+                        height={24}
+                        className="opacity-80"
+                      />
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -407,7 +469,7 @@ export const SectorInfoBox = ({
               </div>
               <div>
                 <div className="text-gray-500 text-[9px]">ETH Balance</div>
-                <div className="font-mono text-cyan-300">{parseFloat(ship.ethBalance).toFixed(4)}</div>
+                <div className="font-mono text-cyan-300">{parseFloat(ship.ethBalance).toFixed(6)}</div>
               </div>
             </div>
           </div>

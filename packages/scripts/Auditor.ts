@@ -6,8 +6,8 @@ import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from packages/scripts/.env
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 // Etherscan API configuration
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";

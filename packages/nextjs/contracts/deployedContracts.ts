@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xef1707af46b68aa697c427325aea18f82b6b2629",
+      address: "0xbf3cd410aa5a3e9da22fd9109add5d3655fcb1c5",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2700,
+      deployedOnBlock: 290,
     },
     Credits: {
-      address: "0x1f9bcc15221eccc5204eb30b5a156031423700ac",
+      address: "0xc8c25aab3eea991e083d2d0240ee4d693c59bdac",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2701,
+      deployedOnBlock: 291,
     },
     Game: {
-      address: "0x83b4e0d6ff93f3183d306da23efae17773e6dfc0",
+      address: "0x7c10a8944baa22a41a51b82dc419e866a04e55db",
       abi: [
         {
           type: "constructor",
@@ -1888,452 +1888,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2702,
-    },
-    MaxExtract: {
-      address: "0x741050c1d044e23d3ebd2e85ad8b6ce5c17555c7",
-      abi: [
-        {
-          type: "constructor",
-          inputs: [
-            {
-              name: "_universe",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_game",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_auditor",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "RULE_ONE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "RULE_THREE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "RULE_TWO",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "activeSectors",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "auditor",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IAuditor",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "broadcast",
-          inputs: [],
-          outputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "game",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IGame",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getAboutInfo",
-          inputs: [
-            {
-              name: "registryAddress",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "name",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "social",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getActiveSectorCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getActiveSectors",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256[]",
-              internalType: "uint256[]",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getPlayerData",
-          inputs: [],
-          outputs: [
-            {
-              name: "sectorIds",
-              type: "uint256[]",
-              internalType: "uint256[]",
-            },
-            {
-              name: "owners",
-              type: "address[]",
-              internalType: "address[]",
-            },
-            {
-              name: "registries",
-              type: "address[]",
-              internalType: "address[]",
-            },
-            {
-              name: "names",
-              type: "string[]",
-              internalType: "string[]",
-            },
-            {
-              name: "socials",
-              type: "string[]",
-              internalType: "string[]",
-            },
-            {
-              name: "scores",
-              type: "uint256[]",
-              internalType: "uint256[]",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getPlayerSector",
-          inputs: [
-            {
-              name: "player",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSectorInfo",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "owner",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "registry",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "score",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "name",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "social",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "hasPlayerBroadcast",
-          inputs: [
-            {
-              name: "player",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "playerHasBroadcast",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "playerToSector",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "sectorToOwner",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "sectors",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "universe",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IUniverse",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "updateRegistry",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "event",
-          name: "RegistryUpdated",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "oldRegistry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "newRegistry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "player",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "SectorBroadcast",
-          inputs: [
-            {
-              name: "sectorId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "registry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "player",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 2703,
+      deployedOnBlock: 292,
     },
     Auditor: {
-      address: "0x8b03e92900e9d2251a93e6640a79353e3e10df1c",
+      address: "0xdc88b5feffd566bfa016b6b9268ea29929e7adf1",
       abi: [
         {
           type: "constructor",
@@ -2872,7 +2430,449 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2702,
+      deployedOnBlock: 292,
+    },
+    MaxExtract: {
+      address: "0x25c74b7124bae93364213a6124a5e45bb0e98889",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_universe",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_game",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "RULE_ONE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "RULE_THREE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "RULE_TWO",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "activeSectors",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "auditor",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IAuditor",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "broadcast",
+          inputs: [],
+          outputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "game",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IGame",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAboutInfo",
+          inputs: [
+            {
+              name: "registryAddress",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "social",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getActiveSectorCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getActiveSectors",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPlayerData",
+          inputs: [],
+          outputs: [
+            {
+              name: "sectorIds",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+            {
+              name: "owners",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "registries",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "names",
+              type: "string[]",
+              internalType: "string[]",
+            },
+            {
+              name: "socials",
+              type: "string[]",
+              internalType: "string[]",
+            },
+            {
+              name: "scores",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPlayerSector",
+          inputs: [
+            {
+              name: "player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSectorInfo",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "owner",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "registry",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "score",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "name",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "social",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "hasPlayerBroadcast",
+          inputs: [
+            {
+              name: "player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "playerHasBroadcast",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "playerToSector",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "sectorToOwner",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "sectors",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "universe",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IUniverse",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "updateRegistry",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "RegistryUpdated",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "oldRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "newRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SectorBroadcast",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "registry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 292,
     },
   },
   42161: {

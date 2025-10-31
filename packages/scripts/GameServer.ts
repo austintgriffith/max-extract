@@ -1,3 +1,4 @@
+// NOTE: Environment variables are loaded in index.ts before this file is imported
 import express from "express";
 import { createServer as createHttpServer } from "http";
 import { createServer as createHttpsServer } from "https";
@@ -15,10 +16,6 @@ import { RouteManager } from "./managers/RouteManager";
 import { CharacterManager } from "./managers/CharacterManager";
 import { SimulationManager } from "./managers/SimulationManager";
 import { GameCycleManager } from "./managers/GameCycleManager";
-import * as dotenv from "dotenv";
-
-// Load environment variables
-dotenv.config();
 
 export class GameServer {
   private app: express.Application;
@@ -47,7 +44,7 @@ export class GameServer {
     // Check for SSL certificate files
     const certPath = path.join(__dirname, "server.cert");
     const keyPath = path.join(__dirname, "server.key");
-    
+
     if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
       // SSL certificates found - create HTTPS server
       try {
@@ -75,8 +72,10 @@ export class GameServer {
     this.setupMiddleware();
 
     // Load contracts API URL from environment
-    this.contractsApiUrl = process.env.LOAD_CONTRACTS_FROM || "http://localhost:3000/api/contracts.json";
-    
+    this.contractsApiUrl =
+      process.env.LOAD_CONTRACTS_FROM ||
+      "http://localhost:3000/api/contracts.json";
+
     if (this.debugMode) {
       console.log(`🔗 Contracts API URL: ${this.contractsApiUrl}`);
     }
@@ -154,6 +153,48 @@ export class GameServer {
       );
       next();
     });
+  }
+
+  /**
+   * Wait for GOD account to have sufficient balance before starting
+   */
+  private async waitForSufficientBalance(): Promise<void> {
+    const MINIMUM_ETH = 0.1; // Conservative estimate for ~200+ cycles on Arbitrum, 10+ on local
+    const CHECK_INTERVAL_MS = 10000; // 10 seconds between checks
+
+    const godAddress = this.blockchainManager.getGodAccount().address;
+
+    while (true) {
+      try {
+        const currentBalanceStr = await this.blockchainManager.getGodBalance();
+        const currentBalance = parseFloat(currentBalanceStr);
+
+        if (currentBalance >= MINIMUM_ETH) {
+          console.log(
+            `✅ GOD account has sufficient balance: ${currentBalance.toFixed(
+              4
+            )} ETH\n`
+          );
+          return;
+        }
+
+        const shortfall = MINIMUM_ETH - currentBalance;
+        console.log("\n⚠️  INSUFFICIENT GOD ACCOUNT BALANCE");
+        console.log("=".repeat(60));
+        console.log(`   GOD Account: ${godAddress}`);
+        console.log(`   Current Balance: ${currentBalance.toFixed(4)} ETH`);
+        console.log(`   Required Balance: ${MINIMUM_ETH} ETH`);
+        console.log(`   Shortfall: ${shortfall.toFixed(4)} ETH`);
+        console.log("=".repeat(60));
+        console.log(`⏳ Waiting for funds... (checking again in 10 seconds)\n`);
+
+        await new Promise((resolve) => setTimeout(resolve, CHECK_INTERVAL_MS));
+      } catch (error: any) {
+        console.error(`❌ Error checking GOD balance: ${error.message}`);
+        console.log(`   Retrying in 10 seconds...\n`);
+        await new Promise((resolve) => setTimeout(resolve, CHECK_INTERVAL_MS));
+      }
+    }
   }
 
   /**
@@ -302,9 +343,7 @@ export class GameServer {
       console.log("🔄 Reloading contracts from API...");
 
       // Reload contracts in BlockchainManager
-      await this.blockchainManager.reloadContractsFromAPI(
-        this.contractsApiUrl
-      );
+      await this.blockchainManager.reloadContractsFromAPI(this.contractsApiUrl);
 
       // Reset EntropyManager state for fresh contracts
       this.entropyManager.reset();
@@ -467,20 +506,25 @@ export class GameServer {
   }
 
   public async start(port: number = 8000): Promise<void> {
+    // Check GOD account balance first - wait if insufficient
+    await this.waitForSufficientBalance();
+
     console.log("\n🌌 Max Extract Protocol Game Server\n");
 
     // Initialize contract monitoring by fetching initial contract addresses
     console.log("🔍 Initializing contracts from API...");
-    
+
     // Load ALL contracts from API into BlockchainManager cache
     try {
       await this.blockchainManager.reloadContractsFromAPI(this.contractsApiUrl);
       console.log("✅ Contracts loaded from API");
     } catch (error: any) {
-      console.log(`⚠️  Warning: Failed to load contracts from API: ${error.message}`);
+      console.log(
+        `⚠️  Warning: Failed to load contracts from API: ${error.message}`
+      );
       console.log("   Falling back to local deployedContracts.ts");
     }
-    
+
     const contracts = await this.fetchContractsFromAPI();
     if (contracts.maxExtract) {
       this.currentMaxExtractAddress = contracts.maxExtract;

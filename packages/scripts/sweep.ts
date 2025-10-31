@@ -10,8 +10,8 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry, arbitrum } from "viem/chains";
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from packages/scripts/.env
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 interface PilotBackup {
   timestamp: string;

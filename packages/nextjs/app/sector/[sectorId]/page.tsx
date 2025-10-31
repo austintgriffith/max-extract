@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useReadContract } from "wagmi";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { SectorCanvas } from "~~/components/SectorCanvas";
 import { SectorEvents } from "~~/components/SectorEvents";
@@ -88,6 +89,74 @@ const SectorPage = () => {
     },
   });
 
+  // Fetch about module address from registry
+  const { data: aboutModuleAddress } = useReadContract({
+    address: registryAddress as `0x${string}`,
+    abi: [
+      {
+        type: "function",
+        name: "modules",
+        inputs: [{ name: "", type: "string" }],
+        outputs: [{ name: "", type: "address" }],
+        stateMutability: "view",
+      },
+    ] as const,
+    functionName: "modules",
+    args: ["about"],
+    query: {
+      enabled: shouldFetchAbout,
+    },
+  });
+
+  // Fetch audit status for about module
+  const aboutAddress = aboutModuleAddress as string | undefined;
+  const shouldFetchAboutAudit = Boolean(
+    aboutAddress && aboutAddress !== "0x0000000000000000000000000000000000000000" && selectedObject?.type === "station",
+  );
+  const { data: aboutAuditedChapter } = useScaffoldReadContract({
+    contractName: "Auditor",
+    functionName: "isAudited",
+    args: [aboutAddress as `0x${string}`],
+    query: {
+      enabled: shouldFetchAboutAudit,
+    },
+  });
+
+  // Fetch credential module address from registry
+  const { data: credentialModuleAddress } = useReadContract({
+    address: registryAddress as `0x${string}`,
+    abi: [
+      {
+        type: "function",
+        name: "modules",
+        inputs: [{ name: "", type: "string" }],
+        outputs: [{ name: "", type: "address" }],
+        stateMutability: "view",
+      },
+    ] as const,
+    functionName: "modules",
+    args: ["credential"],
+    query: {
+      enabled: shouldFetchAbout,
+    },
+  });
+
+  // Fetch audit status for credential module
+  const credentialAddress = credentialModuleAddress as string | undefined;
+  const shouldFetchCredentialAudit = Boolean(
+    credentialAddress &&
+      credentialAddress !== "0x0000000000000000000000000000000000000000" &&
+      selectedObject?.type === "station",
+  );
+  const { data: credentialAuditedChapter } = useScaffoldReadContract({
+    contractName: "Auditor",
+    functionName: "isAudited",
+    args: [credentialAddress as `0x${string}`],
+    query: {
+      enabled: shouldFetchCredentialAudit,
+    },
+  });
+
   // Game logic hooks
   useVectorMatching({ sectorData, setSectorData, wsRef, sectorId });
   useParticleCleanup({ particles, setParticles, setSectorData });
@@ -118,7 +187,16 @@ const SectorPage = () => {
               sectorId,
               ownerAddress: owner,
               registryAddress: registry,
-              aboutAddress: registry !== "0x0000000000000000000000000000000000000000" ? registry : undefined,
+              aboutAddress:
+                aboutAddress && aboutAddress !== "0x0000000000000000000000000000000000000000"
+                  ? aboutAddress
+                  : undefined,
+              aboutAuditedChapter: aboutAuditedChapter ? Number(aboutAuditedChapter) : undefined,
+              credentialAddress:
+                credentialAddress && credentialAddress !== "0x0000000000000000000000000000000000000000"
+                  ? credentialAddress
+                  : undefined,
+              credentialAuditedChapter: credentialAuditedChapter ? Number(credentialAuditedChapter) : undefined,
               stationName: aboutName || sectorName,
               social: aboutSocial || undefined,
               score: Number(playerScore),
@@ -224,7 +302,20 @@ const SectorPage = () => {
     };
 
     fetchDetails();
-  }, [selectedObject, sectorId, sectorInfo, aboutInfo, auditedChapter, sectorName, sectorData, pilotStats]);
+  }, [
+    selectedObject,
+    sectorId,
+    sectorInfo,
+    aboutInfo,
+    auditedChapter,
+    aboutAddress,
+    aboutAuditedChapter,
+    credentialAddress,
+    credentialAuditedChapter,
+    sectorName,
+    sectorData,
+    pilotStats,
+  ]);
 
   // Live update ship/asteroid position and velocity from sectorData
   useEffect(() => {

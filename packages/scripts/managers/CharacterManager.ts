@@ -726,6 +726,9 @@ export class CharacterManager {
       console.log(
         `🎯 Adding ${newPilotAddresses.length} new character addresses as pilots to Game contract...`
       );
+      console.log(
+        `💰 Each pilot will receive: ${SECTOR_CONFIG.CHARACTER_ETH} ETH (from CHARACTER_ETH config)`
+      );
 
       // Add pilots in batches using configurable batch size and ETH amount
       await blockchainManager.addPilotsToGame(

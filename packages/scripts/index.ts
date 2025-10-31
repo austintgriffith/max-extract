@@ -1,3 +1,9 @@
+// CRITICAL: Load environment variables FIRST before any other imports
+import * as dotenv from "dotenv";
+import * as path from "path";
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+// Now import everything else
 import { GameServer } from "./GameServer";
 
 // Check if DEBUG mode is enabled

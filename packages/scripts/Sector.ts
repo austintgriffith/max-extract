@@ -2219,11 +2219,21 @@ export class Sector {
         this.id
       );
       if (!playerAddress) {
-        this.debugLog(
-          `Could not find sector owner for ${this.id}, skipping tip`
+        console.log(
+          `❌ Could not find sector owner for sector ${this.id}, skipping tip`
         );
         return;
       }
+
+      console.log(
+        `   ├─ Sector owner: ${playerAddress}`
+      );
+      console.log(
+        `   ├─ Pilot address: ${ship.pilotAddress}`
+      );
+      console.log(
+        `   └─ Tip amount: ${tipAmount} points`
+      );
 
       // Execute the tip transaction
       try {
@@ -2237,7 +2247,7 @@ export class Sector {
           ? " (enhanced)"
           : " (standard)";
         console.log(
-          `💰 Pilot ${ship.pilotName} tipped player ${tipAmount} points${tipTypeText}! (tx: ${txHash})`
+          `✅ Pilot ${ship.pilotName} tipped player ${tipAmount} points${tipTypeText}! (tx: ${txHash})`
         );
 
         // Broadcast tip event
@@ -2260,7 +2270,18 @@ export class Sector {
           },
         });
       } catch (error: any) {
-        this.debugLog(`Failed to execute tip transaction: ${error.message}`);
+        console.error(`❌ Failed to execute tip transaction: ${error.message}`);
+        if (error.code) {
+          console.error(`   ├─ Error code: ${error.code}`);
+        }
+        if (error.reason) {
+          console.error(`   ├─ Reason: ${error.reason}`);
+        }
+        if (error.data) {
+          console.error(`   └─ Data: ${JSON.stringify(error.data)}`);
+        } else {
+          console.error(`   └─ Full error: ${error.stack || error}`);
+        }
 
         // Broadcast failed tip event
         this.broadcastEvent({
@@ -2283,7 +2304,8 @@ export class Sector {
         });
       }
     } catch (error: any) {
-      this.debugLog(`Error in handlePilotTipping: ${error.message}`);
+      console.error(`❌ Error in handlePilotTipping: ${error.message}`);
+      console.error(`   └─ ${error.stack || error}`);
     }
   }
 

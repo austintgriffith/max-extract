@@ -175,6 +175,9 @@ export interface StationDetails {
   ownerAddress: string;
   registryAddress: string;
   aboutAddress?: string;
+  aboutAuditedChapter?: number;
+  credentialAddress?: string;
+  credentialAuditedChapter?: number;
   stationName?: string;
   social?: string;
   score: number;

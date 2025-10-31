@@ -8,15 +8,32 @@ export async function GET() {
     // Transform the deployed contracts data into a more API-friendly format
     const contractsData = Object.entries(deployedContracts).reduce(
       (acc, [networkId, contracts]) => {
+        const contractsArray = Object.entries(contracts).map(([name, contract]) => ({
+          name,
+          address: contract.address,
+          deployedOnBlock: contract.deployedOnBlock,
+          // Include ABI for those who need it
+          abi: contract.abi,
+        }));
+
+        // Create an object indexed by contract name for easy lookup
+        const contractsByName = Object.entries(contracts).reduce(
+          (contractsAcc, [name, contract]) => {
+            contractsAcc[name] = {
+              name,
+              address: contract.address,
+              deployedOnBlock: contract.deployedOnBlock,
+              abi: contract.abi,
+            };
+            return contractsAcc;
+          },
+          {} as Record<string, any>,
+        );
+
         acc[networkId] = {
           networkId: parseInt(networkId),
-          contracts: Object.entries(contracts).map(([name, contract]) => ({
-            name,
-            address: contract.address,
-            deployedOnBlock: contract.deployedOnBlock,
-            // Include ABI for those who need it
-            abi: contract.abi,
-          })),
+          contracts: contractsArray, // Array format (for backward compatibility)
+          contractsByName, // Object format indexed by name (for easy lookup)
         };
         return acc;
       },

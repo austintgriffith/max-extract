@@ -102,7 +102,7 @@ export const SECTOR_CONFIG = {
   HEIGHT: 2000,
   // Character generation
   CHARACTER_COUNT: 5,
-  CHARACTER_ETH: 0.00002, // Initial ETH for each pilot (reduced to prevent excessive accumulation)
+  CHARACTER_ETH: process.env.CHARACTER_ETH || "0.00002", // Initial ETH for each pilot (reduced to prevent excessive accumulation)
   PILOT_BATCH_SIZE: 25, // Number of pilots to add per transaction batch
   // Asteroid size categories
   ASTEROID_SIZES: {
@@ -121,7 +121,7 @@ export const SECTOR_CONFIG = {
   INNER_LOOP_INTERVAL: parseInt(process.env.INNER_LOOP_INTERVAL || "2000"), // Fast loop for ship movement, mining, battles
   OUTER_LOOP_INTERVAL: parseInt(process.env.OUTER_LOOP_INTERVAL || "20000"), // Slow loop for heavy operations (including rolling commit-reveal)
   ASTEROID_SPAWN_CHANCE: 0.7,
-  SHIP_SPAWN_CHANCE: 0.7,
+  SHIP_SPAWN_CHANCE: 1,
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station
@@ -134,7 +134,7 @@ export const SECTOR_CONFIG = {
   EXIT_TARGET_BUFFER: 200, // Buffer for where ships aim when exiting (used in calculateExitVelocity)
   ASTEROID_EDGE_BUFFER: 100, // Buffer for asteroid edge calculations
   // Tipping system configuration
-  TIP_GAS_AMOUNT: "0.000001", // ETH amount to fund pilots for gas (reduced to prevent excessive accumulation)
+  TIP_GAS_AMOUNT: process.env.TIP_GAS_AMOUNT || "0.000001", // ETH amount to fund pilots for gas (reduced to prevent excessive accumulation)
   TIP_SCORE_THRESHOLDS: {
     HIGH: 240, // Score >= 240 (large asteroids: 240-360+ with fuel bonus)
     MEDIUM: 150, // Score >= 150 (medium asteroids: 150-225+ with fuel bonus)
@@ -146,6 +146,8 @@ export const SECTOR_CONFIG = {
   },
   // Game cycle configuration
   COUNTDOWN_SECONDS: parseInt(process.env.COUNTDOWN_SECONDS || "10"), // Countdown before game starts (buy-in period)
-  ENTROPY_REVEAL_DELAY_SECONDS: parseInt(process.env.ENTROPY_REVEAL_DELAY_SECONDS || "5"), // Wait time before revealing entropy (Universe contract minimum)
+  ENTROPY_REVEAL_DELAY_SECONDS: parseInt(
+    process.env.ENTROPY_REVEAL_DELAY_SECONDS || "5"
+  ), // Wait time before revealing entropy (Universe contract minimum)
   AUTO_GAME_CYCLE: process.env.AUTO_GAME_CYCLE !== "false", // Enable/disable automated game cycles (default: true)
 };
