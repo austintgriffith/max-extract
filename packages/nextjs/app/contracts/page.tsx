@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { Address } from "~~/components/scaffold-eth";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -54,6 +56,20 @@ const ContractsPage = () => {
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">Address:</span>
                         <Address address={contract.address} />
+                        <Link
+                          href={`https://abi.ninja/${contract.address}/${targetNetwork.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:opacity-70 transition-opacity"
+                        >
+                          <Image
+                            src="/abininja.svg"
+                            alt="View on ABI Ninja"
+                            width={24}
+                            height={24}
+                            className="opacity-80"
+                          />
+                        </Link>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">Deployed on Block:</span>
@@ -64,7 +80,12 @@ const ContractsPage = () => {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <a href={`/blockexplorer/address/${contract.address}`} className="btn btn-secondary btn-sm">
+                    <a
+                      href={`${targetNetwork.blockExplorers?.default?.url}/address/${contract.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary btn-sm"
+                    >
                       View in Explorer
                     </a>
                   </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { SelectionIndicator } from "./SelectionIndicator";
 import { Starfield } from "./Starfield";
-import { Asteroid, Particle, SECTOR_CONFIG, SectorSnapshot, Ship, Vector2D } from "~~/types/sector";
+import { Asteroid, Particle, SECTOR_CONFIG, SectorSnapshot, SelectedObject, Ship, Vector2D } from "~~/types/sector";
 import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS } from "~~/utils/shipConstants";
 
 interface SectorCanvasProps {
@@ -12,6 +13,9 @@ interface SectorCanvasProps {
   showGrid?: boolean;
   showDebug?: boolean;
   showTargeting?: boolean;
+  selectedObject: SelectedObject | null;
+  onObjectSelect: (object: SelectedObject | null) => void;
+  infoBoxPosition: Vector2D | null;
 }
 
 // Utility functions
@@ -41,6 +45,9 @@ export const SectorCanvas = ({
   showGrid = true,
   showDebug = false,
   showTargeting = false,
+  selectedObject,
+  onObjectSelect,
+  infoBoxPosition,
 }: SectorCanvasProps) => {
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const baseCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,6 +78,87 @@ export const SectorCanvas = ({
 
   // For now, everyone starts with base1 (will be dynamic per sector/player later)
   const baseIndex = 1;
+
+  // Handle canvas click for object selection
+  const handleCanvasClick = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!sectorData) return;
+
+      const canvas = event.currentTarget;
+      const rect = canvas.getBoundingClientRect();
+
+      // Account for canvas display size vs actual pixel size
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      const clickX = (event.clientX - rect.left) * scaleX;
+      const clickY = (event.clientY - rect.top) * scaleY;
+
+      const scale = SECTOR_CONFIG.CANVAS_SCALE;
+      const padding = SECTOR_CONFIG.PADDING * scale;
+
+      // Convert click position to sector coordinates
+      const sectorX = (clickX - padding) / scale;
+      const sectorY = (clickY - padding) / scale;
+
+      const currentTime = Date.now();
+
+      // Check station first (center of sector)
+      const stationX = SECTOR_CONFIG.WIDTH / 2;
+      const stationY = SECTOR_CONFIG.HEIGHT / 2;
+      const stationRadius =
+        ((baseImageRef.current?.naturalWidth || 100) * scale * BASE_SCALE_FACTORS[baseIndex - 1]) / 2;
+      const stationDistance = Math.sqrt((sectorX - stationX) ** 2 + (sectorY - stationY) ** 2);
+
+      if (stationDistance <= stationRadius / scale) {
+        onObjectSelect({
+          type: "station",
+          id: "station",
+          canvasPosition: { x: stationX * scale, y: stationY * scale },
+          screenPosition: { x: event.clientX, y: event.clientY },
+        });
+        return;
+      }
+
+      // Check ships
+      for (const ship of Object.values(sectorData.ships)) {
+        const pos = calculatePosition(ship, currentTime);
+        const shipSize = 36; // Half of ship visual size
+        const distance = Math.sqrt((sectorX - pos.x) ** 2 + (sectorY - pos.y) ** 2);
+
+        if (distance <= shipSize) {
+          onObjectSelect({
+            type: "ship",
+            id: ship.id,
+            canvasPosition: { x: pos.x * scale, y: pos.y * scale },
+            screenPosition: { x: event.clientX, y: event.clientY },
+          });
+          return;
+        }
+      }
+
+      // Check asteroids
+      for (const asteroid of Object.values(sectorData.asteroids)) {
+        const pos = calculatePosition(asteroid, currentTime);
+        const asteroidRadius = (asteroid.size * 1.35) / 2; // Visual size with 35% increase
+        const distance = Math.sqrt((sectorX - pos.x) ** 2 + (sectorY - pos.y) ** 2);
+
+        if (distance <= asteroidRadius) {
+          onObjectSelect({
+            type: "asteroid",
+            id: asteroid.id,
+            canvasPosition: { x: pos.x * scale, y: pos.y * scale },
+            screenPosition: { x: event.clientX, y: event.clientY },
+          });
+          return;
+        }
+      }
+
+      // No object clicked, clear selection
+      onObjectSelect(null);
+    },
+    [sectorData, onObjectSelect, baseIndex],
+  );
 
   // Load ship images (1-12)
   useEffect(() => {
@@ -531,13 +619,24 @@ export const SectorCanvas = ({
         style={{ background: "transparent" }}
       />
 
-      {/* Foreground canvas for ships and asteroids - highest z-index */}
+      {/* Foreground canvas for ships and asteroids - below selection layer */}
       <canvas
         ref={foregroundCanvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none"
+        onClick={handleCanvasClick}
+        className="border border-base-300 rounded-lg max-w-full absolute top-0 left-1/2 transform -translate-x-1/2 z-30 cursor-pointer"
         style={{ background: "transparent" }}
+      />
+
+      {/* Selection indicator layer - on top of everything */}
+      <SelectionIndicator
+        selectedObject={selectedObject}
+        infoBoxPosition={infoBoxPosition}
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+        baseSize={(baseImageRef.current?.naturalWidth || 100) * BASE_SCALE_FACTORS[baseIndex - 1]}
+        sectorData={sectorData}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ConnectionStatus, Particle, ScrapType, SectorEvent, SectorSnapshot, Vector2D } from "~~/types/sector";
 import { getGameServerWsUrl } from "~~/utils/scaffold-eth/getGameServerUrl";
+import { cleanupOldSectorData, loadSectorEvents, saveSectorEvents } from "~~/utils/scaffold-eth/sectorEventsStorage";
 
 interface UseSectorWebSocketProps {
   sectorId: string;
@@ -108,6 +109,31 @@ export const useSectorWebSocket = ({
   const wsRef = useRef<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
   const [events, setEvents] = useState<SectorEvent[]>([]);
+  const eventsInitializedRef = useRef(false);
+
+  // Load events from localStorage on initial mount
+  useEffect(() => {
+    if (!sectorId || eventsInitializedRef.current) return;
+
+    // Clean up any expired sector data across all sectors
+    cleanupOldSectorData();
+
+    // Load events for this specific sector
+    const storedEvents = loadSectorEvents(sectorId);
+    if (storedEvents.length > 0) {
+      setEvents(storedEvents);
+      console.log(`Loaded ${storedEvents.length} events from localStorage for sector ${sectorId}`);
+    }
+
+    eventsInitializedRef.current = true;
+  }, [sectorId]);
+
+  // Save events to localStorage whenever they change
+  useEffect(() => {
+    if (!sectorId || events.length === 0 || !eventsInitializedRef.current) return;
+
+    saveSectorEvents(sectorId, events);
+  }, [sectorId, events]);
 
   // WebSocket connection
   useEffect(() => {

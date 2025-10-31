@@ -159,3 +159,32 @@ export interface PilotsResponse {
     }>;
   };
 }
+
+// Selection-related types
+export type SelectedObjectType = "station" | "ship" | "asteroid";
+
+export interface SelectedObject {
+  type: SelectedObjectType;
+  id: string; // "station" for base, ship id, or asteroid id
+  canvasPosition: Vector2D; // Position on canvas for drawing selection
+  screenPosition: Vector2D; // Position on screen for info box
+}
+
+export interface StationDetails {
+  sectorId: string;
+  ownerAddress: string;
+  registryAddress: string;
+  aboutAddress?: string;
+  stationName?: string;
+  social?: string;
+  score: number;
+  auditStatus: "none" | "pending" | "audited";
+  auditedChapter?: number;
+}
+
+export interface ShipDetails extends Ship {
+  stats: PilotStats;
+  ethBalance: string;
+}
+
+// AsteroidDetails is now just Asteroid (no additional properties needed)
