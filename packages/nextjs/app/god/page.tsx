@@ -436,7 +436,7 @@ export default function GodPage() {
               <strong>Chapter 2:</strong> Players deploy About contracts with name/social info to increase tip potential
             </p>
             <p>
-              <strong>Chapter 3:</strong> Players deploy soulbound NFT credentials for sector access control (5 points
+              <strong>Chapter 3:</strong> Players deploy soulbound NFT credentials for sector access control (2 points
               per pilot mint)
             </p>
             <p>
@@ -501,7 +501,7 @@ export default function GodPage() {
           <div className="mt-4 text-sm opacity-70">
             <p>
               <strong>💡 Note:</strong> This enables credential minting and sector-based features. Each pilot that mints
-              a sector credential awards 5 points to the player.
+              a sector credential awards 2 points to the player.
             </p>
           </div>
         </div>

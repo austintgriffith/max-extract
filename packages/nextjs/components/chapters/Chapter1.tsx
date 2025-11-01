@@ -38,7 +38,8 @@ export const Chapter1 = () => {
           {/* Code Block */}
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
             <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`mapping(string => address) public modules;`}</code>
+              <code className="text-accent">{`uint256 public sectorId; // Store your sector ID
+mapping(string => address) public modules; // Your module registry`}</code>
             </pre>
           </div>
 
@@ -50,8 +51,8 @@ export const Chapter1 = () => {
             </p>
             <p className="mb-3">
               <strong>Broadcast Function:</strong> Include a function that calls the{" "}
-              <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast</code> function on the MaxExtract
-              contract.
+              <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast()</code> function on the MaxExtract
+              contract. This function returns your sector ID which you should store.
             </p>
             <p className="mb-3">
               <strong>Account Verification:</strong> Must be triggered by the same account that bought into the game
@@ -97,16 +98,19 @@ export const Chapter1 = () => {
             your registry contract as a reward for providing valuable services!
           </p>
           <p className="mb-4">
-            After successfully broadcasting, you can use the{" "}
-            <code className="bg-base-100 px-2 py-1 rounded text-sm">playerToSector(yourAddress)</code> function in the
-            MaxExtract contract to check your assigned sector ID.
+            The <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast()</code> function returns your sector
+            ID directly, which your registry contract should store. You can also check your sector ID anytime using{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">playerToSector(yourAddress)</code> on the MaxExtract
+            contract.
           </p>
 
           <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">Registry Updates</h3>
           <p className="mb-4">
             Need to deploy a new registry? Update your registry address at any time by calling the{" "}
             <code className="bg-base-100 px-2 py-1 rounded text-sm">updateRegistry()</code> function on the MaxExtract
-            contract from your new registry contract.
+            contract from your new registry contract. Like{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast()</code>, this function returns your
+            sector ID which your new registry should store.
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Implementation Steps</h3>
@@ -125,8 +129,8 @@ export const Chapter1 = () => {
                 2
               </div>
               <p>
-                Call the <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast</code> function on the
-                MaxExtract contract from your Registry to launch your satellite
+                Call the <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast()</code> function on the
+                MaxExtract contract from your Registry to launch your satellite and store the returned sector ID
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -134,7 +138,7 @@ export const Chapter1 = () => {
                 3
               </div>
               <p>
-                Verify your sector assignment by checking{" "}
+                Your sector is now live! You can verify your sector ID is stored correctly by checking{" "}
                 <code className="bg-base-100 px-2 py-1 rounded text-sm">playerToSector(yourAddress)</code> on the
                 MaxExtract contract
               </p>

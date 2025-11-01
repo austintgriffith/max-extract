@@ -2119,7 +2119,7 @@ export class Sector {
               sectorId: this.id,
               credentialAddress: credentialAddress,
               transactionHash: result.txHash,
-              pointsEarned: 5, // Chapter 3 specifies 5 points for credential minting
+              pointsEarned: 2, // Chapter 3 specifies 2 points for credential minting
             },
           });
         }

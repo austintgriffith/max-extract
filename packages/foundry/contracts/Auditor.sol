@@ -78,12 +78,12 @@ contract Auditor {
      * Costs 2 points which are deducted from the player's score
      * @param _contract The contract address to audit
      * @param _chapter The chapter number this audit is for
-     * @param _url Optional block explorer URL (empty string for default arbiscan pattern)
+     * @param _optionalUrlOfExistingContractWithSameCode Optional block explorer URL (empty string for default arbiscan pattern)
      */
     function requestAudit(
         address _contract,
         uint8 _chapter,
-        string calldata _url
+        string calldata _optionalUrlOfExistingContractWithSameCode
     ) external {
         require(_contract != address(0), "Invalid contract address");
         require(address(gameContract) != address(0), "Game contract not set");
@@ -98,8 +98,8 @@ contract Auditor {
         }
         
         // Build block explorer URL (use provided or default to arbiscan)
-        string memory explorerUrl = bytes(_url).length > 0 
-            ? _url 
+        string memory explorerUrl = bytes(_optionalUrlOfExistingContractWithSameCode).length > 0 
+            ? _optionalUrlOfExistingContractWithSameCode 
             : string(abi.encodePacked("https://arbiscan.io/address/", toAsciiString(_contract), "#code"));
         
         // Create audit request

@@ -10,12 +10,13 @@ STRICT REQUIREMENTS:
    - If audit FAILS to detect ERC-721 implementation, contract FAILS
 
 2. The contract MUST be soulbound (non-transferable after minting)
-   - MUST override these transfer functions to revert:
-     * transferFrom(address, address, uint256)
-     * safeTransferFrom(address, address, uint256)
-     * safeTransferFrom(address, address, uint256, bytes)
+   - MUST prevent all transfers by overriding transfer functions to revert:
+     * transferFrom(address, address, uint256) - MUST be overridden
+     * safeTransferFrom(address, address, uint256, bytes) - MUST be overridden
+   - Note: The 3-parameter safeTransferFrom is NOT virtual in OpenZeppelin and cannot be overridden
+     * However, it must still be functionally blocked (it calls the 4-param version internally)
    - Each override MUST revert/throw an error (using revert(), require(false), or custom error)
-   - If any transfer function allows transfers, the audit FAILS
+   - If any transfer method allows actual transfers to succeed, the audit FAILS
    - The revert message should indicate the NFT is soulbound (e.g., "Soulbound", "Cannot transfer", etc.)
 
 3. The contract MUST have a public issue() function
@@ -24,16 +25,16 @@ STRICT REQUIREMENTS:
    - Must NOT take any parameters (function signature: issue())
    - If function is missing or has wrong signature, audit FAILS
 
-4. The issue() function MUST mint NFT to tx.origin
-   - Must use tx.origin (not msg.sender) to mint the NFT
-   - This ensures the NFT goes to the actual pilot, not an intermediary contract
-   - Look for _mint(tx.origin, ...) or equivalent minting to tx.origin
-   - If minting to msg.sender instead of tx.origin, audit FAILS
+4. The issue() function MUST mint NFT to the caller
+   - Should mint to msg.sender (standard approach)
+   - Can also mint to tx.origin (also acceptable, though less standard)
+   - Look for _mint(msg.sender, ...) or _mint(tx.origin, ...) or equivalent
+   - Both implementations are acceptable, but msg.sender is preferred
 
-5. The issue() function MUST call game.pilotMintSectorCredential()
-   - Must call a Game contract's pilotMintSectorCredential function
-   - Must pass a player address as the parameter
-   - The call pattern should look like: game.pilotMintSectorCredential(someAddress)
+5. The issue() function MUST call game.pilotMintSectorCredential(sectorId)
+   - Must call the Game contract's pilotMintSectorCredential function
+   - Must pass a sector ID as the parameter (uint256)
+   - The call pattern should look like: game.pilotMintSectorCredential(SECTOR_ID)
    - If this call is missing, audit FAILS
 
 6. The contract MAY have additional helper functions
@@ -43,26 +44,38 @@ STRICT REQUIREMENTS:
 
 PASS CONDITIONS:
 - Is a valid ERC-721 NFT implementation
-- All three transfer functions are overridden and revert
+- transferFrom() is overridden and reverts
+- safeTransferFrom(4-param) is overridden and reverts
+- 3-parameter safeTransferFrom is functionally blocked (even if not explicitly overridden)
 - Has a public issue() function with no parameters
-- issue() mints to tx.origin
-- issue() calls game.pilotMintSectorCredential(playerAddress)
-- Transfer functions clearly prevent transfers (revert/throw)
+- issue() mints to either msg.sender (preferred) or tx.origin (acceptable)
+- issue() calls game.pilotMintSectorCredential(sectorId) with a sector ID parameter
+- All transfer attempts fail (contract is functionally soulbound)
 
 FAIL CONDITIONS:
 - Not an ERC-721 implementation
-- Missing any of the three transfer function overrides
-- Transfer functions allow transfers instead of reverting
+- Missing transferFrom() override or it doesn't revert
+- Missing safeTransferFrom(4-param) override or it doesn't revert
+- Any transfer method successfully completes (not functionally soulbound)
 - Missing issue() function or wrong signature
-- issue() mints to msg.sender instead of tx.origin
-- issue() doesn't call game.pilotMintSectorCredential()
+- issue() doesn't call game.pilotMintSectorCredential(sectorId)
 - issue() function takes parameters (should be parameterless)
 - Any overcomplexity or obfuscation attempt 
 
 IMPORTANT NOTES:
 - The soulbound requirement is CRITICAL - NFTs must not be transferable
-- Using tx.origin is REQUIRED for this specific use case (despite general security warnings)
-- The Game contract call is what awards points to the player
+- Minting should be to msg.sender (standard), though tx.origin is also acceptable
+- The credential contract calls Game.pilotMintSectorCredential(sectorId) directly
+- The Game contract verifies msg.sender is the registered credential by:
+  1. Looking up the registry for the sector ID
+  2. Getting the credential contract from registry.modules("credential")
+  3. Verifying msg.sender matches the registered credential
+- The Game contract uses tx.origin to identify the pilot (since msg.sender is the credential)
+- The Game contract awards 2 points to the player when a valid credential is minted
+- Only TWO function overrides are required (transferFrom and 4-param safeTransferFrom)
+- The 3-param safeTransferFrom cannot be overridden in OpenZeppelin (not virtual)
+  but will be blocked automatically when it calls the 4-param version
+- Focus on functional security: can transfers actually succeed? If yes, FAIL. If no, PASS.
 - Be strict about function signatures and implementations
 
 When auditing, verify ALL requirements are met. If even one requirement is missing or incorrect, the audit must FAIL with a clear explanation of what's wrong.

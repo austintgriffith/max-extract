@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xed28d2f9e7281a63254e6ea4894a5460e24d0450",
+      address: "0xfdbda51a027e55e42155e48ab318ffcc12444cd9",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1216,
+      deployedOnBlock: 2915,
     },
     Credits: {
-      address: "0xa7328deaa1b585a494f055fc9bd99ea56d52cd3d",
+      address: "0x0b88ffca9f2f088bfdb11efaf72e2af49afc763b",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1217,
+      deployedOnBlock: 2916,
     },
     Game: {
-      address: "0x867bfafda54b592392c550b538f77f9f2101551e",
+      address: "0x3c2d8336e9fb2c76cee9c0663f1c450f108ed03c",
       abi: [
         {
           type: "constructor",
@@ -1310,6 +1310,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isPlayerMapping",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "maxExtract",
           inputs: [],
           outputs: [
@@ -1344,9 +1363,9 @@ const deployedContracts = {
           name: "pilotMintSectorCredential",
           inputs: [
             {
-              name: "_player",
-              type: "address",
-              internalType: "address",
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],
@@ -1866,6 +1885,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "NotARegistry",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "OnlyAuditor",
           inputs: [],
         },
@@ -1906,10 +1930,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1218,
+      deployedOnBlock: 2916,
     },
     Auditor: {
-      address: "0x2f634917cc00a9897621cd3490327721198fa369",
+      address: "0x67b9c5ce3f9f26dd80fbc90eb548aceb72693d3c",
       abi: [
         {
           type: "constructor",
@@ -2253,7 +2277,7 @@ const deployedContracts = {
               internalType: "uint8",
             },
             {
-              name: "_url",
+              name: "_optionalUrlOfExistingContractWithSameCode",
               type: "string",
               internalType: "string",
             },
@@ -2448,10 +2472,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1218,
+      deployedOnBlock: 2916,
     },
     MaxExtract: {
-      address: "0xef1707af46b68aa697c427325aea18f82b6b2629",
+      address: "0x47457b290e229a374f6ee505df522297b9f4eb37",
       abi: [
         {
           type: "constructor",
@@ -2829,7 +2853,13 @@ const deployedContracts = {
           type: "function",
           name: "updateRegistry",
           inputs: [],
-          outputs: [],
+          outputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           stateMutability: "nonpayable",
         },
         {
@@ -2890,7 +2920,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1218,
+      deployedOnBlock: 2916,
     },
   },
   42161: {
@@ -4198,6 +4228,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isPlayerMapping",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "maxExtract",
           inputs: [],
           outputs: [
@@ -4232,9 +4281,9 @@ const deployedContracts = {
           name: "pilotMintSectorCredential",
           inputs: [
             {
-              name: "_player",
-              type: "address",
-              internalType: "address",
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],
@@ -4754,6 +4803,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "NotARegistry",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "OnlyAuditor",
           inputs: [],
         },
@@ -5175,7 +5229,13 @@ const deployedContracts = {
           type: "function",
           name: "updateRegistry",
           inputs: [],
-          outputs: [],
+          outputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           stateMutability: "nonpayable",
         },
         {
@@ -5583,7 +5643,7 @@ const deployedContracts = {
               internalType: "uint8",
             },
             {
-              name: "_url",
+              name: "_optionalUrlOfExistingContractWithSameCode",
               type: "string",
               internalType: "string",
             },

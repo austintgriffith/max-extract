@@ -54,7 +54,7 @@ export const Chapter3 = () => {
                   <strong>Have an issue() function</strong>: Public function pilots call to mint their credential
                 </li>
                 <li>
-                  <strong>Call Game.pilotMintSectorCredential()</strong>: Pass your player address to earn points
+                  <strong>Call Game.pilotMintSectorCredential(sectorId)</strong>: Pass your sector ID to earn points
                 </li>
               </ul>
             </div>
@@ -69,11 +69,11 @@ export const Chapter3 = () => {
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
             <pre className="text-sm overflow-x-auto">
               <code className="text-accent">{`function issue() external {
-    // Mint the NFT to the pilot address (tx.origin)
-    _mint(tx.origin, nextTokenId++);
+    // Mint the NFT to the pilot calling this function
+    _mint(msg.sender, nextTokenId++);
 
-    // Call the Game contract to award points to YOUR player address
-    game.pilotMintSectorCredential(YOUR_PLAYER_ADDRESS);
+    // Call the Game contract directly with your sector ID
+    game.pilotMintSectorCredential(YOUR_SECTOR_ID);
 }`}</code>
             </pre>
           </div>
@@ -86,11 +86,11 @@ export const Chapter3 = () => {
                 <code className="bg-base-100 px-1 rounded">msg.sender</code>)
               </li>
               <li>
-                It then calls{" "}
-                <code className="bg-base-100 px-1 rounded">game.pilotMintSectorCredential(YOUR_PLAYER_ADDRESS)</code>
+                It then calls <code className="bg-base-100 px-1 rounded">game.pilotMintSectorCredential(sectorId)</code>{" "}
+                directly
               </li>
               <li>
-                The Game contract verifies everything on-chain and awards you <strong>5 points</strong>
+                The Game contract verifies everything on-chain and awards you <strong>2 points</strong>
               </li>
             </ul>
           </div>
@@ -98,25 +98,27 @@ export const Chapter3 = () => {
           <h3 className="text-xl font-semibold mb-4 text-secondary">On-Chain Verification</h3>
           <p className="mb-4">
             The Game contract performs extensive verification to ensure security. When your credential contract calls{" "}
-            <code className="bg-base-100 px-2 py-1 rounded text-sm">pilotMintSectorCredential()</code>, it:
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">pilotMintSectorCredential(sectorId)</code>, it:
           </p>
 
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
             <ul className="space-y-2 text-sm list-disc list-inside">
               <li>
-                ✅ Verifies <code className="bg-base-100 px-1 rounded">tx.origin</code> is an active pilot
+                ✅ Verifies <code className="bg-base-100 px-1 rounded">tx.origin</code> is an active pilot (the original
+                transaction signer)
               </li>
-              <li>✅ Checks that you (the player) have a registered sector</li>
+              <li>✅ Gets the registry for the given sector ID</li>
               <li>
-                ✅ Looks up your registry and verifies the credential contract is registered under the{" "}
+                ✅ Looks up the registered credential contract from the registry under{" "}
                 <code className="bg-base-100 px-1 rounded">&ldquo;credential&rdquo;</code> key
               </li>
               <li>
-                ✅ Ensures <code className="bg-base-100 px-1 rounded">msg.sender</code> matches your registered
-                credential
+                ✅ Verifies <code className="bg-base-100 px-1 rounded">msg.sender</code> matches the registered
+                credential contract
               </li>
+              <li>✅ Derives the player address from the sector owner (cannot be spoofed)</li>
               <li>✅ Verifies this pilot hasn&apos;t already minted from you (prevents point farming)</li>
-              <li>✅ Awards you 5 points if all checks pass</li>
+              <li>✅ Awards you 2 points if all checks pass</li>
             </ul>
           </div>
 
@@ -180,10 +182,8 @@ export const Chapter3 = () => {
               </div>
               <p>
                 Add an <code className="bg-base-100 px-2 py-1 rounded text-sm">issue()</code> function that mints to{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">pilot address</code> and calls{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">
-                  game.pilotMintSectorCredential(YOUR_ADDRESS)
-                </code>
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">msg.sender</code> and calls{" "}
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">game.pilotMintSectorCredential(sectorId)</code>
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -222,7 +222,7 @@ export const Chapter3 = () => {
               station.
             </p>
             <p>
-              Each credential mint earns you <strong>5 points</strong>, and pilots will need valid credentials to land
+              Each credential mint earns you <strong>2 points</strong>, and pilots will need valid credentials to land
               at your station and interact with your contracts.
             </p>
           </div>

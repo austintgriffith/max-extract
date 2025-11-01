@@ -177,13 +177,15 @@ contract MaxExtract {
      * 2. Player must have a sector (playerToSector[tx.origin] != 0)
      * 3. msg.sender must be a valid contract address
      * 4. msg.sender must be different from the current registry address
+     * 
+     * @return sectorId The sector ID that was updated
      */
-    function updateRegistry() external {
+    function updateRegistry() external returns (uint256 sectorId) {
         // Contract-only access: must be called from a contract, not directly from EOA
         require(tx.origin != msg.sender, "Cannot update registry directly from EOA - use your Registry Contract");
         
         // Get the player's sector ID
-        uint256 sectorId = playerToSector[tx.origin];
+        sectorId = playerToSector[tx.origin];
         require(sectorId != 0, "Player does not have a sector");
         
         // msg.sender must be a valid contract address (already validated by tx.origin != msg.sender check)

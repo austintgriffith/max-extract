@@ -17,7 +17,8 @@ const ETHERSCAN_API_BASE = "https://api.etherscan.io/v2/api";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 
 // API configuration
-const CONTRACTS_API_URL = process.env.LOAD_CONTRACTS_FROM || "http://localhost:3000/api/contracts.json";
+const CONTRACTS_API_URL =
+  process.env.LOAD_CONTRACTS_FROM || "http://localhost:3000/api/contracts.json";
 
 const POLL_INTERVAL = 2000;
 
@@ -149,20 +150,32 @@ class AuditorService {
   private currentAuditorAddress: string | null = null;
   private isRestarting: boolean = false;
   private debugMode: boolean = false;
+  private skipBytecodeVerification: boolean = false;
   private anthropic: Anthropic;
 
   constructor() {
     // Check for debug mode
     this.debugMode = process.env.DEBUG === "true" || process.env.DEBUG === "1";
 
+    // Check if bytecode verification should be skipped
+    this.skipBytecodeVerification =
+      process.env.SKIP_BYTECODE_VERIFICATION === "true" ||
+      process.env.SKIP_BYTECODE_VERIFICATION === "1";
+
     if (this.debugMode) {
       console.log("🐛 DEBUG MODE ENABLED\n");
     }
 
+    if (this.skipBytecodeVerification) {
+      console.log("⚠️  BYTECODE VERIFICATION DISABLED");
+      console.log("   Only source code will be verified by AI\n");
+    }
+
     // Setup blockchain clients - use environment configuration
     const chainId = process.env.CHAINID ? parseInt(process.env.CHAINID) : 31337;
-    const rpcUrl = process.env.RPC || process.env.RPC_URL || "http://localhost:8545";
-    
+    const rpcUrl =
+      process.env.RPC || process.env.RPC_URL || "http://localhost:8545";
+
     // Determine chain based on chainId
     let chain;
     if (chainId === 42161) {
@@ -224,10 +237,17 @@ class AuditorService {
       "🔑 Etherscan API Key:",
       ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"
     );
-    console.log(
-      "🤖 Anthropic API Key:",
-      ANTHROPIC_API_KEY ? "✓ Set" : "✗ Not Set"
-    );
+
+    // Show masked API key to verify it's loaded correctly
+    if (ANTHROPIC_API_KEY) {
+      const maskedKey =
+        ANTHROPIC_API_KEY.substring(0, 12) +
+        "..." +
+        ANTHROPIC_API_KEY.substring(ANTHROPIC_API_KEY.length - 4);
+      console.log("🤖 Anthropic API Key:", maskedKey);
+    } else {
+      console.log("🤖 Anthropic API Key: ✗ Not Set");
+    }
   }
 
   private debugLog(message: string, data?: any): void {
@@ -280,7 +300,9 @@ class AuditorService {
 
       return auditorContract.address;
     } catch (error: any) {
-      console.error(`❌ Failed to fetch Auditor address from API: ${error.message}`);
+      console.error(
+        `❌ Failed to fetch Auditor address from API: ${error.message}`
+      );
       this.debugLog("API fetch error details:", error);
       return null;
     }
@@ -297,15 +319,17 @@ class AuditorService {
     } else {
       console.log("🔍 Fetching Auditor contract address from API...");
       const auditorAddress = await this.fetchAuditorAddressFromAPI();
-      
+
       if (!auditorAddress) {
         console.error("\n❌ Error: Could not load Auditor contract address");
         console.log("\n💡 Please either:");
         console.log("   1. Set AUDITOR_CONTRACT_ADDRESS in your .env file");
-        console.log(`   2. Ensure ${CONTRACTS_API_URL} is accessible and contains the Auditor contract`);
+        console.log(
+          `   2. Ensure ${CONTRACTS_API_URL} is accessible and contains the Auditor contract`
+        );
         process.exit(1);
       }
-      
+
       this.auditorContract = auditorAddress as Address;
       console.log("📋 Auditor Contract (from API):", this.auditorContract);
     }
@@ -422,7 +446,16 @@ class AuditorService {
         );
 
         for (let i = lastProcessedIndex + 1; i < totalCount; i++) {
-          await this.processAuditRequest(i);
+          const madeApiCall = await this.processAuditRequest(i);
+
+          // Only delay if we made an API call to avoid rate limiting
+          // This ensures we stay under 30k tokens/minute
+          if (madeApiCall && i < totalCount - 1) {
+            console.log(
+              `   ⏳ Waiting 5s before next audit to respect rate limits...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+          }
         }
 
         lastProcessedIndex = totalCount - 1;
@@ -477,15 +510,27 @@ class AuditorService {
 
   /**
    * Audit contract source code using Claude AI
+   * Retries up to MAX_RETRIES times if JSON parsing fails
    */
   private async auditWithClaude(
     sourceCode: string,
-    chapterDefinition: string
+    chapterDefinition: string,
+    maxRetries: number = 3
   ): Promise<{ passed: boolean; reason: string }> {
-    try {
-      this.debugLog("Starting Claude AI audit...");
+    let lastError: any = null;
 
-      const prompt = `You are a smart contract auditor for the Max Extract game. Your job is to review a Solidity contract and determine if it meets the requirements defined in the chapter definition.
+    // Try up to maxRetries times
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 1) {
+          console.log(
+            `\n   🔄 Retry attempt ${attempt}/${maxRetries} for AI audit...`
+          );
+        }
+
+        this.debugLog(`Starting Claude AI audit (attempt ${attempt})...`);
+
+        const prompt = `You are a smart contract auditor for the Max Extract game. Your job is to review a Solidity contract and determine if it meets the requirements defined in the chapter definition.
 
 CHAPTER DEFINITION:
 ${chapterDefinition}
@@ -505,94 +550,182 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
   "reason": "A clear, concise explanation (max 200 characters)"
 }`;
 
-      this.debugLog("Sending request to Claude API...");
+        this.debugLog("Sending request to Claude API...");
 
-      const message = await this.anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      });
+        const message = await this.anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        });
 
-      this.debugLog("Received response from Claude API", {
-        id: message.id,
-        model: message.model,
-        stopReason: message.stop_reason,
-      });
+        this.debugLog("Received response from Claude API", {
+          id: message.id,
+          model: message.model,
+          stopReason: message.stop_reason,
+        });
 
-      // Extract text from response
-      const responseText =
-        message.content[0].type === "text" ? message.content[0].text : "";
+        // Extract text from response
+        const responseText =
+          message.content[0].type === "text" ? message.content[0].text : "";
 
-      this.debugLog("Claude response text", responseText);
+        this.debugLog("Claude response text", responseText);
 
-      // Parse JSON response
-      let jsonResponse: { verdict: string; reason: string };
+        // Parse JSON response
+        let jsonResponse: { verdict: string; reason: string };
 
-      try {
-        // Try to extract JSON from response (in case Claude wraps it in markdown)
-        let jsonText = responseText.trim();
+        try {
+          // Try to extract JSON from response (in case Claude wraps it in markdown)
+          let jsonText = responseText.trim();
 
-        // Remove markdown code blocks if present
-        if (jsonText.startsWith("```")) {
-          const match = jsonText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-          if (match) {
-            jsonText = match[1];
+          // Remove markdown code blocks if present
+          if (jsonText.startsWith("```")) {
+            const match = jsonText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+            if (match) {
+              jsonText = match[1];
+            }
+          }
+
+          jsonResponse = JSON.parse(jsonText);
+        } catch (parseError: any) {
+          lastError = {
+            type: "parse",
+            message: parseError.message,
+            responseText: responseText.substring(0, 500),
+          };
+
+          console.error(
+            `   ⚠️  Could not parse Claude JSON response (attempt ${attempt}/${maxRetries})`
+          );
+          this.debugLog("JSON parse error", {
+            attempt,
+            error: parseError.message,
+            responseText: responseText.substring(0, 500),
+          });
+
+          // If we have more retries, continue to next attempt
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            continue;
+          }
+
+          // No more retries - return error
+          return {
+            passed: false,
+            reason: "AI audit failed: Could not parse response after retries",
+          };
+        }
+
+        const verdict = jsonResponse.verdict?.toUpperCase();
+        let reason = jsonResponse.reason || "No reason provided";
+
+        if (verdict !== "PASS" && verdict !== "FAIL") {
+          lastError = {
+            type: "invalid_verdict",
+            verdict,
+            jsonResponse,
+          };
+
+          console.error(
+            `   ⚠️  Invalid verdict in response (attempt ${attempt}/${maxRetries}):`,
+            verdict
+          );
+          this.debugLog("Invalid verdict", jsonResponse);
+
+          // If we have more retries, continue to next attempt
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            continue;
+          }
+
+          // No more retries - return error
+          return {
+            passed: false,
+            reason: "AI audit failed: Invalid verdict format after retries",
+          };
+        }
+
+        // Truncate reason to 200 characters for on-chain storage
+        if (reason.length > 200) {
+          reason = reason.substring(0, 197) + "...";
+        }
+
+        if (attempt > 1) {
+          console.log(`   ✓ Successfully parsed response on retry!`);
+        }
+
+        console.log(`\n   🤖 Claude AI Verdict: ${verdict}`);
+        console.log(`   💭 Reason: ${reason}`);
+
+        return {
+          passed: verdict === "PASS",
+          reason: reason,
+        };
+      } catch (error: any) {
+        lastError = {
+          type: "api_error",
+          message: error.message,
+        };
+
+        // Check if it's a rate limit error
+        const isRateLimitError =
+          error.message?.includes("rate_limit") ||
+          error.message?.includes("rate limit") ||
+          error.status === 429;
+
+        if (isRateLimitError) {
+          console.error(
+            `   ⚠️  Rate limit hit (attempt ${attempt}/${maxRetries})`
+          );
+          this.debugLog("Rate limit error", error);
+
+          // Use exponential backoff for rate limits (30s, 60s, 90s)
+          const waitTime = attempt * 30000; // 30s per attempt
+
+          if (attempt < maxRetries) {
+            console.log(
+              `   ⏳ Waiting ${waitTime / 1000}s to respect rate limits...`
+            );
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+            continue;
+          }
+        } else {
+          console.error(
+            `   ⚠️  Error in Claude AI audit (attempt ${attempt}/${maxRetries}):`,
+            error.message
+          );
+          this.debugLog("Claude audit error", error);
+
+          // If we have more retries and it's a network/API error, retry
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+            continue;
           }
         }
 
-        jsonResponse = JSON.parse(jsonText);
-      } catch (parseError: any) {
-        console.error("❌ Could not parse Claude JSON response");
-        this.debugLog("JSON parse error", {
-          error: parseError.message,
-          responseText: responseText.substring(0, 500),
-        });
+        // No more retries - return error
         return {
           passed: false,
-          reason: "AI audit failed: Could not parse response",
+          reason: `AI audit error after retries: ${error.message.substring(
+            0,
+            120
+          )}`,
         };
       }
-
-      const verdict = jsonResponse.verdict?.toUpperCase();
-      let reason = jsonResponse.reason || "No reason provided";
-
-      if (verdict !== "PASS" && verdict !== "FAIL") {
-        console.error("❌ Invalid verdict in response:", verdict);
-        this.debugLog("Invalid verdict", jsonResponse);
-        return {
-          passed: false,
-          reason: "AI audit failed: Invalid verdict format",
-        };
-      }
-
-      // Truncate reason to 200 characters for on-chain storage
-      if (reason.length > 200) {
-        reason = reason.substring(0, 197) + "...";
-      }
-
-      console.log(`\n   🤖 Claude AI Verdict: ${verdict}`);
-      console.log(`   💭 Reason: ${reason}`);
-
-      return {
-        passed: verdict === "PASS",
-        reason: reason,
-      };
-    } catch (error: any) {
-      console.error("Error in Claude AI audit:", error.message);
-      this.debugLog("Claude audit error", error);
-      return {
-        passed: false,
-        reason: `AI audit error: ${error.message.substring(0, 150)}`,
-      };
     }
+
+    // Should never reach here, but just in case
+    return {
+      passed: false,
+      reason: "AI audit failed: Unknown error after retries",
+    };
   }
 
-  private async processAuditRequest(requestId: number) {
+  private async processAuditRequest(requestId: number): Promise<boolean> {
     console.log(`\n🔍 Processing Audit Request #${requestId}`);
     this.debugLog(`Starting audit process for request #${requestId}`);
 
@@ -650,7 +783,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         this.debugLog(
           `Request #${requestId} already processed, status: ${request.status}`
         );
-        return;
+        return false; // No API call made
       }
 
       // Check if chapter is visible
@@ -685,7 +818,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           `   Visible chapters: ${visibleChapters.join(", ") || "none"}`
         );
         await this.markAsFailed(requestId, "This chapter is not yet visible");
-        return;
+        return false; // No API call made
       }
 
       console.log(`   ✓ Chapter ${request.chapterNumber} is visible`);
@@ -709,7 +842,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         console.log(`   ❌ No bytecode found at address`);
         this.debugLog("No bytecode - marking as failed");
         await this.markAsFailed(requestId, "No bytecode found at address");
-        return;
+        return false; // No API call made
       }
 
       console.log(`   ✓ Bytecode found on chain (${bytecode.length} bytes)`);
@@ -734,7 +867,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         this.debugLog(
           "Contract already audited for this chapter on-chain, not re-auditing"
         );
-        return;
+        return false; // No API call made
       } else if (auditedChapter > 0) {
         console.log(
           `   ℹ️  Contract was previously audited for Chapter ${auditedChapter}, now auditing for Chapter ${request.chapterNumber}`
@@ -757,7 +890,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           requestId,
           `Unknown chapter ${request.chapterNumber}`
         );
-        return;
+        return false; // No API call made
       }
 
       console.log(`   ✓ Chapter definition loaded`);
@@ -833,7 +966,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           requestId,
           "Source code not verified on block explorer"
         );
-        return;
+        return false; // No API call made
       }
 
       console.log(`   ✓ Source code found on Etherscan`);
@@ -847,16 +980,8 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         console.log(`   ❌ Audit FAILED - Source code empty`);
         this.debugLog("Source code is empty or null - marking as failed");
         await this.markAsFailed(requestId, "Source code is empty");
-        return;
+        return false; // No API call made
       }
-
-      // Compare local bytecode with Etherscan bytecode
-      console.log(`\n   🔍 Verifying bytecode match...`);
-
-      // Get local bytecode for the contract being audited
-      const localBytecode = await this.publicClient.getBytecode({
-        address: request.contractAddress,
-      });
 
       // Determine which chain to fetch from based on block explorer URL
       const chainInfo = this.getChainFromExplorerUrl(
@@ -871,8 +996,71 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           requestId,
           "Invalid block explorer URL - could not determine chain"
         );
-        return;
+        return false; // No API call made
       }
+
+      // Check if we should skip bytecode verification (ONLY if explicitly disabled via env var)
+      if (this.skipBytecodeVerification) {
+        console.log(
+          `\n   ⚠️  BYTECODE VERIFICATION DISABLED (SKIP_BYTECODE_VERIFICATION=true)`
+        );
+        console.log(`   📄 Will only verify source code with AI audit`);
+        console.log(`   🚨 WARNING: This bypasses the primary security check!`);
+
+        // Show source code info
+        console.log(`\n   📄 Source Code Info:`);
+        console.log(
+          `   Length: ${sourceCodeData.SourceCode.length} characters`
+        );
+        console.log(
+          `   Lines: ${sourceCodeData.SourceCode.split("\n").length} lines`
+        );
+
+        // Show a preview of the source code
+        const sourcePreview =
+          sourceCodeData.SourceCode.length > 500
+            ? sourceCodeData.SourceCode.substring(0, 500) + "..."
+            : sourceCodeData.SourceCode;
+        console.log(`\n   📄 Source Code Preview:`);
+        console.log(
+          `   ${sourcePreview.split("\n").slice(0, 10).join("\n   ")}`
+        );
+        if (sourceCodeData.SourceCode.split("\n").length > 10) {
+          console.log(
+            `   ... (${
+              sourceCodeData.SourceCode.split("\n").length
+            } total lines)`
+          );
+        }
+
+        // Skip to AI audit
+        console.log(`\n   🤖 Starting AI-powered contract audit...`);
+        const auditResult = await this.auditWithClaude(
+          sourceCodeData.SourceCode,
+          chapterDefinition
+        );
+
+        if (auditResult.passed) {
+          console.log(`\n   ✅ Audit PASSED`);
+          this.debugLog("AI audit passed - marking as audited");
+          await this.markAsAudited(requestId);
+        } else {
+          console.log(`\n   ❌ Audit FAILED`);
+          console.log(`   Reason: ${auditResult.reason}`);
+          this.debugLog("AI audit failed - marking as failed");
+          await this.markAsFailed(requestId, auditResult.reason);
+        }
+
+        return true; // API call was made - skip the rest of the bytecode verification
+      }
+
+      // Compare local bytecode with Etherscan bytecode
+      console.log(`\n   🔍 Verifying bytecode match...`);
+
+      // Get local bytecode for the contract being audited
+      const localBytecode = await this.publicClient.getBytecode({
+        address: request.contractAddress,
+      });
 
       console.log(
         `   📡 Fetching bytecode from ${chainInfo.chainName} RPC for ${addressToVerify}...`
@@ -946,43 +1134,122 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         );
       }
 
-      console.log(
-        `\n   🔎 Bytecode Match: ${
-          localBytecode === remoteBytecode ? "✅ YES" : "❌ NO"
-        }`
-      );
-      if (localBytecode && remoteBytecode && localBytecode !== remoteBytecode) {
-        console.log(
-          `   📏 Length difference: ${Math.abs(
-            (localBytecode?.length || 0) - (remoteBytecode?.length || 0)
-          )} characters`
-        );
-      }
-      console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-
-      // Check that we have both bytecodes
+      // Check that we have both bytecodes first
       if (!localBytecode || localBytecode === "0x") {
-        console.log(`   ❌ No bytecode found at local address`);
+        console.log(`\n   ❌ No bytecode found at local address`);
+        console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
         await this.markAsFailed(
           requestId,
           "No bytecode found at local contract address"
         );
-        return;
+        return false; // No API call made
       }
 
       if (!remoteBytecode || remoteBytecode === "0x") {
         console.log(
-          `   ❌ No bytecode found on ${chainInfo.chainName} for verified address`
+          `\n   ❌ No bytecode found on ${chainInfo.chainName} for verified address`
         );
+        console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
         await this.markAsFailed(
           requestId,
           `No bytecode found on ${chainInfo.chainName} for verification address`
         );
-        return;
+        return false; // No API call made
       }
 
-      // Verify bytecode match
-      if (localBytecode !== remoteBytecode) {
+      // Compare bytecodes using smart comparison
+      const comparison = this.compareBytecodes(localBytecode, remoteBytecode);
+
+      console.log(
+        `\n   🔎 Exact Bytecode Match: ${
+          comparison.exactMatch ? "✅ YES" : "❌ NO"
+        }`
+      );
+
+      if (!comparison.exactMatch) {
+        console.log(
+          `   📏 Length difference: ${Math.abs(
+            localBytecode.length - remoteBytecode.length
+          )} characters`
+        );
+
+        // Find first difference
+        let firstDiff = -1;
+        for (
+          let i = 0;
+          i < Math.min(localBytecode.length, remoteBytecode.length);
+          i++
+        ) {
+          if (localBytecode[i] !== remoteBytecode[i]) {
+            firstDiff = i;
+            break;
+          }
+        }
+
+        if (firstDiff >= 0) {
+          console.log(`   📍 First difference at position: ${firstDiff}`);
+          console.log(
+            `   Local:  ...${localBytecode.substring(
+              Math.max(0, firstDiff - 20),
+              firstDiff + 80
+            )}...`
+          );
+          console.log(
+            `   Remote: ...${remoteBytecode.substring(
+              Math.max(0, firstDiff - 20),
+              firstDiff + 80
+            )}...`
+          );
+
+          // Check if difference is in metadata region (near the end)
+          const metadataRegionStart = localBytecode.length - 150; // Metadata is typically in last ~100 chars
+          if (firstDiff >= metadataRegionStart) {
+            console.log(
+              `   💡 Difference is in metadata region (compiler-generated hash)`
+            );
+          } else {
+            console.log(
+              `   ⚠️  Difference is in contract code region (position ${firstDiff}/${localBytecode.length})`
+            );
+
+            // Check if it looks like an address (40 hex chars)
+            const localChunk = localBytecode.substring(
+              firstDiff,
+              firstDiff + 40
+            );
+            const remoteChunk = remoteBytecode.substring(
+              firstDiff,
+              firstDiff + 40
+            );
+            if (
+              /^[a-f0-9]{40}$/i.test(localChunk) &&
+              /^[a-f0-9]{40}$/i.test(remoteChunk)
+            ) {
+              console.log(
+                `   💡 Appears to be an address difference (constructor arg or immutable variable):`
+              );
+              console.log(`      Local address:  0x${localChunk}`);
+              console.log(`      Remote address: 0x${remoteChunk}`);
+              console.log(
+                `   ℹ️  This is expected when contracts are deployed with different constructor arguments`
+              );
+            }
+          }
+        }
+
+        console.log(
+          `\n   🔍 Code Match (excluding metadata): ${
+            comparison.codeMatch ? "✅ YES" : "❌ NO"
+          }`
+        );
+        if (comparison.reason) {
+          console.log(`   📝 ${comparison.reason}`);
+        }
+      }
+      console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+      // Verify bytecode match - accept if code matches (even if metadata differs)
+      if (!comparison.codeMatch) {
         console.log(
           `   ❌ Bytecode mismatch between local contract and ${chainInfo.chainName} verified contract`
         );
@@ -993,12 +1260,17 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           requestId,
           `Bytecode mismatch: Local contract does not match verified source on ${chainInfo.chainName}`
         );
-        return;
+        return false; // No API call made
       }
 
       console.log(
         `   ✅ Bytecode verification passed - Local matches ${chainInfo.chainName}!`
       );
+      if (comparison.exactMatch) {
+        console.log(`   🎯 Perfect match (including metadata)`);
+      } else {
+        console.log(`   ✓ Code matches (metadata differs - this is normal)`);
+      }
       console.log(`   Bytecode length: ${localBytecode.length} characters`);
 
       // Show source code info
@@ -1038,6 +1310,8 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         this.debugLog("AI audit failed - marking as failed");
         await this.markAsFailed(requestId, auditResult.reason);
       }
+
+      return true; // API call was made
     } catch (error: any) {
       console.error(`   ❌ Error processing audit request:`, error.message);
       this.debugLog("Error during audit processing", {
@@ -1063,7 +1337,73 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         this.debugLog("Error marking as failed", markError);
         // Don't throw - we want to continue processing other audits
       }
+
+      return false; // Error occurred, uncertain if API call was made
     }
+  }
+
+  /**
+   * Strip Solidity metadata hash from bytecode
+   * Metadata hash is appended by the compiler and differs between compilations
+   * Format: 0xa264697066735822{32-byte-hash}64736f6c63{compiler-version}
+   */
+  private stripMetadata(bytecode: string): string {
+    if (!bytecode || bytecode.length < 100) {
+      return bytecode;
+    }
+
+    // Look for the metadata prefix 'a264697066735822' (CBOR-encoded 'ipfs' in hex)
+    // This is followed by 64 hex chars (32 bytes) for the IPFS hash
+    // Then '64736f6c63' ('solc' in hex) and version info
+    const metadataPattern =
+      /a264697066735822[a-f0-9]{64}64736f6c63[a-f0-9]{6}0033$/i;
+
+    const stripped = bytecode.replace(metadataPattern, "");
+
+    this.debugLog("Metadata stripping", {
+      originalLength: bytecode.length,
+      strippedLength: stripped.length,
+      removedBytes: bytecode.length - stripped.length,
+      hadMetadata: bytecode !== stripped,
+    });
+
+    return stripped;
+  }
+
+  /**
+   * Compare bytecodes with metadata-aware matching
+   */
+  private compareBytecodes(
+    local: string,
+    remote: string
+  ): { exactMatch: boolean; codeMatch: boolean; reason?: string } {
+    // Check exact match first
+    const exactMatch = local === remote;
+
+    if (exactMatch) {
+      return { exactMatch: true, codeMatch: true };
+    }
+
+    // If not exact match, try stripping metadata
+    const localStripped = this.stripMetadata(local);
+    const remoteStripped = this.stripMetadata(remote);
+
+    const codeMatch = localStripped === remoteStripped;
+
+    if (codeMatch) {
+      return {
+        exactMatch: false,
+        codeMatch: true,
+        reason:
+          "Bytecode matches after stripping compiler metadata (IPFS hash)",
+      };
+    }
+
+    return {
+      exactMatch: false,
+      codeMatch: false,
+      reason: "Bytecode differs in actual contract code, not just metadata",
+    };
   }
 
   /**

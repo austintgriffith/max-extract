@@ -57,6 +57,9 @@ contract Game {
     address[] public gameWinners;          // Array of winner addresses after settlement
     uint256 public winningScore;           // The winning score after settlement
     
+    // Player tracking
+    mapping(address => bool) public isPlayerMapping;
+    
     // Player scores mapping
     mapping(address => uint256) public scores;
     
@@ -98,6 +101,7 @@ contract Game {
     error MaxExtractNotSet();
     error PilotAlreadyMintedFromPlayer();
     error OnlyAuditor();
+    error NotARegistry();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -257,11 +261,10 @@ contract Game {
         if (msg.value < BUY_IN_PRICE) revert InsufficientPayment();
         
         // Check if player has already joined
-        for (uint256 i = 0; i < players.length; i++) {
-            if (players[i] == msg.sender) revert PlayerAlreadyJoined();
-        }
+        if (isPlayerMapping[msg.sender]) revert PlayerAlreadyJoined();
         
         players.push(msg.sender);
+        isPlayerMapping[msg.sender] = true;
         emit PlayerBoughtIn(msg.sender, msg.value);
         
         // Refund excess payment
@@ -300,12 +303,7 @@ contract Game {
      * @return True if the address is a player
      */
     function isPlayer(address _player) external view returns (bool) {
-        for (uint256 i = 0; i < players.length; i++) {
-            if (players[i] == _player) {
-                return true;
-            }
-        }
-        return false;
+        return isPlayerMapping[_player];
     }
     
     /**
@@ -390,14 +388,7 @@ contract Game {
         if (deadPilots[msg.sender]) revert PilotAlreadyDead();
         
         // Check if the player to penalize is actually a player
-        bool isValidPlayer = false;
-        for (uint256 i = 0; i < players.length; i++) {
-            if (players[i] == _playerToPenalize) {
-                isValidPlayer = true;
-                break;
-            }
-        }
-        if (!isValidPlayer) revert NotAPlayer();
+        if (!isPlayerMapping[_playerToPenalize]) revert NotAPlayer();
         
         // Mark pilot as dead
         deadPilots[msg.sender] = true;
@@ -643,29 +634,23 @@ contract Game {
     
     /**
      * Called by a credential contract when a pilot mints a credential
-     * Verifies the credential is registered in the specified player's registry
-     * Awards 5 points to the player if verification succeeds
-     * Only callable by credential contracts through pilot transactions
+     * Derives the player address from the sector owner
+     * Awards 2 points to the player if verification succeeds
+     * Only callable by registered credential contracts through pilot transactions
      * Each pilot can only mint one credential per player (prevents point farming)
-     * @param _player The player address who owns the credential contract
+     * @param _sectorId The sector ID that the credential belongs to
      */
-    function pilotMintSectorCredential(address _player) external {
+    function pilotMintSectorCredential(uint256 _sectorId) external {
         if (address(maxExtract) == address(0)) revert MaxExtractNotSet();
         
         // tx.origin must be a pilot
         if (!isPilot(tx.origin)) revert OnlyPilot();
         
-        // Check if this pilot has already minted a credential from this player
-        if (pilotPlayerCredentialMinted[tx.origin][_player]) revert PilotAlreadyMintedFromPlayer();
+        // Get the registry for this sector
+        address registryAddress = maxExtract.sectors(_sectorId);
+        if (registryAddress == address(0)) revert NotARegistry();
         
-        // Get the player's sector ID - if non-zero, they're a valid player with a sector
-        uint256 sectorId = maxExtract.playerToSector(_player);
-        if (sectorId == 0) revert NotAPlayer(); // Player has no sector (not a valid player)
-        
-        // Get the registry address for this sector
-        address registryAddress = maxExtract.sectors(sectorId);
-        
-        // Try to call modules("credential") on the registry to get the registered credential
+        // Get the registered credential contract from the registry
         (bool success, bytes memory data) = registryAddress.staticcall(
             abi.encodeWithSignature("modules(string)", "credential")
         );
@@ -677,13 +662,20 @@ contract Game {
         // Verify that msg.sender (the credential contract) matches the registered credential
         if (registeredCredential != msg.sender) revert CredentialNotRegistered();
         
+        // Get the player who owns this sector
+        address player = maxExtract.sectorToOwner(_sectorId);
+        if (player == address(0)) revert NotAPlayer();
+        
+        // Check if this pilot has already minted a credential from this player
+        if (pilotPlayerCredentialMinted[tx.origin][player]) revert PilotAlreadyMintedFromPlayer();
+        
         // Mark that this pilot has minted from this player
-        pilotPlayerCredentialMinted[tx.origin][_player] = true;
+        pilotPlayerCredentialMinted[tx.origin][player] = true;
         
-        // All checks passed - award 5 points to the player
-        scores[_player] += 5;
+        // All checks passed - award 2 points to the player
+        scores[player] += 2;
         
-        emit CredentialMinted(tx.origin, _player, msg.sender);
+        emit CredentialMinted(tx.origin, player, msg.sender);
     }
     
     /**

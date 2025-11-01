@@ -573,9 +573,11 @@ export class BlockchainManager {
 
       try {
         this.debugLog(
-          `Processing funding batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
-            addresses.length / batchSize
-          )}: ${batch.length} addresses`
+          `Processing funding batch ${
+            Math.floor(i / batchSize) + 1
+          }/${Math.ceil(addresses.length / batchSize)}: ${
+            batch.length
+          } addresses`
         );
 
         // Calculate total ETH to send for this batch (worst case: all at 0 balance)
@@ -602,9 +604,14 @@ export class BlockchainManager {
         );
 
         console.log(
-          `✅ Topped up ${batch.length} addresses to minimum ${minBalancePerAddress} ETH (batch ${
+          `✅ Topped up ${
+            batch.length
+          } addresses to minimum ${minBalancePerAddress} ETH (batch ${
             Math.floor(i / batchSize) + 1
-          }/${Math.ceil(addresses.length / batchSize)}) - tx: ${hash.slice(0, 10)}...`
+          }/${Math.ceil(addresses.length / batchSize)}) - tx: ${hash.slice(
+            0,
+            10
+          )}...`
         );
       } catch (error: any) {
         console.error(
@@ -1081,7 +1088,9 @@ export class BlockchainManager {
 
       if (pilotBalance < tipGasThreshold) {
         this.debugLog(
-          `Pilot balance (${formatEther(pilotBalance)} ETH) below threshold (${SECTOR_CONFIG.TIP_GAS_AMOUNT} ETH), topping up...`
+          `Pilot balance (${formatEther(pilotBalance)} ETH) below threshold (${
+            SECTOR_CONFIG.TIP_GAS_AMOUNT
+          } ETH), topping up...`
         );
         await this.fundAddresses(
           [pilotAccount.address],
@@ -1089,7 +1098,9 @@ export class BlockchainManager {
           1
         );
         console.log(
-          `⛽ Topped up pilot ${pilotAccount.address.slice(0, 10)}... to ${SECTOR_CONFIG.CHARACTER_ETH} ETH`
+          `⛽ Topped up pilot ${pilotAccount.address.slice(0, 10)}... to ${
+            SECTOR_CONFIG.CHARACTER_ETH
+          } ETH`
         );
       }
 
@@ -1560,6 +1571,44 @@ export class BlockchainManager {
         `Attempting credential mint for pilot ${pilotAddress} from ${credentialAddress}`
       );
 
+      // Check if credential contract is audited for Chapter 3
+      const auditorContract = this.getContract("Auditor");
+      if (!auditorContract) {
+        this.debugLog(
+          "Auditor contract not found, cannot verify credential audit status"
+        );
+        return {
+          success: false,
+          error:
+            "Auditor contract not found - cannot verify credential audit status",
+        };
+      }
+
+      const auditedChapter = (await this.publicClient.readContract({
+        address: auditorContract.address as `0x${string}`,
+        abi: auditorContract.abi,
+        functionName: "isAudited",
+        args: [credentialAddress as `0x${string}`],
+      })) as number;
+
+      if (auditedChapter !== 3) {
+        this.debugLog(
+          `Credential contract ${credentialAddress} is not audited for Chapter 3 (auditedChapter: ${auditedChapter})`
+        );
+        return {
+          success: false,
+          error: `Credential contract must be audited for Chapter 3 before pilots can mint. Current audit status: ${
+            auditedChapter === 0
+              ? "not audited"
+              : `audited for Chapter ${auditedChapter}`
+          }`,
+        };
+      }
+
+      this.debugLog(
+        `Credential contract ${credentialAddress} is audited for Chapter 3 ✓`
+      );
+
       // Check if pilot already owns the credential (ERC721 balanceOf)
       const balance = (await this.publicClient.readContract({
         address: credentialAddress as `0x${string}`,
@@ -1721,6 +1770,16 @@ export class BlockchainManager {
           "MaxExtractNotSet() - MaxExtract contract address not configured in Game",
         "0x933099c1":
           "PilotAlreadyMintedFromPlayer() - Pilot already bought a credential from this player (one-time purchase rule)",
+        "0x81d522f5":
+          "NotARegistry() - Caller or address is not a valid registry contract",
+
+        // ===== Credential Contract Errors (Chapter 3) =====
+        "0xa7a99435":
+          "SectorNotBroadcast() - Registry does not have a sector ID set (call registry.broadcastSectorId first)",
+        "0x4e3f67f9":
+          "InvalidGameContract() - Game contract address not set in credential contract",
+        "0xd6a72296":
+          "InvalidRegistryContract() - Registry contract address not set in credential contract",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
