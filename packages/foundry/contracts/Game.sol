@@ -378,12 +378,13 @@ contract Game {
 
     /**
      * Dead man's switch - called when a pilot is killed
-     * Marks the pilot as dead, penalizes the player who owned the sector, and forwards ETH to GOD
+     * Marks the pilot as dead and penalizes the player who owned the sector
      * Only callable by pilots (before they die)
+     * Note: ETH should be sent to GOD in a separate transaction after this call
      * @param _killer Address of the pilot who killed this pilot
      * @param _playerToPenalize Address of the player to penalize (sector owner)
      */
-    function deadMansSwitch(address _killer, address _playerToPenalize) external payable onlyPilot {
+    function deadMansSwitch(address _killer, address _playerToPenalize) external onlyPilot {
         // Check if pilot is already dead
         if (deadPilots[msg.sender]) revert PilotAlreadyDead();
         
@@ -398,13 +399,7 @@ contract Game {
         uint256 penalty = currentScore >= 10 ? 10 : currentScore;
         scores[_playerToPenalize] = currentScore - penalty;
         
-        // Forward all received ETH to GOD
-        uint256 ethAmount = msg.value;
-        if (ethAmount > 0) {
-            payable(universe.GOD()).transfer(ethAmount);
-        }
-        
-        emit PilotDied(msg.sender, _killer, _playerToPenalize, penalty, ethAmount);
+        emit PilotDied(msg.sender, _killer, _playerToPenalize, penalty, 0);
     }
     
     /**

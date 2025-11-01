@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xfdbda51a027e55e42155e48ab318ffcc12444cd9",
+      address: "0x84e94874f0ed99e0d5c2526dd58bcc674ceb02c8",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2915,
+      deployedOnBlock: 3394,
     },
     Credits: {
-      address: "0x0b88ffca9f2f088bfdb11efaf72e2af49afc763b",
+      address: "0xc7534de00d4f7352d757fcec2bafa87df384ef3e",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2916,
+      deployedOnBlock: 3395,
     },
     Game: {
-      address: "0x3c2d8336e9fb2c76cee9c0663f1c450f108ed03c",
+      address: "0xe10772ed33e56949fd2807b2e193603cd0536e54",
       abi: [
         {
           type: "constructor",
@@ -993,7 +993,7 @@ const deployedContracts = {
             },
           ],
           outputs: [],
-          stateMutability: "payable",
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1930,10 +1930,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2916,
+      deployedOnBlock: 3395,
     },
     Auditor: {
-      address: "0x67b9c5ce3f9f26dd80fbc90eb548aceb72693d3c",
+      address: "0x59b9fccc343d014b6fdd0c028282e9a6a23cfbc3",
       abi: [
         {
           type: "constructor",
@@ -2472,10 +2472,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2916,
+      deployedOnBlock: 3396,
     },
     MaxExtract: {
-      address: "0x47457b290e229a374f6ee505df522297b9f4eb37",
+      address: "0x301b93da70e28195b5800855ef4e2d6335f2d660",
       abi: [
         {
           type: "constructor",
@@ -2920,7 +2920,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2916,
+      deployedOnBlock: 3396,
     },
   },
   42161: {
@@ -3911,7 +3911,7 @@ const deployedContracts = {
             },
           ],
           outputs: [],
-          stateMutability: "payable",
+          stateMutability: "nonpayable",
         },
         {
           type: "function",

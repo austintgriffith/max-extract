@@ -175,6 +175,7 @@ export class CharacterManager {
   private lastNames: string[] = [];
   private debugMode: boolean;
   private serverSecret: string;
+  private gameContractAddressForCharacters: string | null = null; // Track which Game contract these characters belong to
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
@@ -417,18 +418,19 @@ export class CharacterManager {
   }
 
   /**
-   * Clear all characters (useful for testing)
+   * Clear all characters (useful for testing or when Game contract changes)
    */
   public clearCharacters(): void {
     this.characters.clear();
-    this.debugLog("Cleared all characters");
+    this.gameContractAddressForCharacters = null;
+    this.debugLog("Cleared all characters and reset Game contract address");
   }
 
   /**
    * Save all characters to a JSON file
    * This allows recovery of pilots after server restart
    */
-  private saveCharactersToFile(): void {
+  private saveCharactersToFile(gameContractAddress?: string): void {
     try {
       const characters = this.listCharacters();
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -446,6 +448,7 @@ export class CharacterManager {
 
       const data = {
         timestamp: new Date().toISOString(),
+        gameContractAddress: gameContractAddress || "unknown",
         characterCount: characters.length,
         characters: characters.map((char) => ({
           firstname: char.firstname,
@@ -479,8 +482,9 @@ export class CharacterManager {
   /**
    * Load characters from the latest backup file
    * Returns true if characters were loaded, false otherwise
+   * Also checks if the Game contract address matches to ensure pilots are for the current deployment
    */
-  public loadCharactersFromFile(): boolean {
+  public loadCharactersFromFile(currentGameContractAddress?: string): boolean {
     try {
       const latestFilepath = path.join(
         process.cwd(),
@@ -501,6 +505,26 @@ export class CharacterManager {
         return false;
       }
 
+      // Check if the backup is for a different Game contract deployment
+      if (currentGameContractAddress) {
+        // If backup doesn't have gameContractAddress, reject it (old format)
+        if (!data.gameContractAddress) {
+          console.log("🔄 Backup file missing Game contract address (old format)");
+          console.log(`   Current Game contract: ${currentGameContractAddress}`);
+          console.log(`   Generating new pilots for current deployment...`);
+          return false;
+        }
+        
+        // If addresses don't match, reject the backup
+        if (data.gameContractAddress.toLowerCase() !== currentGameContractAddress.toLowerCase()) {
+          console.log("🔄 Backup pilots are from a different Game contract deployment");
+          console.log(`   Backup Game contract: ${data.gameContractAddress}`);
+          console.log(`   Current Game contract: ${currentGameContractAddress}`);
+          console.log(`   Generating new pilots for current deployment...`);
+          return false;
+        }
+      }
+
       // Load characters into memory
       for (const charData of data.characters) {
         const character: Character = {
@@ -518,10 +542,16 @@ export class CharacterManager {
         this.characters.set(character.publicAddress, character);
       }
 
+      // Store the Game contract address these characters belong to
+      this.gameContractAddressForCharacters = currentGameContractAddress || null;
+
       console.log(
         `📂 Loaded ${data.characters.length} pilots from backup file`
       );
       console.log(`   Backup timestamp: ${data.timestamp}`);
+      if (data.gameContractAddress) {
+        console.log(`   Game contract: ${data.gameContractAddress}`);
+      }
       this.debugLog(`Characters loaded from ${latestFilepath}`);
       return true;
     } catch (error: any) {
@@ -595,6 +625,10 @@ export class CharacterManager {
   /**
    * Initialize characters and register them as pilots
    * This is the main orchestration method that handles the full character initialization flow
+   * 
+   * Pilots are generated using a combination of:
+   * - Game contract address (ensures unique pilots per deployment)
+   * - Universe entropy (ensures deterministic generation)
    */
   public async initializeCharacters(
     blockchainManager: BlockchainManager,
@@ -603,33 +637,62 @@ export class CharacterManager {
     try {
       this.debugLog("Starting character initialization...");
 
+      // Get Game contract address for pilot generation validation
+      const gameContractAddress = blockchainManager.getContract("Game")?.address;
+      if (!gameContractAddress) {
+        throw new Error("Game contract not found - cannot initialize pilots");
+      }
+
       // Check if we already have characters in memory
       const existingCharacterCount = this.getCharacterCount();
 
       if (existingCharacterCount > 0) {
-        console.log(
-          `🎭 Found existing ${existingCharacterCount} characters in memory`
-        );
+        // Validate that in-memory characters match the current Game contract
+        if (this.gameContractAddressForCharacters && 
+            this.gameContractAddressForCharacters.toLowerCase() === gameContractAddress.toLowerCase()) {
+          console.log(
+            `🎭 Found existing ${existingCharacterCount} characters in memory (matching Game contract)`
+          );
 
-        // Even with existing characters, check if they need to be added as pilots
-        await this.addCharactersAsPilots(blockchainManager);
+          // Even with existing characters, check if they need to be added as pilots
+          await this.addCharactersAsPilots(blockchainManager);
 
-        this.debugLog("Using existing character list");
-        return;
+          this.debugLog("Using existing character list");
+          return;
+        } else {
+          // Game contract has changed - clear old characters
+          console.log(`🔄 Game contract changed, clearing old pilots from memory`);
+          if (this.gameContractAddressForCharacters) {
+            console.log(`   Old Game contract: ${this.gameContractAddressForCharacters}`);
+          }
+          console.log(`   New Game contract: ${gameContractAddress}`);
+          this.clearCharacters();
+        }
       }
 
-      // Try to load characters from backup file
+      // Try to load characters from backup file (with Game contract validation)
       console.log("🔍 Checking for pilot backup file...");
-      const loadedFromFile = this.loadCharactersFromFile();
+      const loadedFromFile = this.loadCharactersFromFile(gameContractAddress);
 
       if (loadedFromFile) {
-        console.log(`✅ Successfully loaded pilots from backup`);
+        // Double-check: if Game contract has 0 pilots but we have backup,
+        // this might be a fresh deployment - verify backup is still valid
+        const contractPilotCount = await blockchainManager.getPilotCount();
+        
+        if (contractPilotCount === 0 && this.getCharacterCount() > 0) {
+          console.log(`⚠️  Game contract has 0 pilots but backup exists`);
+          console.log(`   This might be a fresh deployment - generating new pilots...`);
+          this.clearCharacters();
+          // Fall through to generate new pilots
+        } else {
+          console.log(`✅ Successfully loaded pilots from backup (matching Game contract)`);
 
-        // Check if they need to be added as pilots to the contract
-        await this.addCharactersAsPilots(blockchainManager);
+          // Check if they need to be added as pilots to the contract
+          await this.addCharactersAsPilots(blockchainManager);
 
-        this.debugLog("Using characters loaded from backup file");
-        return;
+          this.debugLog("Using characters loaded from backup file");
+          return;
+        }
       }
 
       // No characters exist in memory or file, generate new ones
@@ -659,21 +722,34 @@ export class CharacterManager {
     // Start timer for character generation
     const startTime = performance.now();
 
-    // Generate characters using universe entropy as base seed
+    // Get Game contract address to use as part of entropy
+    const gameContractAddress = blockchainManager.getContract("Game")?.address;
+    if (!gameContractAddress) {
+      throw new Error("Game contract not found - cannot generate pilots");
+    }
+
+    // Generate characters using universe entropy + Game contract address as base seed
+    // This ensures each new deployment creates a unique set of pilots
     const universeEntropy = await entropyManager.getUniverseEntropy();
-    const baseSeed = universeEntropy || "default_seed_for_characters";
+    const entropyPart = universeEntropy || "default_seed_for_characters";
+    
+    // Combine Game contract address with universe entropy for unique pilot set per deployment
+    const baseSeed = keccak256(toHex(gameContractAddress + entropyPart));
 
     console.log(
-      `🎲 Using universe entropy for pilot generation: ${baseSeed.slice(
-        0,
-        10
-      )}...${baseSeed.slice(-8)}`
+      `🎲 Generating pilots using Game contract (${gameContractAddress.slice(0, 10)}...) + universe entropy`
+    );
+    console.log(
+      `   Combined seed: ${baseSeed.slice(0, 10)}...${baseSeed.slice(-8)}`
     );
 
     const characters = this.generateCharacters(
       baseSeed,
       SECTOR_CONFIG.CHARACTER_COUNT
     );
+
+    // Store the Game contract address these characters belong to
+    this.gameContractAddressForCharacters = gameContractAddress;
 
     // Calculate generation time
     const endTime = performance.now();
@@ -683,8 +759,8 @@ export class CharacterManager {
       `🎭 Generated ${characters.length} new characters in ${generationTime}ms`
     );
 
-    // Save characters to backup file
-    this.saveCharactersToFile();
+    // Save characters to backup file with Game contract address
+    this.saveCharactersToFile(gameContractAddress);
 
     // Add all character addresses as pilots to the Game contract
     await this.addCharactersAsPilots(blockchainManager);

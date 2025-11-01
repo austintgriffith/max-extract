@@ -1944,20 +1944,16 @@ export class Sector {
         return;
       }
 
-      // Calculate remaining ETH to send (victim's remaining fuel as a percentage of gas funding)
-      const remainingFuelPercentage = victimShip.fuel / 100;
-      const ethToSend = (remainingFuelPercentage * 0.001).toString(); // Small amount based on fuel
-
-      // Execute the deadMansSwitch transaction
-      const txHash = await this.blockchainManager.executeDeadMansSwitch(
+      // Execute the deadMansSwitch transaction (marks pilot dead, penalizes player, returns remaining ETH to GOD)
+      const { deadMansSwitchHash, ethTransferHash } = await this.blockchainManager.executeDeadMansSwitch(
         victimShip.privateKey,
         killerShip.pilotAddress,
-        playerAddress,
-        ethToSend
+        playerAddress
       );
 
+      const ethMessage = ethTransferHash ? ` ETH returned to GOD (tx: ${ethTransferHash.slice(0, 10)}...)` : '';
       console.log(
-        `💀 DeadMansSwitch executed! Pilot ${victimShip.pilotName} killed by ${killerShip.pilotName}. Player ${playerAddress} penalized -10 points. (tx: ${txHash})`
+        `💀 DeadMansSwitch executed! Pilot ${victimShip.pilotName} killed by ${killerShip.pilotName}. Player ${playerAddress.slice(0, 8)}... penalized -10 points. (tx: ${deadMansSwitchHash.slice(0, 10)}...)${ethMessage}`
       );
 
       // Broadcast deadMansSwitch event
@@ -1971,8 +1967,8 @@ export class Sector {
           killerPilotName: killerShip.pilotName,
           playerPenalized: playerAddress,
           scorePenalty: 10,
-          ethForwarded: ethToSend,
-          transactionHash: txHash,
+          transactionHash: deadMansSwitchHash,
+          ethTransferHash: ethTransferHash,
           sectorId: this.id,
           blockchainConfirmed: true,
         },

@@ -995,13 +995,14 @@ export class BlockchainManager {
 
   /**
    * Execute deadMansSwitch transaction when a pilot is killed
+   * This marks the pilot as dead and penalizes the player
+   * Then sends all remaining ETH to GOD in a separate transaction
    */
   public async executeDeadMansSwitch(
     victimPrivateKey: string,
     killerAddress: string,
-    playerAddress: string,
-    ethAmount: string = "0"
-  ): Promise<string> {
+    playerAddress: string
+  ): Promise<{ deadMansSwitchHash: string; ethTransferHash: string | null }> {
     this.debugLog(
       `Executing deadMansSwitch for victim pilot with killer ${killerAddress} and player ${playerAddress}`
     );
@@ -1022,25 +1023,66 @@ export class BlockchainManager {
         transport: http(this.config.rpcUrl),
       });
 
-      // Execute the deadMansSwitch transaction
-      const hash = await victimWalletClient.writeContract({
+      // Step 1: Execute the deadMansSwitch transaction (no ETH involved)
+      const deadMansSwitchHash = await victimWalletClient.writeContract({
         address: gameContract.address as `0x${string}`,
         abi: gameContract.abi,
         functionName: "deadMansSwitch",
         args: [killerAddress, playerAddress],
-        value: parseEther(ethAmount), // Convert ETH to wei properly
+        gas: BigInt(100000), // Explicit gas limit for predictable costs
         chain: this.selectedChain,
       });
 
-      this.debugLog(`DeadMansSwitch transaction sent: ${hash}`);
+      this.debugLog(`DeadMansSwitch transaction sent: ${deadMansSwitchHash}`);
 
-      // Wait for transaction to be mined
-      const receipt = await this.waitForTransactionReceipt(hash);
-      this.debugLog(
-        `DeadMansSwitch transaction mined in block ${receipt.blockNumber}`
-      );
+      // Wait for deadMansSwitch to be mined
+      await this.waitForTransactionReceipt(deadMansSwitchHash);
+      this.debugLog(`DeadMansSwitch transaction mined`);
 
-      return hash;
+      // Step 2: Send all remaining ETH to GOD
+      let ethTransferHash: string | null = null;
+      try {
+        // Get pilot's remaining balance
+        const remainingBalance = await this.publicClient.getBalance({
+          address: victimAccount.address,
+        });
+
+        // Estimate gas for the transfer
+        const gasPrice = await this.publicClient.getGasPrice();
+        const gasLimit = BigInt(21000); // Standard ETH transfer gas
+        const gasCost = gasLimit * gasPrice;
+
+        // Calculate amount to send (balance - gas cost)
+        if (remainingBalance > gasCost) {
+          const amountToSend = remainingBalance - gasCost;
+          
+          this.debugLog(
+            `Sending ${formatEther(amountToSend)} ETH to GOD (${formatEther(remainingBalance)} - ${formatEther(gasCost)} gas)`
+          );
+
+          // Send ETH to GOD
+          const godAddress = this.godAccount.address;
+          ethTransferHash = await victimWalletClient.sendTransaction({
+            to: godAddress,
+            value: amountToSend,
+            gas: gasLimit,
+            chain: this.selectedChain,
+          });
+
+          this.debugLog(`ETH transfer to GOD sent: ${ethTransferHash}`);
+          await this.waitForTransactionReceipt(ethTransferHash);
+          this.debugLog(`ETH transfer to GOD mined`);
+        } else {
+          this.debugLog(
+            `Pilot balance (${formatEther(remainingBalance)}) too low to send ETH after gas costs`
+          );
+        }
+      } catch (ethError: any) {
+        this.debugLog(`Failed to send ETH to GOD: ${ethError.message}`);
+        // Don't throw - deadMansSwitch succeeded, ETH transfer is secondary
+      }
+
+      return { deadMansSwitchHash, ethTransferHash };
     } catch (error: any) {
       this.debugLog(`Failed to execute deadMansSwitch:`, error);
       throw new Error(`DeadMansSwitch failed: ${error.message}`);

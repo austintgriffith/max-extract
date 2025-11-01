@@ -50,10 +50,13 @@ export interface TipEventData {
   pilotName: string;
   playerAddress: string;
   tipAmount: number;
-  finalScore: number;
+  finalScore?: number; // Optional - only for exit tips
+  reason?: "refueling"; // Optional - indicates why the tip happened
+  stationName?: string; // For refueling tips at stations
   transactionHash?: string;
   error?: string;
-  aboutInfo: {
+  aboutInfo?: {
+    // Optional - only for exit tips
     hasAboutContract: boolean;
     stationName?: string;
     tipType: "standard" | "enhanced";

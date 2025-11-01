@@ -104,7 +104,11 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                             <span>❌ {event.data.pilotName} tip failed</span>
                           ) : (
                             <>
-                              <span>{event.data.pilotName} tipped</span>
+                              <span>
+                                {event.data.reason === "refueling"
+                                  ? `⛽ ${event.data.pilotName} refueled and tipped`
+                                  : `${event.data.pilotName} tipped`}
+                              </span>
                               <div
                                 className={`px-2 py-1 rounded text-white font-bold ${
                                   event.data.aboutInfo?.tipType === "enhanced"
@@ -116,7 +120,9 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                                 {event.data.aboutInfo?.tipType === "enhanced" && " ⭐"}
                               </div>
                               <span>
-                                to {event.data.aboutInfo?.stationName || event.data.stationName || "the sector owner"}.
+                                {event.data.reason === "refueling"
+                                  ? `to ${event.data.stationName || "the station owner"} for fuel.`
+                                  : `to ${event.data.aboutInfo?.stationName || event.data.stationName || "the sector owner"}.`}
                               </span>
                             </>
                           )}
