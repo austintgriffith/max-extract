@@ -8,7 +8,7 @@ packages/foundry:
 
     decide BUY_IN_PRICE and gameEndTime in Game.sol
 
-    `yarn deploy`
+`yarn deploy`
 
 packages/nextjs:
 
@@ -18,7 +18,7 @@ packages/nextjs:
 
     edit types files to set constants (packages/scripts/types.ts)
 
-    `yarn start`
+`yarn start`
 
 in max-extract-player repo , run the frontend
 (should be user 0x8aa8474993bB889206Fd5Fda2cE48979AE027b10)
@@ -38,13 +38,13 @@ packages/scripts:
 
     fund GOD at faucet
 
-    `yarn maxextract`
+`yarn maxextract`
 
     import Auditor pk from scripts env into punkwallet on chrome incognito:
 
         fund Auditor at faucet
 
-    `yarn auditor`
+`yarn auditor`
 
     brave browser or any browser really:  http://localhost:3000/dashboard
 
@@ -52,7 +52,7 @@ packages/scripts:
 
 in max-extract-player:
 
-    `yarn deploy`
+`yarn deploy`
 
     in canary open http://localhost:3001
 
@@ -71,3 +71,21 @@ repeat
 when you are finished with the game make sure you pay out to the winner if it didn't automatically
 
 also run `yarn sweep` to claw back some eth from your pilots
+
+## extract.fi
+
+Universe.sol has 0x0647603E7711D9686BdB9fDB1fe0b04162b73dD7 (amelia) as god
+
+Game.sol has the right buyin and timelimit
+
+look over .env file for scripts out on maxextract ssh
+
+deploy the contracts to arbitrum
+
+`yarn deploy --network arbitrum`
+
+`yarn verify --network arbitrum`
+
+scaffold config -> arbitrum
+
+commit code and make sure everything is solid
