@@ -212,6 +212,43 @@ contract Game {
     }
     
     /**
+     * Fund existing pilots with ETH in batch - smart top-up system
+     * Only callable by the God address
+     * Checks each pilot's balance and only sends enough to reach the minimum
+     * Refunds any unused ETH back to GOD
+     * @param _pilots Array of pilot addresses to fund
+     * @param minBalancePerPilot Minimum balance each pilot should have
+     */
+    function fundPilots(address[] calldata _pilots, uint256 minBalancePerPilot) external payable onlyGod {
+        require(_pilots.length > 0, "No pilots provided");
+        require(minBalancePerPilot > 0, "Invalid minimum balance");
+        
+        uint256 totalSent = 0;
+        
+        // Loop through each pilot and top up if needed
+        for (uint256 i = 0; i < _pilots.length; i++) {
+            uint256 currentBalance = _pilots[i].balance;
+            
+            // Only send if below minimum
+            if (currentBalance < minBalancePerPilot) {
+                uint256 amountNeeded = minBalancePerPilot - currentBalance;
+                
+                (bool success, ) = payable(_pilots[i]).call{value: amountNeeded}("");
+                require(success, "ETH transfer failed");
+                
+                totalSent += amountNeeded;
+            }
+        }
+        
+        // Refund any unused ETH back to GOD
+        uint256 remaining = msg.value - totalSent;
+        if (remaining > 0) {
+            (bool refundSuccess, ) = payable(msg.sender).call{value: remaining}("");
+            require(refundSuccess, "Refund failed");
+        }
+    }
+    
+    /**
      * Buy into the game by paying the buy-in price
      * Only available when game state is Open
      * Players can only buy in once

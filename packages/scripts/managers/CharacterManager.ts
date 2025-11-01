@@ -518,7 +518,9 @@ export class CharacterManager {
         this.characters.set(character.publicAddress, character);
       }
 
-      console.log(`📂 Loaded ${data.characters.length} pilots from backup file`);
+      console.log(
+        `📂 Loaded ${data.characters.length} pilots from backup file`
+      );
       console.log(`   Backup timestamp: ${data.timestamp}`);
       this.debugLog(`Characters loaded from ${latestFilepath}`);
       return true;
@@ -605,7 +607,9 @@ export class CharacterManager {
       const existingCharacterCount = this.getCharacterCount();
 
       if (existingCharacterCount > 0) {
-        console.log(`🎭 Found existing ${existingCharacterCount} characters in memory`);
+        console.log(
+          `🎭 Found existing ${existingCharacterCount} characters in memory`
+        );
 
         // Even with existing characters, check if they need to be added as pilots
         await this.addCharactersAsPilots(blockchainManager);
@@ -620,10 +624,10 @@ export class CharacterManager {
 
       if (loadedFromFile) {
         console.log(`✅ Successfully loaded pilots from backup`);
-        
+
         // Check if they need to be added as pilots to the contract
         await this.addCharactersAsPilots(blockchainManager);
-        
+
         this.debugLog("Using characters loaded from backup file");
         return;
       }
@@ -688,6 +692,7 @@ export class CharacterManager {
 
   /**
    * Add all generated character addresses as pilots to the Game contract
+   * Ensures each pilot has at least CHARACTER_ETH by checking balances first
    */
   private async addCharactersAsPilots(
     blockchainManager: BlockchainManager
@@ -707,41 +712,134 @@ export class CharacterManager {
       const existingPilotCount = await blockchainManager.getPilotCount();
       console.log(`🎯 Current pilots in Game contract: ${existingPilotCount}`);
 
-      // Filter out addresses that are already pilots (to avoid revert on duplicate)
+      // Filter addresses into two groups:
+      // 1. New pilots that need to be added to contract
+      // 2. Existing pilots that just need balance top-up
       const newPilotAddresses: string[] = [];
+      const existingPilotAddresses: string[] = [];
+
       for (const address of characterAddresses) {
         const isAlreadyPilot = await blockchainManager.isPilot(address);
-        if (!isAlreadyPilot) {
+        if (isAlreadyPilot) {
+          existingPilotAddresses.push(address);
+        } else {
           newPilotAddresses.push(address);
         }
       }
 
-      if (newPilotAddresses.length === 0) {
-        console.log(
-          "🎯 All character addresses are already pilots in the Game contract"
-        );
-        return;
+      // Check balances for all addresses (both new and existing pilots)
+      const publicClient = blockchainManager.getPublicClient();
+      const requiredBalance = BigInt(
+        Math.floor(parseFloat(SECTOR_CONFIG.CHARACTER_ETH.toString()) * 1e18)
+      );
+
+      const addressesNeedingFunds: string[] = [];
+
+      console.log(
+        `💰 Checking balances for ${characterAddresses.length} addresses...`
+      );
+      console.log(
+        `   Required minimum balance: ${SECTOR_CONFIG.CHARACTER_ETH} ETH`
+      );
+
+      for (const address of characterAddresses) {
+        const balance = await publicClient.getBalance({
+          address: address as `0x${string}`,
+        });
+
+        if (balance < requiredBalance) {
+          addressesNeedingFunds.push(address);
+          const balanceEth = (Number(balance) / 1e18).toFixed(6);
+          this.debugLog(
+            `Address ${address.slice(
+              0,
+              10
+            )}... needs funds (current: ${balanceEth} ETH)`
+          );
+        }
       }
 
       console.log(
-        `🎯 Adding ${newPilotAddresses.length} new character addresses as pilots to Game contract...`
+        `   💸 ${addressesNeedingFunds.length} addresses need funding`
       );
       console.log(
-        `💰 Each pilot will receive: ${SECTOR_CONFIG.CHARACTER_ETH} ETH (from CHARACTER_ETH config)`
+        `   ✅ ${
+          characterAddresses.length - addressesNeedingFunds.length
+        } addresses already funded`
       );
 
-      // Add pilots in batches using configurable batch size and ETH amount
-      await blockchainManager.addPilotsToGame(
-        newPilotAddresses,
-        SECTOR_CONFIG.PILOT_BATCH_SIZE,
-        SECTOR_CONFIG.CHARACTER_ETH.toString()
+      // Process new pilots that need to be added to the contract
+      if (newPilotAddresses.length > 0) {
+        console.log(
+          `🎯 Adding ${newPilotAddresses.length} new pilots to Game contract...`
+        );
+
+        // Only send ETH to new pilots that actually need it
+        const newPilotsNeedingFunds = newPilotAddresses.filter((addr) =>
+          addressesNeedingFunds.includes(addr)
+        );
+
+        if (newPilotsNeedingFunds.length > 0) {
+          console.log(
+            `💰 Funding ${newPilotsNeedingFunds.length} new pilots with ${SECTOR_CONFIG.CHARACTER_ETH} ETH each`
+          );
+
+          await blockchainManager.addPilotsToGame(
+            newPilotsNeedingFunds,
+            SECTOR_CONFIG.PILOT_BATCH_SIZE,
+            SECTOR_CONFIG.CHARACTER_ETH.toString()
+          );
+        }
+
+        // Add new pilots that already have enough funds (send 0 ETH)
+        const newPilotsAlreadyFunded = newPilotAddresses.filter(
+          (addr) => !addressesNeedingFunds.includes(addr)
+        );
+
+        if (newPilotsAlreadyFunded.length > 0) {
+          console.log(
+            `🎯 Adding ${newPilotsAlreadyFunded.length} new pilots without funding (already have sufficient balance)`
+          );
+
+          await blockchainManager.addPilotsToGame(
+            newPilotsAlreadyFunded,
+            SECTOR_CONFIG.PILOT_BATCH_SIZE,
+            "0" // No ETH needed
+          );
+        }
+      }
+
+      // Top up existing pilots that need more funds
+      const existingPilotsNeedingFunds = existingPilotAddresses.filter((addr) =>
+        addressesNeedingFunds.includes(addr)
       );
+
+      if (existingPilotsNeedingFunds.length > 0) {
+        console.log(
+          `💰 Topping up ${existingPilotsNeedingFunds.length} existing pilots to ${SECTOR_CONFIG.CHARACTER_ETH} ETH`
+        );
+
+        // For existing pilots, we need to send them ETH directly
+        await blockchainManager.fundAddresses(
+          existingPilotsNeedingFunds,
+          SECTOR_CONFIG.CHARACTER_ETH.toString()
+        );
+      }
+
+      if (
+        newPilotAddresses.length === 0 &&
+        existingPilotsNeedingFunds.length === 0
+      ) {
+        console.log(
+          "✅ All character addresses are already pilots with sufficient balance"
+        );
+      }
 
       // Verify the final count
       const finalPilotCount = await blockchainManager.getPilotCount();
       console.log(`🎯 Final pilots in Game contract: ${finalPilotCount}`);
 
-      this.debugLog("Successfully added all character addresses as pilots");
+      this.debugLog("Successfully processed all character addresses as pilots");
     } catch (error: any) {
       console.error("❌ Failed to add characters as pilots:", error.message);
       this.debugLog("Pilot addition error details:", error);

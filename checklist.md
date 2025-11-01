@@ -16,7 +16,7 @@ packages/nextjs:
 
     scaffold config file pointed to local
 
-    edit types files to set constants
+    edit types files to set constants (packages/scripts/types.ts)
 
     yarn start
 

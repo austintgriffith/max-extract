@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xbf3cd410aa5a3e9da22fd9109add5d3655fcb1c5",
+      address: "0xed28d2f9e7281a63254e6ea4894a5460e24d0450",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 290,
+      deployedOnBlock: 1216,
     },
     Credits: {
-      address: "0xc8c25aab3eea991e083d2d0240ee4d693c59bdac",
+      address: "0xa7328deaa1b585a494f055fc9bd99ea56d52cd3d",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 291,
+      deployedOnBlock: 1217,
     },
     Game: {
-      address: "0x7c10a8944baa22a41a51b82dc419e866a04e55db",
+      address: "0x867bfafda54b592392c550b538f77f9f2101551e",
       abi: [
         {
           type: "constructor",
@@ -1031,6 +1031,24 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "fundPilots",
+          inputs: [
+            {
+              name: "_pilots",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "minBalancePerPilot",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
         },
         {
           type: "function",
@@ -1888,10 +1906,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 292,
+      deployedOnBlock: 1218,
     },
     Auditor: {
-      address: "0xdc88b5feffd566bfa016b6b9268ea29929e7adf1",
+      address: "0x2f634917cc00a9897621cd3490327721198fa369",
       abi: [
         {
           type: "constructor",
@@ -2430,10 +2448,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 292,
+      deployedOnBlock: 1218,
     },
     MaxExtract: {
-      address: "0x25c74b7124bae93364213a6124a5e45bb0e98889",
+      address: "0xef1707af46b68aa697c427325aea18f82b6b2629",
       abi: [
         {
           type: "constructor",
@@ -2872,7 +2890,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 292,
+      deployedOnBlock: 1218,
     },
   },
   42161: {
@@ -3901,6 +3919,24 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "fundPilots",
+          inputs: [
+            {
+              name: "_pilots",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "minBalancePerPilot",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
         },
         {
           type: "function",

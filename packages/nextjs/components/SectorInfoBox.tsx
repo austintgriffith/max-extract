@@ -89,6 +89,8 @@ export const SectorInfoBox = ({
   useEffect(() => {
     if (!isDragging) return;
 
+    let lastPosition: Vector2D | null = null;
+
     const handleMouseMove = (e: MouseEvent) => {
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
@@ -97,12 +99,16 @@ export const SectorInfoBox = ({
       const boundedX = Math.max(padding, Math.min(newX, window.innerWidth - boxWidth - padding));
       const boundedY = Math.max(padding, Math.min(newY, window.innerHeight - boxHeight - padding));
 
-      const newPosition = { x: boundedX, y: boundedY };
-      setDraggedPosition(newPosition);
+      // Only update if position actually changed
+      if (!lastPosition || lastPosition.x !== boundedX || lastPosition.y !== boundedY) {
+        const newPosition = { x: boundedX, y: boundedY };
+        lastPosition = newPosition;
+        setDraggedPosition(newPosition);
 
-      // Update the connecting line position while dragging
-      if (onPositionAdjusted) {
-        onPositionAdjusted(newPosition);
+        // Update the connecting line position while dragging
+        if (onPositionAdjusted) {
+          onPositionAdjusted(newPosition);
+        }
       }
     };
 
@@ -117,7 +123,7 @@ export const SectorInfoBox = ({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, dragOffset, padding, boxWidth, boxHeight, onPositionAdjusted]);
+  }, [isDragging, dragOffset.x, dragOffset.y, padding, boxWidth, boxHeight, onPositionAdjusted]);
 
   // Reset dragged position when a new object is selected
   useEffect(() => {
@@ -130,7 +136,6 @@ export const SectorInfoBox = ({
       setCurrentAsteroidPosition(null);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
       }
       return;
     }
@@ -154,7 +159,6 @@ export const SectorInfoBox = ({
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
       }
     };
   }, [objectType, data]);
@@ -166,7 +170,6 @@ export const SectorInfoBox = ({
       setCurrentShipVelocity(null);
       if (shipAnimationFrameRef.current) {
         cancelAnimationFrame(shipAnimationFrameRef.current);
-        shipAnimationFrameRef.current = null;
       }
       return;
     }
@@ -191,7 +194,6 @@ export const SectorInfoBox = ({
     return () => {
       if (shipAnimationFrameRef.current) {
         cancelAnimationFrame(shipAnimationFrameRef.current);
-        shipAnimationFrameRef.current = null;
       }
     };
   }, [objectType, data]);
@@ -202,7 +204,9 @@ export const SectorInfoBox = ({
       const newPosition = { x: adjustedX, y: adjustedY };
       onPositionAdjusted(newPosition);
     }
-  }, [adjustedX, adjustedY, onPositionAdjusted, draggedPosition]);
+    // Only run when position or draggedPosition changes, not on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position.x, position.y, draggedPosition]);
 
   const renderStationInfo = (station: StationDetails) => {
     // Determine station display name
@@ -230,7 +234,9 @@ export const SectorInfoBox = ({
           {/* Score - Top Level */}
           <div>
             <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Score</div>
-            <div className="font-mono text-yellow-400 text-lg">{station.score.toLocaleString()}</div>
+            <div className="font-mono text-yellow-400 text-lg">
+              {station.score !== undefined && !isNaN(station.score) ? station.score.toLocaleString() : "0"}
+            </div>
           </div>
 
           {/* Registry Contract */}
@@ -338,7 +344,9 @@ export const SectorInfoBox = ({
           {/* Sector ID - Separate */}
           <div>
             <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Sector ID</div>
-            <div className="font-mono text-green-400">{station.sectorId.slice(0, 16)}...</div>
+            <div className="font-mono text-green-400">
+              {station.sectorId ? `${station.sectorId.slice(0, 16)}...` : "Unknown"}
+            </div>
           </div>
         </div>
       </>

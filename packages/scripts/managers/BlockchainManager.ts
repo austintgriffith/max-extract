@@ -547,6 +547,82 @@ export class BlockchainManager {
   }
 
   /**
+   * Fund multiple addresses with ETH in batches using Game contract's fundPilots function
+   * Smart top-up system: only sends what's needed to reach minimum balance, refunds excess to GOD
+   * @param addresses Array of addresses to fund
+   * @param minBalancePerAddress Minimum ETH balance each address should have (in ETH, e.g., "0.01")
+   * @param batchSize Number of addresses to fund per transaction (default: 50)
+   */
+  public async fundAddresses(
+    addresses: string[],
+    minBalancePerAddress: string,
+    batchSize: number = 50
+  ): Promise<void> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    this.debugLog(
+      `Funding ${addresses.length} addresses to minimum balance of ${minBalancePerAddress} ETH in batches of ${batchSize}`
+    );
+
+    // Process addresses in batches
+    for (let i = 0; i < addresses.length; i += batchSize) {
+      const batch = addresses.slice(i, i + batchSize);
+
+      try {
+        this.debugLog(
+          `Processing funding batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
+            addresses.length / batchSize
+          )}: ${batch.length} addresses`
+        );
+
+        // Calculate total ETH to send for this batch (worst case: all at 0 balance)
+        const minBalanceWei = parseEther(minBalancePerAddress);
+        const totalEthForBatch = minBalanceWei * BigInt(batch.length);
+
+        // Call fundPilots on Game contract with ETH and minimum balance
+        const hash = await this.walletClient.writeContract({
+          address: gameContract.address as `0x${string}`,
+          abi: gameContract.abi,
+          functionName: "fundPilots",
+          args: [batch, minBalanceWei],
+          value: totalEthForBatch,
+          account: this.godAccount,
+          chain: this.selectedChain,
+        });
+
+        this.debugLog(`Funding batch transaction sent: ${hash}`);
+
+        // Wait for transaction to be mined
+        const receipt = await this.waitForTransactionReceipt(hash);
+        this.debugLog(
+          `Funding batch transaction mined in block ${receipt.blockNumber}`
+        );
+
+        console.log(
+          `✅ Topped up ${batch.length} addresses to minimum ${minBalancePerAddress} ETH (batch ${
+            Math.floor(i / batchSize) + 1
+          }/${Math.ceil(addresses.length / batchSize)}) - tx: ${hash.slice(0, 10)}...`
+        );
+      } catch (error: any) {
+        console.error(
+          `❌ Failed to fund batch ${Math.floor(i / batchSize) + 1}: ${
+            error.shortMessage || error.message
+          }`
+        );
+        this.debugLog("Funding batch error details:", error);
+        throw error;
+      }
+    }
+
+    console.log(
+      `💰 Successfully topped up all ${addresses.length} addresses to minimum balance`
+    );
+  }
+
+  /**
    * Check if an address is already a pilot in the Game contract
    * @param pilotAddress Address to check
    * @returns True if the address is already a pilot
@@ -995,6 +1071,27 @@ export class BlockchainManager {
         chain: this.selectedChain,
         transport: http(this.config.rpcUrl),
       });
+
+      // Check pilot balance and top up if needed
+      const { SECTOR_CONFIG } = require("../types");
+      const pilotBalance = await this.publicClient.getBalance({
+        address: pilotAccount.address,
+      });
+      const tipGasThreshold = parseEther(SECTOR_CONFIG.TIP_GAS_AMOUNT);
+
+      if (pilotBalance < tipGasThreshold) {
+        this.debugLog(
+          `Pilot balance (${formatEther(pilotBalance)} ETH) below threshold (${SECTOR_CONFIG.TIP_GAS_AMOUNT} ETH), topping up...`
+        );
+        await this.fundAddresses(
+          [pilotAccount.address],
+          SECTOR_CONFIG.CHARACTER_ETH,
+          1
+        );
+        console.log(
+          `⛽ Topped up pilot ${pilotAccount.address.slice(0, 10)}... to ${SECTOR_CONFIG.CHARACTER_ETH} ETH`
+        );
+      }
 
       // Call tipPlayer function on Game contract
       const hash = await pilotWalletClient.writeContract({

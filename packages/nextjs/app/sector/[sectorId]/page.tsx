@@ -55,7 +55,7 @@ const SectorPage = () => {
 
   // Fetch registry details when station is selected
   const shouldFetchStation = selectedObject?.type === "station";
-  const sectorIdBigInt = BigInt(sectorId);
+  const sectorIdBigInt = sectorId ? BigInt(sectorId) : BigInt(0);
   const { data: sectorInfo } = useScaffoldReadContract({
     contractName: "MaxExtract",
     functionName: "getSectorInfo",
@@ -158,16 +158,19 @@ const SectorPage = () => {
   });
 
   // Game logic hooks
-  useVectorMatching({ sectorData, setSectorData, wsRef, sectorId });
+  useVectorMatching({ sectorData, setSectorData, wsRef, sectorId, showDebug });
   useParticleCleanup({ particles, setParticles, setSectorData });
 
   // Handle initial object selection and fetch static data (pilot stats, station info)
   useEffect(() => {
     if (!selectedObject) {
-      setSelectedDetails(null);
-      setClickPosition(null);
-      setAdjustedBoxPosition(null);
-      setPilotStats(null);
+      // Only clear if we actually had something selected before
+      if (selectedDetails || clickPosition || adjustedBoxPosition || pilotStats) {
+        setSelectedDetails(null);
+        setClickPosition(null);
+        setAdjustedBoxPosition(null);
+        setPilotStats(null);
+      }
       return;
     }
 
@@ -184,7 +187,7 @@ const SectorPage = () => {
             const [aboutName, aboutSocial] = aboutData as [string, string];
 
             const stationDetails: StationDetails = {
-              sectorId,
+              sectorId: sectorId || "unknown",
               ownerAddress: owner,
               registryAddress: registry,
               aboutAddress:
@@ -199,7 +202,7 @@ const SectorPage = () => {
               credentialAuditedChapter: credentialAuditedChapter ? Number(credentialAuditedChapter) : undefined,
               stationName: aboutName || sectorName,
               social: aboutSocial || undefined,
-              score: Number(playerScore),
+              score: playerScore !== undefined ? Number(playerScore) : 0,
               auditStatus:
                 sectorName && sectorName !== "(pending audit)"
                   ? "audited"
@@ -302,6 +305,10 @@ const SectorPage = () => {
     };
 
     fetchDetails();
+    // Note: selectedDetails, clickPosition, adjustedBoxPosition, pilotStats are intentionally
+    // omitted from dependencies to avoid infinite loops - they're only used in the conditional
+    // check at the start, not as inputs to fetchDetails
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedObject,
     sectorId,
@@ -314,7 +321,6 @@ const SectorPage = () => {
     credentialAuditedChapter,
     sectorName,
     sectorData,
-    pilotStats,
   ]);
 
   // Live update ship/asteroid position and velocity from sectorData
@@ -573,7 +579,7 @@ const SectorPage = () => {
           >
             {connectionStatus}
           </div>
-          <h1 className="text-xl font-bold">Sector {sectorId.slice(0, 8)}...</h1>
+          <h1 className="text-xl font-bold">Sector {sectorId ? `${sectorId.slice(0, 8)}...` : "Unknown"}</h1>
         </div>
       </div>
 
