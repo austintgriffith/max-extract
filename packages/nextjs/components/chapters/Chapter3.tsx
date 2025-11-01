@@ -69,9 +69,9 @@ export const Chapter3 = () => {
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
             <pre className="text-sm overflow-x-auto">
               <code className="text-accent">{`function issue() external {
-    // Mint the NFT to the caller (tx.origin)
+    // Mint the NFT to the pilot address (tx.origin)
     _mint(tx.origin, nextTokenId++);
-    
+
     // Call the Game contract to award points to YOUR player address
     game.pilotMintSectorCredential(YOUR_PLAYER_ADDRESS);
 }`}</code>
@@ -83,7 +83,7 @@ export const Chapter3 = () => {
             <ul className="space-y-2 text-sm list-disc list-inside">
               <li>
                 The function mints an NFT to the pilot calling it (
-                <code className="bg-base-100 px-1 rounded">tx.origin</code>)
+                <code className="bg-base-100 px-1 rounded">msg.sender</code>)
               </li>
               <li>
                 It then calls{" "}
@@ -120,19 +120,6 @@ export const Chapter3 = () => {
             </ul>
           </div>
 
-          <div className="bg-success/10 border border-success rounded-lg p-4 mb-4">
-            <div className="flex items-start space-x-3">
-              <div className="text-success text-xl">🛡️</div>
-              <div>
-                <h4 className="font-semibold text-success mb-2">Trustless Security</h4>
-                <p className="text-sm text-base-content">
-                  You cannot cheat the system. The Game contract validates every credential mint on-chain. If your
-                  implementation is wrong or malicious, you simply won&apos;t earn points.
-                </p>
-              </div>
-            </div>
-          </div>
-
           <h3 className="text-xl font-semibold mb-4 text-secondary">⚠️ CRITICAL: One-Time Purchase</h3>
           <div className="bg-error/10 border-2 border-error rounded-lg p-4 mb-4">
             <div className="flex items-start space-x-3">
@@ -166,53 +153,17 @@ export const Chapter3 = () => {
           <h3 className="text-xl font-semibold mb-4 text-secondary">Registry Integration</h3>
           <p className="mb-4">
             After deploying your credential contract, register it in your Registry contract under the{" "}
-            <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;credential&rdquo;</code> key:
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;credential&rdquo;</code> key.
           </p>
 
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`// Call your Registry's setModule function (or equivalent)
-registry.setModule("credential", credentialContractAddress);`}</code>
-            </pre>
-          </div>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Making Credentials Soulbound</h3>
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Verify</h3>
           <p className="mb-4">
-            To make your ERC-721 NFT soulbound, override the transfer functions to prevent transfers after minting:
+            Make sure everyone can read your credential contract code by getting it verified in the block explorer.
           </p>
 
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`// Override transfer functions to make NFT soulbound
-function transferFrom(address, address, uint256) public pure override {
-    revert("Soulbound: cannot transfer");
-}
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Audit</h3>
+          <p className="mb-4">Submit your credential contract to the official Auditor contract for an audit.</p>
 
-function safeTransferFrom(address, address, uint256) public pure override {
-    revert("Soulbound: cannot transfer");
-}
-
-function safeTransferFrom(address, address, uint256, bytes memory) public pure override {
-    revert("Soulbound: cannot transfer");
-}`}</code>
-            </pre>
-          </div>
-
-          <div className="bg-warning/10 border border-warning rounded-lg p-4 mb-4">
-            <div className="flex items-start space-x-3">
-              <div className="text-warning text-xl">🤖</div>
-              <div>
-                <h4 className="font-semibold text-warning mb-2">TODO: AI Auditor System</h4>
-                <p className="text-sm text-base-content">
-                  An AI auditor system will be built to verify that credentials are truly soulbound before pilots
-                  purchase them. Pilots will consult the auditor to ensure the credential contract is legitimate and
-                  follows all the rules. This is a future enhancement to protect pilots from malicious contracts.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Implementation Steps</h3>
           <div className="space-y-4 mb-6">
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -229,7 +180,7 @@ function safeTransferFrom(address, address, uint256, bytes memory) public pure o
               </div>
               <p>
                 Add an <code className="bg-base-100 px-2 py-1 rounded text-sm">issue()</code> function that mints to{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">tx.origin</code> and calls{" "}
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">pilot address</code> and calls{" "}
                 <code className="bg-base-100 px-2 py-1 rounded text-sm">
                   game.pilotMintSectorCredential(YOUR_ADDRESS)
                 </code>
@@ -254,57 +205,26 @@ function safeTransferFrom(address, address, uint256, bytes memory) public pure o
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 5
               </div>
-              <p>Test by having a pilot call the issue function and verify points are awarded</p>
+              <p>Verify your credential contract in the block explorer</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 6
               </div>
-              <p>
-                Check the{" "}
-                <a href="/dashboard" className="link link-primary">
-                  dashboard
-                </a>{" "}
-                to see your score increase
-              </p>
+              <p>Get your credential contract audited</p>
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Testing Your Implementation</h3>
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <p className="text-sm mb-2">
-              <strong>Before going to production, verify:</strong>
+          <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">Credentials Go Live</h3>
+          <div className="bg-accent/10 border border-accent rounded-lg p-6">
+            <p className="mb-3">
+              Once your credential contract is audited and working, pilots can start minting credentials to access your
+              station.
             </p>
-            <ul className="space-y-2 text-sm list-disc list-inside">
-              <li>Transfer functions properly revert (test on testnet)</li>
-              <li>
-                The <code className="bg-base-100 px-1 rounded">issue()</code> function successfully mints to pilots
-              </li>
-              <li>
-                The Game contract awards you points when pilots mint (check{" "}
-                <code className="bg-base-100 px-1 rounded">scores[yourAddress]</code>)
-              </li>
-              <li>The credential is properly registered in your registry</li>
-              <li>
-                The Game contract can verify pilot access via{" "}
-                <code className="bg-base-100 px-1 rounded">canPilotAccessSector()</code>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-info/10 border border-info rounded-lg p-4 mb-4">
-            <div className="flex items-start space-x-3">
-              <div className="text-info text-xl">💡</div>
-              <div>
-                <h4 className="font-semibold text-info mb-2">Why Credentials Matter</h4>
-                <p className="text-sm text-base-content">
-                  In future chapters, pilots will need valid credentials to land at your station, access your services,
-                  and interact with your contracts. Without proper credentials, pilots can&apos;t dock—and you
-                  don&apos;t earn points. This system creates a permissioned economy where you control who can access
-                  your sector.
-                </p>
-              </div>
-            </div>
+            <p>
+              Each credential mint earns you <strong>5 points</strong>, and pilots will need valid credentials to land
+              at your station and interact with your contracts.
+            </p>
           </div>
         </div>
       </div>
