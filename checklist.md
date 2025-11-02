@@ -88,4 +88,12 @@ deploy the contracts to arbitrum
 
 scaffold config -> arbitrum
 
-commit code and make sure everything is solid
+commit code and push to git
+
+ssh to maxextract and git pull
+
+(triple check the LOAD_CONTRACTS_FROM on the maxextract server is the site you playing on)
+
+PLAYERS BUY IN!!
+
+`yarn maxextract` and `yarn auditor` out on the server
