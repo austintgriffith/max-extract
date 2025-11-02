@@ -1,6 +1,6 @@
 "use client";
 
-import { Chapter1, Chapter2, Chapter3 } from "./chapters";
+import { Chapter1, Chapter2, Chapter3, Chapter4 } from "./chapters";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 // Map chapter numbers to their components
@@ -8,6 +8,7 @@ const chapterComponents: Record<number, React.ComponentType> = {
   1: Chapter1,
   2: Chapter2,
   3: Chapter3,
+  4: Chapter4,
 };
 
 export const ChapterLoader = () => {

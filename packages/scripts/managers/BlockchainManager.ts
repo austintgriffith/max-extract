@@ -1974,4 +1974,413 @@ export class BlockchainManager {
       };
     }
   }
+
+  /**
+   * Chapter 4: Check if chapter 4 is visible for a player
+   */
+  public async isChapter4Visible(playerAddress: string): Promise<boolean> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        this.debugLog("Game contract not found for chapter visibility check");
+        return false;
+      }
+
+      // Get the array of visible chapters from Game contract
+      const visibleChapters = (await this.readContract(
+        gameContract.address,
+        gameContract.abi,
+        "getVisibleChapters",
+        []
+      )) as number[];
+
+      this.debugLog(
+        `Visible chapters: [${visibleChapters.join(", ")}]`
+      );
+
+      // Check if chapter 4 is in the array
+      const isVisible = visibleChapters.includes(4);
+
+      this.debugLog(
+        `Chapter 4 visibility for player ${playerAddress}: ${isVisible}`
+      );
+      return isVisible;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to check chapter 4 visibility for ${playerAddress}:`,
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Chapter 4: Get a module address from a registry contract
+   */
+  public async getRegistryModule(
+    registryAddress: string,
+    moduleKey: string
+  ): Promise<string | null> {
+    try {
+      if (
+        !registryAddress ||
+        registryAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        return null;
+      }
+
+      this.debugLog(
+        `Looking up module "${moduleKey}" from registry: ${registryAddress}`
+      );
+
+      // Call modules(moduleKey) on the registry contract
+      const moduleAddress = (await this.publicClient.readContract({
+        address: registryAddress as `0x${string}`,
+        abi: [
+          {
+            inputs: [{ name: "key", type: "string" }],
+            name: "modules",
+            outputs: [{ name: "", type: "address" }],
+            stateMutability: "view",
+            type: "function",
+          },
+        ],
+        functionName: "modules",
+        args: [moduleKey],
+      })) as string;
+
+      // Check if module exists and is not zero address
+      if (
+        !moduleAddress ||
+        moduleAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        this.debugLog(`No "${moduleKey}" module found in registry`);
+        return null;
+      }
+
+      this.debugLog(`Found "${moduleKey}" module at ${moduleAddress}`);
+      return moduleAddress;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get module "${moduleKey}" from registry ${registryAddress}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Chapter 4: Check audit status of a contract
+   * @returns Chapter number if audited (1-4), 0 if not audited
+   */
+  public async checkAuditStatus(contractAddress: string): Promise<number> {
+    try {
+      const auditorContract = this.getContract("Auditor");
+      if (!auditorContract) {
+        this.debugLog("Auditor contract not found");
+        return 0;
+      }
+
+      const auditedChapter = (await this.publicClient.readContract({
+        address: auditorContract.address as `0x${string}`,
+        abi: auditorContract.abi,
+        functionName: "isAudited",
+        args: [contractAddress as `0x${string}`],
+      })) as number;
+
+      this.debugLog(
+        `Audit status for ${contractAddress}: Chapter ${auditedChapter}`
+      );
+      return auditedChapter;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to check audit status for ${contractAddress}:`,
+        error
+      );
+      return 0;
+    }
+  }
+
+  /**
+   * Chapter 4: Get fuel token price from fuel contract
+   */
+  public async getFuelTokenPrice(fuelAddress: string): Promise<bigint> {
+    try {
+      this.debugLog(
+        `Getting pricePerTokenInCredits from fuel contract: ${fuelAddress}`
+      );
+
+      const price = (await this.publicClient.readContract({
+        address: fuelAddress as `0x${string}`,
+        abi: [
+          {
+            name: "pricePerTokenInCredits",
+            type: "function",
+            stateMutability: "view",
+            inputs: [],
+            outputs: [{ name: "", type: "uint256" }],
+          },
+        ],
+        functionName: "pricePerTokenInCredits",
+      })) as bigint;
+
+      this.debugLog(
+        `Fuel token price: ${price} (${Number(price) / 1e18} credits)`
+      );
+      return price;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get fuel token price from ${fuelAddress}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Get fuel token balance for an address
+   */
+  public async getFuelTokenBalance(
+    fuelAddress: string,
+    holderAddress: string
+  ): Promise<bigint> {
+    try {
+      const balance = (await this.publicClient.readContract({
+        address: fuelAddress as `0x${string}`,
+        abi: [
+          {
+            name: "balanceOf",
+            type: "function",
+            stateMutability: "view",
+            inputs: [{ name: "account", type: "address" }],
+            outputs: [{ name: "", type: "uint256" }],
+          },
+        ],
+        functionName: "balanceOf",
+        args: [holderAddress as `0x${string}`],
+      })) as bigint;
+
+      this.debugLog(
+        `Fuel token balance for ${holderAddress}: ${balance} (${
+          Number(balance) / 1e18
+        } tokens)`
+      );
+      return balance;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get fuel token balance for ${holderAddress} from ${fuelAddress}:`,
+        error
+      );
+      return 0n;
+    }
+  }
+
+  /**
+   * Chapter 4: Approve credit spending from a pilot wallet
+   */
+  public async approveCreditSpend(
+    fromPilot: any,
+    spenderAddress: string,
+    amount: bigint
+  ): Promise<void> {
+    try {
+      const creditsContract = this.getContract("Credits");
+      if (!creditsContract) {
+        throw new Error("Credits contract not found");
+      }
+
+      this.debugLog(
+        `Approving ${Number(amount) / 1e18} credits for ${spenderAddress} from pilot ${fromPilot.address}`
+      );
+
+      // Create wallet client for the pilot
+      const pilotWalletClient = createWalletClient({
+        account: fromPilot,
+        chain: this.selectedChain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      const hash = await pilotWalletClient.writeContract({
+        address: creditsContract.address as `0x${string}`,
+        abi: creditsContract.abi,
+        functionName: "approve",
+        args: [spenderAddress, amount],
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Credit approval transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Credit approval confirmed`);
+    } catch (error: any) {
+      this.debugLog(`Failed to approve credit spend:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Buy fuel tokens from a pilot wallet
+   */
+  public async buyFuelTokens(
+    fromPilot: any,
+    fuelAddress: string,
+    amount: bigint
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Buying ${Number(amount) / 1e18} fuel tokens from ${fuelAddress} as pilot ${fromPilot.address}`
+      );
+
+      // Create wallet client for the pilot
+      const pilotWalletClient = createWalletClient({
+        account: fromPilot,
+        chain: this.selectedChain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      const hash = await pilotWalletClient.writeContract({
+        address: fuelAddress as `0x${string}`,
+        abi: [
+          {
+            name: "buy",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [{ name: "amount", type: "uint256" }],
+            outputs: [],
+          },
+        ],
+        functionName: "buy",
+        args: [amount],
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Buy fuel tokens transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Buy fuel tokens confirmed`);
+    } catch (error: any) {
+      this.debugLog(`Failed to buy fuel tokens:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Call upgrade function on fuel contract from a pilot wallet
+   * @returns true if successful, false otherwise
+   */
+  public async callUpgrade(
+    fromPilot: any,
+    fuelAddress: string
+  ): Promise<boolean> {
+    try {
+      this.debugLog(
+        `Calling upgrade() on ${fuelAddress} as pilot ${fromPilot.address}`
+      );
+
+      // Create wallet client for the pilot
+      const pilotWalletClient = createWalletClient({
+        account: fromPilot,
+        chain: this.selectedChain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      const hash = await pilotWalletClient.writeContract({
+        address: fuelAddress as `0x${string}`,
+        abi: [
+          {
+            name: "upgrade",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        functionName: "upgrade",
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Upgrade transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Upgrade confirmed successfully`);
+      return true;
+    } catch (error: any) {
+      this.debugLog(`Upgrade call failed:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Chapter 4: Redeem fuel token from a pilot wallet
+   */
+  public async redeemFuelToken(
+    fromPilot: any,
+    fuelAddress: string
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Redeeming fuel token from ${fuelAddress} as pilot ${fromPilot.address}`
+      );
+
+      // Create wallet client for the pilot
+      const pilotWalletClient = createWalletClient({
+        account: fromPilot,
+        chain: this.selectedChain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      const hash = await pilotWalletClient.writeContract({
+        address: fuelAddress as `0x${string}`,
+        abi: [
+          {
+            name: "redeem",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        functionName: "redeem",
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Redeem fuel token transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Redeem fuel token confirmed`);
+    } catch (error: any) {
+      this.debugLog(`Failed to redeem fuel token:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Get credit balance of a contract
+   */
+  public async getContractCreditBalance(
+    contractAddress: string
+  ): Promise<bigint> {
+    try {
+      const creditsContract = this.getContract("Credits");
+      if (!creditsContract) {
+        throw new Error("Credits contract not found");
+      }
+
+      const balance = await this.readContract(
+        creditsContract.address,
+        creditsContract.abi,
+        "balanceOf",
+        [contractAddress]
+      );
+
+      this.debugLog(
+        `Contract ${contractAddress} credit balance: ${balance} (${
+          Number(balance) / 1e18
+        } credits)`
+      );
+      return balance as bigint;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get credit balance for contract ${contractAddress}:`,
+        error
+      );
+      return 0n;
+    }
+  }
 }

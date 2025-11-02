@@ -31,6 +31,7 @@ export class Sector {
   private characterManager: CharacterManager;
   private pilotManager: PilotManager;
   private blockchainManager: BlockchainManager;
+  private crowdsaleManager: any; // CrowdsaleManager (optional for Chapter 4)
 
   constructor(
     id: string,
@@ -38,13 +39,15 @@ export class Sector {
     pilotManager: PilotManager,
     blockchainManager: BlockchainManager,
     seed?: string,
-    debugMode: boolean = false
+    debugMode: boolean = false,
+    crowdsaleManager?: any
   ) {
     this.id = id;
     this.debugMode = debugMode;
     this.characterManager = characterManager;
     this.pilotManager = pilotManager;
     this.blockchainManager = blockchainManager;
+    this.crowdsaleManager = crowdsaleManager;
 
     let seedValue = seed ? this.hashSeed(seed) : Math.random() * 1000000;
     this.rng = () => {
@@ -624,11 +627,46 @@ export class Sector {
   private async completeRefueling(ship: Ship): Promise<void> {
     const currentTime = Date.now();
 
+    // Get player address first (needed for fuel token check)
+    const playerAddress = await this.blockchainManager.getSectorOwner(this.id);
+
+    // Chapter 4: Check if pilot has fuel tokens and redeem one
+    if (this.crowdsaleManager && playerAddress) {
+      try {
+        const fuelTokenBalance =
+          await this.crowdsaleManager.getPilotFuelTokenBalance(
+            ship.pilotAddress,
+            playerAddress
+          );
+
+        if (fuelTokenBalance > 0n) {
+          this.debugLog(
+            `Pilot ${ship.pilotName} has ${
+              Number(fuelTokenBalance) / 1e18
+            } fuel tokens, attempting redeem`
+          );
+
+          const redeemed = await this.crowdsaleManager.redeemFuelToken(
+            ship.privateKey,
+            playerAddress
+          );
+
+          if (redeemed) {
+            console.log(
+              `🎟️  Pilot ${ship.pilotName} redeemed fuel token for refueling at station`
+            );
+          }
+        }
+      } catch (error: any) {
+        this.debugLog(`Failed to check/redeem fuel token: ${error.message}`);
+        // Continue with refueling even if token redemption fails
+      }
+    }
+
     // Set fuel to 100%
     ship.fuel = 100;
 
-    // Get player address and station info
-    const playerAddress = await this.blockchainManager.getSectorOwner(this.id);
+    // Get station info
     const aboutInfo = await this.blockchainManager.getAboutContractInfo(
       this.id
     );

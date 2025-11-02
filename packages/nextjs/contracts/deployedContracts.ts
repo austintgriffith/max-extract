@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x38381d63418ff752dba93ee018e36a6814388fa7",
+      address: "0x0f043de293e7bf56857c22d88da3289a0c6e68d9",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 500,
+      deployedOnBlock: 1320,
     },
     Credits: {
-      address: "0xd49880bddfac4fd20d3b6bee01c71231c0c63789",
+      address: "0xbbeea9d7938877d1cc7e0c39f725a10a4558f346",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 501,
+      deployedOnBlock: 1321,
     },
     Game: {
-      address: "0x45b0bbaceedcfbae96aec2d2ffef70777b0b3ae3",
+      address: "0x099abf3d2fd566a5cb60accd473b7b6e55259007",
       abi: [
         {
           type: "constructor",
@@ -1601,6 +1601,38 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "upgradeStation",
+          inputs: [
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "upgradedStations",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "visibleChapters",
           inputs: [
             {
@@ -1854,6 +1886,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "StationUpgraded",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "pilotCaller",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "TipGiven",
           inputs: [
             {
@@ -1899,6 +1956,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "InsufficientCreditsForUpgrade",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InsufficientPayment",
           inputs: [],
         },
@@ -1920,6 +1982,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "NotACredential",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotAFuelContract",
           inputs: [],
         },
         {
@@ -1972,12 +2039,17 @@ const deployedContracts = {
           name: "PlayerAlreadyJoined",
           inputs: [],
         },
+        {
+          type: "error",
+          name: "StationAlreadyUpgraded",
+          inputs: [],
+        },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 502,
+      deployedOnBlock: 1321,
     },
     Auditor: {
-      address: "0x8f3024d12c3d702930f2ff98aa8e2261f0be490a",
+      address: "0x19bccbb4708870d945e91c968c6c7aecacebd74b",
       abi: [
         {
           type: "constructor",
@@ -2485,10 +2557,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 502,
+      deployedOnBlock: 1321,
     },
     MaxExtract: {
-      address: "0x67f65b834aaac92c15c2eba9ff7e81f2d33a1cfd",
+      address: "0xb06d3ac86e43fd99a7bb03e8ca082904eb2e4301",
       abi: [
         {
           type: "constructor",
@@ -2933,7 +3005,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 502,
+      deployedOnBlock: 1321,
     },
   },
   42161: {
@@ -4532,6 +4604,38 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "upgradeStation",
+          inputs: [
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "upgradedStations",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "visibleChapters",
           inputs: [
             {
@@ -4785,6 +4889,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "StationUpgraded",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "player",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "pilotCaller",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "TipGiven",
           inputs: [
             {
@@ -4830,6 +4959,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "InsufficientCreditsForUpgrade",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InsufficientPayment",
           inputs: [],
         },
@@ -4851,6 +4985,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "NotACredential",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotAFuelContract",
           inputs: [],
         },
         {
@@ -4901,6 +5040,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "PlayerAlreadyJoined",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "StationAlreadyUpgraded",
           inputs: [],
         },
       ],

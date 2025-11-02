@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "./Universe.sol";
+import "./RegistryHelper.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // WETH interface for safe ETH transfers
@@ -25,6 +26,8 @@ interface IMaxExtract {
  * @author Max Extract Protocol
  */
 contract Game {
+    using RegistryHelper for address;
+    
     // Game configuration - hardcoded values
     uint256 public constant BUY_IN_PRICE = 0.000001 ether;
     uint256 public immutable gameEndTime = block.timestamp + 30 minutes;
@@ -73,6 +76,9 @@ contract Game {
     // Track which pilots have minted credentials from which players (one per pilot per player)
     mapping(address => mapping(address => bool)) public pilotPlayerCredentialMinted;
     
+    // Track which stations have been upgraded
+    mapping(uint256 => bool) public upgradedStations;
+    
     // Events
     event ChaptersUpdated(uint8[] newVisibleChapters);
     event GameStateChanged(GameState newState);
@@ -85,6 +91,7 @@ contract Game {
     event GameSettled(address[] winners, uint256 winningScore, uint256 totalPayout, uint256 payoutPerWinner);
     event CredentialMinted(address indexed pilot, address indexed player, address indexed credentialContract);
     event PointsDeducted(address indexed player, uint256 amount, uint256 newScore);
+    event StationUpgraded(uint256 indexed sectorId, address indexed player, address indexed pilotCaller);
     
     // Errors
     error OnlyGod();
@@ -106,6 +113,9 @@ contract Game {
     error PilotAlreadyMintedFromPlayer();
     error OnlyAuditor();
     error NotARegistry();
+    error StationAlreadyUpgraded();
+    error InsufficientCreditsForUpgrade();
+    error NotAFuelContract();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -610,14 +620,8 @@ contract Game {
         address registryAddress = maxExtract.sectors(_sectorId);
         if (registryAddress == address(0)) return false;
         
-        // Get the credential contract from the registry
-        (bool success, bytes memory data) = registryAddress.staticcall(
-            abi.encodeWithSignature("modules(string)", "credential")
-        );
-        
-        if (!success || data.length < 32) return false;
-        
-        address credentialContract = abi.decode(data, (address));
+        // Get the credential contract from the registry using library
+        address credentialContract = registryAddress.getModule("credential");
         if (credentialContract == address(0)) return false;
         
         // Check the pilot's balance in the credential contract (ERC721 balanceOf)
@@ -649,14 +653,9 @@ contract Game {
         address registryAddress = maxExtract.sectors(_sectorId);
         if (registryAddress == address(0)) revert NotARegistry();
         
-        // Get the registered credential contract from the registry
-        (bool success, bytes memory data) = registryAddress.staticcall(
-            abi.encodeWithSignature("modules(string)", "credential")
-        );
-        
-        if (!success || data.length < 32) revert CredentialNotRegistered();
-        
-        address registeredCredential = abi.decode(data, (address));
+        // Get the registered credential contract from the registry using library
+        address registeredCredential = registryAddress.getModule("credential");
+        if (registeredCredential == address(0)) revert CredentialNotRegistered();
         
         // Verify that msg.sender (the credential contract) matches the registered credential
         if (registeredCredential != msg.sender) revert CredentialNotRegistered();
@@ -675,6 +674,55 @@ contract Game {
         scores[player] += 2;
         
         emit CredentialMinted(tx.origin, player, msg.sender);
+    }
+    
+    /**
+     * Called by a fuel contract when a pilot triggers the station upgrade
+     * Verifies the fuel contract has 49,500 credits and transfers them to the game
+     * Awards 50 points to the player upon successful upgrade
+     * Only callable by registered fuel contracts through pilot transactions
+     * @param _sectorId The sector ID that is being upgraded
+     */
+    function upgradeStation(uint256 _sectorId) external {
+        if (address(maxExtract) == address(0)) revert MaxExtractNotSet();
+        
+        // tx.origin must be a pilot (the one calling upgrade on the fuel contract)
+        if (!isPilot(tx.origin)) revert OnlyPilot();
+        
+        // Get the registry for this sector
+        address registryAddress = maxExtract.sectors(_sectorId);
+        if (registryAddress == address(0)) revert NotARegistry();
+        
+        // Get the registered fuel contract from the registry using library
+        address fuelContract = registryAddress.getModule("fuel");
+        if (fuelContract == address(0)) revert NotAFuelContract();
+        
+        // Verify that msg.sender (the fuel contract) matches the registered fuel contract
+        if (fuelContract != msg.sender) revert NotAFuelContract();
+        
+        // Get the player who owns this sector
+        address player = maxExtract.sectorToOwner(_sectorId);
+        if (player == address(0)) revert NotAPlayer();
+        
+        // Check if station is already upgraded
+        if (upgradedStations[_sectorId]) revert StationAlreadyUpgraded();
+        
+        // Verify the fuel contract has at least 49,500 credits
+        uint256 upgradeAmount = 49_500 * 10**18;
+        if (creditsContract.balanceOf(fuelContract) < upgradeAmount) {
+            revert InsufficientCreditsForUpgrade();
+        }
+        
+        // Transfer 49,500 credits from fuel contract to Game contract (requires prior approval)
+        creditsContract.transferFrom(fuelContract, address(this), upgradeAmount);
+        
+        // Award 50 points to the player for upgrading their station
+        scores[player] += 50;
+        
+        // Mark station as upgraded
+        upgradedStations[_sectorId] = true;
+        
+        emit StationUpgraded(_sectorId, player, tx.origin);
     }
     
     /**

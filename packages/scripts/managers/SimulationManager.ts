@@ -3,6 +3,7 @@ import { SECTOR_CONFIG } from "../types";
 import { BlockchainManager } from "./BlockchainManager";
 import { EntropyManager } from "./EntropyManager";
 import { CharacterManager, PilotManager } from "./CharacterManager";
+import { CrowdsaleManager } from "./CrowdsaleManager";
 
 export class SimulationManager {
   private innerLoopInterval: NodeJS.Timeout | null = null;
@@ -13,6 +14,7 @@ export class SimulationManager {
   private gameSettled: boolean = false;
   private isStopped: boolean = false;
   private entropySetMessageShown: boolean = false;
+  private crowdsaleManager: CrowdsaleManager;
 
   constructor(
     private sectors: Map<string, Sector>,
@@ -23,11 +25,13 @@ export class SimulationManager {
     debugMode: boolean = false,
     private stopGameServer?: () => void,
     private checkContractChanges?: () => Promise<void>,
-    private onGameSettled?: () => Promise<void>
+    private onGameSettled?: () => Promise<void>,
+    crowdsaleManager?: CrowdsaleManager
   ) {
     this.debugMode = debugMode;
     this.characterManager = characterManager;
     this.pilotManager = new PilotManager(debugMode);
+    this.crowdsaleManager = crowdsaleManager!;
   }
 
   private debugLog(message: string, data?: any): void {
@@ -175,6 +179,16 @@ export class SimulationManager {
     if (currentEntropy) {
       // Update all sectors with spawning and heavy operations
       await this.updateSectorsOuterLoop();
+
+      // Check for new crowdsales and process active ones (Chapter 4)
+      if (this.crowdsaleManager) {
+        console.log("\n🎫 [OuterLoop] Running Chapter 4 crowdsale checks...");
+        await this.crowdsaleManager.checkForNewCrowdsales();
+        await this.crowdsaleManager.processCrowdsales();
+        console.log("✅ [OuterLoop] Crowdsale checks complete\n");
+      } else {
+        console.log("⚠️  [OuterLoop] CrowdsaleManager not initialized");
+      }
     } else {
       this.debugLog(
         "Skipping sector outer loop updates - no rolling entropy available yet"

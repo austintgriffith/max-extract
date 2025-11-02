@@ -16,6 +16,7 @@ import { RouteManager } from "./managers/RouteManager";
 import { CharacterManager } from "./managers/CharacterManager";
 import { SimulationManager } from "./managers/SimulationManager";
 import { GameCycleManager } from "./managers/GameCycleManager";
+import { CrowdsaleManager } from "./managers/CrowdsaleManager";
 
 export class GameServer {
   private app: express.Application;
@@ -34,6 +35,7 @@ export class GameServer {
   private characterManager: CharacterManager;
   private simulationManager: SimulationManager;
   private gameCycleManager: GameCycleManager;
+  private crowdsaleManager: CrowdsaleManager;
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
@@ -97,6 +99,11 @@ export class GameServer {
       debugMode
     );
     this.characterManager = new CharacterManager(debugMode);
+    this.crowdsaleManager = new CrowdsaleManager(
+      this.blockchainManager,
+      this.characterManager,
+      debugMode
+    );
 
     // Initialize GameCycleManager
     this.gameCycleManager = new GameCycleManager(
@@ -116,7 +123,8 @@ export class GameServer {
       debugMode,
       this.stop.bind(this),
       this.checkForContractChanges.bind(this),
-      this.gameCycleManager.onGameSettled.bind(this.gameCycleManager)
+      this.gameCycleManager.onGameSettled.bind(this.gameCycleManager),
+      this.crowdsaleManager
     );
     this.routeManager = new RouteManager(
       this.app,
@@ -385,7 +393,8 @@ export class GameServer {
         this.debugMode,
         this.stop.bind(this),
         this.checkForContractChanges.bind(this),
-        this.gameCycleManager.onGameSettled.bind(this.gameCycleManager)
+        this.gameCycleManager.onGameSettled.bind(this.gameCycleManager),
+        this.crowdsaleManager
       );
       this.debugLog("Simulation manager reinitialized");
 
@@ -487,7 +496,8 @@ export class GameServer {
             this.simulationManager.getPilotManager(),
             this.blockchainManager,
             undefined,
-            this.debugMode
+            this.debugMode,
+            this.crowdsaleManager
           );
 
           // Update sector with current rolling entropy if available
@@ -690,6 +700,13 @@ export class GameServer {
    */
   public getSimulationManager(): SimulationManager {
     return this.simulationManager;
+  }
+
+  /**
+   * Get the crowdsale manager for direct access
+   */
+  public getCrowdsaleManager(): CrowdsaleManager {
+    return this.crowdsaleManager;
   }
 
   /**
