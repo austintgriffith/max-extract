@@ -285,6 +285,7 @@ const WinnersDisplay = ({ winners, winningScore }: { winners: string[]; winningS
 };
 
 const Dashboard: NextPage = () => {
+  const [siteUrl, setSiteUrl] = useState<string>("");
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [playerSectors, setPlayerSectors] = useState<Map<string, string>>(new Map());
   const [playerRegistries, setPlayerRegistries] = useState<Map<string, string>>(new Map());
@@ -382,6 +383,13 @@ const Dashboard: NextPage = () => {
     functionName: "getCommitmentHash" as any,
   });
 
+  // Get the site URL from window.location
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSiteUrl(window.location.hostname);
+    }
+  }, []);
+
   useEffect(() => {
     if (playersData) {
       // Convert addresses to PlayerData objects
@@ -470,7 +478,7 @@ const Dashboard: NextPage = () => {
 
   return (
     <div className="flex items-center flex-col grow pt-10">
-      <div className="px-5 w-full max-w-4xl">
+      <div className="px-5 w-full max-w-7xl">
         <div className="card bg-black shadow-xl border border-gray-800 relative overflow-hidden">
           {/* Animated stars background - parallax effect */}
           <div className="absolute inset-0 pointer-events-none z-0">
@@ -512,6 +520,13 @@ const Dashboard: NextPage = () => {
             ))}
           </div>
           <div className="card-body relative z-10">
+            {/* Site URL Title */}
+            {siteUrl && (
+              <h1 className="text-5xl font-bold text-center mb-8 text-warning drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
+                {siteUrl}
+              </h1>
+            )}
+
             {/* Game Status */}
             <div className="space-y-4 mb-8">
               {/* Game State and Basic Info */}
