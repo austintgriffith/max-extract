@@ -14,6 +14,7 @@ export interface Character {
   aggression: number;
   intelligence: number;
   dexterity: number;
+  credits: number; // Credits amount (10k-100k)
   privateKey: `0x${string}`;
   publicAddress: `0x${string}`;
 }
@@ -319,6 +320,10 @@ export class CharacterManager {
     const intelligence = this.generateDeterministicRandom(seed, 6);
     const dexterity = this.generateDeterministicRandom(seed, 7);
 
+    // Generate credits (10,000 to 100,000) using public seed for deterministic traits
+    const creditsRandom = this.generateDeterministicRandom(seed, 8); // 0-99
+    const credits = 10000 + Math.floor((creditsRandom / 100) * 90000); // Scale to 10,000-100,000 range
+
     const character: Character = {
       firstname,
       lastname,
@@ -328,6 +333,7 @@ export class CharacterManager {
       aggression,
       intelligence,
       dexterity,
+      credits,
       privateKey,
       publicAddress,
     };
@@ -342,6 +348,7 @@ export class CharacterManager {
       aggression,
       intelligence,
       dexterity,
+      credits,
       address: publicAddress,
       // Note: Private key intentionally not logged for security
     });
@@ -459,6 +466,7 @@ export class CharacterManager {
           aggression: char.aggression,
           intelligence: char.intelligence,
           dexterity: char.dexterity,
+          credits: char.credits,
           privateKey: char.privateKey,
           publicAddress: char.publicAddress,
         })),
@@ -547,6 +555,11 @@ export class CharacterManager {
           aggression: charData.aggression,
           intelligence: charData.intelligence,
           dexterity: charData.dexterity,
+          // Backward compatibility: if credits doesn't exist, generate random value
+          credits:
+            charData.credits !== undefined
+              ? charData.credits
+              : 10000 + Math.floor(Math.random() * 90000),
           privateKey: charData.privateKey as `0x${string}`,
           publicAddress: charData.publicAddress as `0x${string}`,
         };
@@ -941,6 +954,58 @@ export class CharacterManager {
       // Verify the final count
       const finalPilotCount = await blockchainManager.getPilotCount();
       console.log(`🎯 Final pilots in Game contract: ${finalPilotCount}`);
+
+      // Mint CREDITS tokens to pilots that don't have any yet
+      console.log(`💰 Checking and minting CREDITS tokens to pilots...`);
+      let creditsMintedCount = 0;
+
+      for (const character of this.listCharacters()) {
+        try {
+          // Check current CREDITS balance
+          const currentCredits = await blockchainManager.getCreditsBalance(
+            character.publicAddress
+          );
+
+          if (currentCredits === 0n) {
+            // Convert credits to wei (18 decimals)
+            const creditsToMint = BigInt(character.credits) * BigInt(10 ** 18);
+
+            this.debugLog(
+              `Minting ${character.credits.toLocaleString()} CREDITS to ${
+                character.firstname
+              } ${character.lastname} (${character.publicAddress.slice(
+                0,
+                10
+              )}...)`
+            );
+
+            await blockchainManager.mintCredits(
+              character.publicAddress,
+              creditsToMint
+            );
+            creditsMintedCount++;
+          } else {
+            // Pilot already has credits
+            const creditsFormatted = (
+              Number(currentCredits) / 1e18
+            ).toLocaleString();
+            this.debugLog(
+              `${character.firstname} ${character.lastname} already has ${creditsFormatted} CREDITS, skipping mint`
+            );
+          }
+        } catch (error: any) {
+          console.error(
+            `⚠️  Failed to mint credits to ${character.firstname} ${character.lastname}: ${error.message}`
+          );
+          // Continue with other pilots even if one fails
+        }
+      }
+
+      if (creditsMintedCount > 0) {
+        console.log(`💰 Minted CREDITS to ${creditsMintedCount} pilots`);
+      } else {
+        console.log(`✅ All pilots already have CREDITS tokens`);
+      }
 
       this.debugLog("Successfully processed all character addresses as pilots");
     } catch (error: any) {

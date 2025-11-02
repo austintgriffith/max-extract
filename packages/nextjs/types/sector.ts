@@ -142,6 +142,7 @@ export interface Pilot {
   death: PilotDeath;
   isAvailable: boolean;
   ethBalance: string;
+  credits: string; // Credits balance (as string for large numbers)
 }
 
 export interface PilotsResponse {

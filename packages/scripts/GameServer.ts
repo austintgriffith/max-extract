@@ -428,6 +428,20 @@ export class GameServer {
         }
       }
 
+      // Set Credits contract address in Game contract
+      const creditsContract = this.blockchainManager.getContract("Credits");
+      if (creditsContract) {
+        console.log("🔗 Setting Credits contract address in Game contract...");
+        try {
+          await this.blockchainManager.setCreditsContract(creditsContract.address);
+        } catch (error: any) {
+          console.error(
+            `⚠️  Warning: Failed to set Credits contract address in Game contract: ${error.message}`
+          );
+          console.log("   Continuing with restart anyway...");
+        }
+      }
+
       console.log("▶️  Starting simulation...");
       // Start simulation
       this.simulationManager.start();
@@ -569,6 +583,20 @@ export class GameServer {
       } catch (error: any) {
         console.error(
           `⚠️  Warning: Failed to set Auditor contract address in Game contract: ${error.message}`
+        );
+        console.log("   Continuing with startup anyway...");
+      }
+    }
+
+    // Set Credits contract address in Game contract
+    const creditsContract = this.blockchainManager.getContract("Credits");
+    if (creditsContract) {
+      console.log("🔗 Setting Credits contract address in Game contract...");
+      try {
+        await this.blockchainManager.setCreditsContract(creditsContract.address);
+      } catch (error: any) {
+        console.error(
+          `⚠️  Warning: Failed to set Credits contract address in Game contract: ${error.message}`
         );
         console.log("   Continuing with startup anyway...");
       }

@@ -166,26 +166,39 @@ export class RouteManager {
           ])
         );
 
-        // Get all pilots with ETH balances in one efficient call
+        // Get all pilots with ETH balances and CREDITS in one efficient call
         let pilotsBalanceData: Map<
           string,
-          { ethBalance: string; isDead: boolean }
+          { ethBalance: string; isDead: boolean; credits: string }
         > = new Map();
         try {
           const blockchainManager =
             this.simulationManager.getBlockchainManager();
+          
+          // Fetch ETH balances and death status
           const { pilots: pilotsWithBalances } =
             await blockchainManager.getAllPilotsAndBalances();
 
-          pilotsWithBalances.forEach((pilot: any) => {
+          // Fetch CREDITS balances in one batch call
+          const { pilots: pilotsWithCredits } =
+            await blockchainManager.getAllPilotsWithCredits();
+          
+          // Create a map of credits balances for quick lookup
+          const creditsMap = new Map(
+            pilotsWithCredits.map(p => [p.address, p.creditsBalance])
+          );
+
+          // Combine ETH and CREDITS data
+          for (const pilot of pilotsWithBalances) {
             pilotsBalanceData.set(pilot.address, {
               ethBalance: pilot.ethBalance,
               isDead: pilot.isDead,
+              credits: creditsMap.get(pilot.address) || "0",
             });
-          });
+          }
 
           console.log(
-            `📊 Retrieved ETH balances for ${pilotsWithBalances.length} pilots in one call`
+            `📊 Retrieved ETH and CREDITS balances for ${pilotsWithBalances.length} pilots in 2 batch calls`
           );
         } catch (error) {
           console.error("Failed to get pilots balances from contract:", error);
@@ -222,6 +235,7 @@ export class RouteManager {
               killedBy: assignment?.killedBy || null,
             },
             ethBalance: blockchainData?.ethBalance || "0",
+            credits: blockchainData?.credits || "0",
             isAvailable: pilotManager.isPilotAvailable(character.publicAddress),
           };
         });

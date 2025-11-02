@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x5621d0b4d8043524ac5837918d6a95b1050ef228",
+      address: "0x38381d63418ff752dba93ee018e36a6814388fa7",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 376,
+      deployedOnBlock: 500,
     },
     Credits: {
-      address: "0x2c4b93b614ddbfaf0807e8f4ca982e9f9c2e2aa4",
+      address: "0xd49880bddfac4fd20d3b6bee01c71231c0c63789",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 377,
+      deployedOnBlock: 501,
     },
     Game: {
-      address: "0x04fc820176617a99ae134904935bc854b2e51628",
+      address: "0x45b0bbaceedcfbae96aec2d2ffef70777b0b3ae3",
       abi: [
         {
           type: "constructor",
@@ -973,6 +973,19 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "creditsContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IERC20",
             },
           ],
           stateMutability: "view",
@@ -1101,6 +1114,24 @@ const deployedContracts = {
               name: "isDead",
               type: "bool[]",
               internalType: "bool[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllPilotsWithCredits",
+          inputs: [],
+          outputs: [
+            {
+              name: "pilotAddresses",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "creditsBalances",
+              type: "uint256[]",
+              internalType: "uint256[]",
             },
           ],
           stateMutability: "view",
@@ -1458,6 +1489,19 @@ const deployedContracts = {
           inputs: [
             {
               name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setCreditsContract",
+          inputs: [
+            {
+              name: "_credits",
               type: "address",
               internalType: "address",
             },
@@ -1930,10 +1974,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 378,
+      deployedOnBlock: 502,
     },
     Auditor: {
-      address: "0xf1078fd568ad76e49e6f88d1ff485402a086976b",
+      address: "0x8f3024d12c3d702930f2ff98aa8e2261f0be490a",
       abi: [
         {
           type: "constructor",
@@ -2441,10 +2485,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 378,
+      deployedOnBlock: 502,
     },
     MaxExtract: {
-      address: "0xe8f76a822b57b973c7a89006092364fff8f69040",
+      address: "0x67f65b834aaac92c15c2eba9ff7e81f2d33a1cfd",
       abi: [
         {
           type: "constructor",
@@ -2889,7 +2933,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 378,
+      deployedOnBlock: 502,
     },
   },
   42161: {
@@ -3866,6 +3910,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "creditsContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IERC20",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "deadMansSwitch",
           inputs: [
             {
@@ -3988,6 +4045,24 @@ const deployedContracts = {
               name: "isDead",
               type: "bool[]",
               internalType: "bool[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllPilotsWithCredits",
+          inputs: [],
+          outputs: [
+            {
+              name: "pilotAddresses",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "creditsBalances",
+              type: "uint256[]",
+              internalType: "uint256[]",
             },
           ],
           stateMutability: "view",
@@ -4345,6 +4420,19 @@ const deployedContracts = {
           inputs: [
             {
               name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setCreditsContract",
+          inputs: [
+            {
+              name: "_credits",
               type: "address",
               internalType: "address",
             },

@@ -3,7 +3,7 @@
 export const Chapter3 = () => {
   return (
     <div className="bg-base-300 rounded-3xl p-8 mb-6">
-      <h2 className="text-3xl font-bold mb-6 text-primary">Chapter 3: Access Credentials</h2>
+      <h2 className="text-3xl font-bold mb-6 text-primary">Chapter 3: The Credential</h2>
       <div className="space-y-6">
         {/* TODO Section */}
         <div className="bg-warning/10 border border-warning rounded-lg p-4">

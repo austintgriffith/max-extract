@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "./Universe.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // WETH interface for safe ETH transfers
 interface IWETH {
@@ -39,6 +40,9 @@ contract Game {
     
     // Reference to the Auditor contract
     address public auditorContract;
+    
+    // Reference to the Credits ERC20 token contract
+    IERC20 public creditsContract;
     
     // Game states
     enum GameState {
@@ -709,5 +713,44 @@ contract Game {
     function setAuditorContract(address _auditor) external onlyGod {
         require(_auditor != address(0), "Invalid address");
         auditorContract = _auditor;
+    }
+    
+    /**
+     * Set the Credits ERC20 token contract address
+     * Only callable by the God address
+     * @param _credits Address of the Credits token contract
+     */
+    function setCreditsContract(address _credits) external onlyGod {
+        require(_credits != address(0), "Invalid address");
+        creditsContract = IERC20(_credits);
+    }
+    
+    /**
+     * Get all pilots with their CREDITS token balances in one call
+     * @return pilotAddresses Array of pilot addresses
+     * @return creditsBalances Array of CREDITS balances (in wei, 18 decimals)
+     */
+    function getAllPilotsWithCredits() external view returns (
+        address[] memory pilotAddresses,
+        uint256[] memory creditsBalances
+    ) {
+        uint256 pilotCount = pilots.length;
+        
+        pilotAddresses = new address[](pilotCount);
+        creditsBalances = new uint256[](pilotCount);
+        
+        for (uint256 i = 0; i < pilotCount; i++) {
+            address pilot = pilots[i];
+            pilotAddresses[i] = pilot;
+            
+            // Get CREDITS balance if contract is set, otherwise return 0
+            if (address(creditsContract) != address(0)) {
+                creditsBalances[i] = creditsContract.balanceOf(pilot);
+            } else {
+                creditsBalances[i] = 0;
+            }
+        }
+        
+        return (pilotAddresses, creditsBalances);
     }
 }

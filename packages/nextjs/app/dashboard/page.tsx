@@ -87,6 +87,11 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
         )}
       </td>
       <td>
+        <span className="font-mono text-xs text-success" title="Credits">
+          {parseFloat(pilot.credits || "0").toLocaleString()}
+        </span>
+      </td>
+      <td>
         <span className={`font-mono text-xs ${getStatColor(pilot.stats.fuel)}`} title="Fuel">
           {pilot.stats.fuel.toFixed(1)}
         </span>
@@ -721,6 +726,12 @@ const Dashboard: NextPage = () => {
                       <span className="text-xs opacity-70">Dead:</span>
                       <span className="font-mono text-xs">{pilotsData.summary.dead}</span>
                     </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs opacity-70">Total Credits:</span>
+                      <span className="font-mono text-xs text-success">
+                        {pilotsData.pilots.reduce((sum, p) => sum + parseFloat(p.credits || "0"), 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -731,6 +742,7 @@ const Dashboard: NextPage = () => {
                         <th>Pilot Name</th>
                         <th>Address</th>
                         <th>Status</th>
+                        <th title="Credits">💰</th>
                         <th title="Fuel">⛽</th>
                         <th title="Cargo">📦</th>
                         <th title="Aggression">⚔️</th>
@@ -740,7 +752,11 @@ const Dashboard: NextPage = () => {
                     </thead>
                     <tbody>
                       {pilotsData.pilots
-                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .sort((a, b) => {
+                          const creditsA = parseFloat(a.credits || "0");
+                          const creditsB = parseFloat(b.credits || "0");
+                          return creditsB - creditsA; // Highest credits first
+                        })
                         .map(pilot => (
                           <PilotRow key={pilot.address} pilot={pilot} />
                         ))}

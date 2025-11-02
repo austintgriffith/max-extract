@@ -700,6 +700,106 @@ export class BlockchainManager {
   }
 
   /**
+   * Get the CREDITS token balance of an address
+   * @param address Address to check balance for
+   * @returns Balance in wei (with 18 decimals)
+   */
+  public async getCreditsBalance(address: string): Promise<bigint> {
+    const creditsContract = this.getContract("Credits");
+    if (!creditsContract) {
+      throw new Error("Credits contract not found. Run: yarn deploy");
+    }
+
+    return await this.readContract(
+      creditsContract.address,
+      creditsContract.abi,
+      "balanceOf",
+      [address]
+    );
+  }
+
+  /**
+   * Get all pilots with their CREDITS balances in one batch call
+   * @returns Object containing pilots with addresses and CREDITS balances
+   */
+  public async getAllPilotsWithCredits(): Promise<{
+    pilots: Array<{
+      address: string;
+      creditsBalance: string;
+    }>;
+  }> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      const result = (await this.readContract(
+        gameContract.address,
+        gameContract.abi,
+        "getAllPilotsWithCredits"
+      )) as [string[], bigint[]];
+
+      const [addresses, balances] = result;
+
+      const pilots = addresses.map((address, index) => ({
+        address,
+        creditsBalance: (Number(balances[index]) / 1e18).toString(),
+      }));
+
+      return { pilots };
+    } catch (error: any) {
+      console.error("Failed to get pilots with credits:", error);
+      return { pilots: [] };
+    }
+  }
+
+  /**
+   * Mint CREDITS tokens to an address (only GOD can call)
+   * @param to Address to mint credits to
+   * @param amount Amount to mint in wei (with 18 decimals)
+   */
+  public async mintCredits(to: string, amount: bigint): Promise<void> {
+    const creditsContract = this.getContract("Credits");
+    if (!creditsContract) {
+      throw new Error("Credits contract not found. Run: yarn deploy");
+    }
+
+    this.debugLog(`Minting ${amount} credits to ${to.slice(0, 10)}...`);
+
+    const hash = await this.writeContract(
+      creditsContract.address,
+      creditsContract.abi,
+      "mint",
+      [to, amount]
+    );
+
+    this.debugLog(`Credits minted, transaction: ${hash}`);
+  }
+
+  /**
+   * Set the Credits contract address in the Game contract
+   * @param creditsAddress Address of the Credits token contract
+   */
+  public async setCreditsContract(creditsAddress: string): Promise<void> {
+    const gameContract = this.getContract("Game");
+    if (!gameContract) {
+      throw new Error("Game contract not found. Run: yarn deploy");
+    }
+
+    this.debugLog(`Setting Credits contract address: ${creditsAddress}`);
+
+    const hash = await this.writeContract(
+      gameContract.address,
+      gameContract.abi,
+      "setCreditsContract",
+      [creditsAddress]
+    );
+
+    this.debugLog(`Credits contract set, transaction: ${hash}`);
+  }
+
+  /**
    * Check if the game can be settled
    */
   public async canGameSettle(): Promise<boolean> {
