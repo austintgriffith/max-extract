@@ -359,6 +359,12 @@ const Dashboard: NextPage = () => {
     functionName: "winningScore",
   });
 
+  // Read visible chapters
+  const { data: visibleChapters } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "getVisibleChapters",
+  });
+
   // Read entropy from Universe contract
   const { data: entropy } = useScaffoldReadContract({
     contractName: "Universe",
@@ -526,6 +532,9 @@ const Dashboard: NextPage = () => {
             {siteUrl && (
               <h1 className="text-5xl font-bold text-center mb-8 text-warning drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
                 {siteUrl}
+                {visibleChapters && Array.isArray(visibleChapters) && visibleChapters.length > 0 && (
+                  <span className="ml-3">[{visibleChapters.map((chapter: number) => chapter).join(", ")}]</span>
+                )}
               </h1>
             )}
 
