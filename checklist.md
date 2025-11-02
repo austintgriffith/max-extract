@@ -2,6 +2,14 @@
 
 ## localhost
 
+`yarn chain`
+
+`yarn start`
+
+scaffold config -> foundry
+
+open brave and get that burner address to use as god
+
 packages/foundry:
 
     Universe.sol has 0x43D9B634006B4fCe2523a710990a397AC3d18D7a as god
@@ -18,9 +26,7 @@ packages/nextjs:
 
     edit types files to set constants (packages/scripts/types.ts)
 
-`yarn start`
-
-in max-extract-player repo , run the frontend
+in max-extract-player repo , run the frontend with canary
 (should be user 0x8aa8474993bB889206Fd5Fda2cE48979AE027b10)
 
     `yarn start` and open from chrome canary
@@ -31,7 +37,7 @@ in max-extract-player repo , run the frontend
 
 packages/scripts:
 
-    env for localhost
+    env for localhost (paste got pk in if it changed)
 
         in particular you need TIP_GAS_AMOUNT in there and 0.0000001 for arb
             but 0.0001 for localhost
@@ -40,13 +46,15 @@ packages/scripts:
 
 `yarn maxextract`
 
+    for the auditor, maybe open safari to localhost:3000 and use that burner for auditor
+
     import Auditor pk from scripts env into punkwallet on chrome incognito:
 
         fund Auditor at faucet
 
 `yarn auditor`
 
-    brave browser or any browser really:  http://localhost:3000/dashboard
+    maybe use safari as your public dashboard:  http://localhost:3000/dashboard
 
     brave browser opens GOD page: make chapter 1 visible
 
@@ -79,6 +87,9 @@ Universe.sol has 0x0647603E7711D9686BdB9fDB1fe0b04162b73dD7 (amelia) as god
 Game.sol has the right buyin and timelimit
 
 look over .env file for scripts out on maxextract ssh
+TIP_GAS_AMOUNT=0.0000001 # amount of eth for gas when tipping?!
+CHARACTER_ETH=0.000001 # amount of eth to fund new characters with
+REQUIRED_GOD_ETH=0.002
 
 deploy the contracts to arbitrum
 
@@ -90,10 +101,24 @@ scaffold config -> arbitrum
 
 commit code and push to git
 
+watch vercel.com to make sure deployment is going
+
 ssh to maxextract and git pull
 
 (triple check the LOAD_CONTRACTS_FROM on the maxextract server is the site you playing on)
 
-PLAYERS BUY IN!!
+introduce `extract.fi` and bring up the dashboard on a public screen
 
-`yarn maxextract` and `yarn auditor` out on the server
+PLAYERS BUY IN!! (player names show up on the dashboard)
+
+out on the maxextract server: `yarn maxextract` and `yarn auditor`
+
+show and explain the pirates flying through space
+
+fire up an incognito brave browser and import GOD PK for /god dashboard
+
+(you can open and close buy ins if you need to let someone in but the game is already running and the entropy is rolling)
+
+(explain entropy and rolling entropy and point to it in white paper?)
+
+[ open chapter 1 ]

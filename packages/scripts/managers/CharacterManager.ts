@@ -509,17 +509,28 @@ export class CharacterManager {
       if (currentGameContractAddress) {
         // If backup doesn't have gameContractAddress, reject it (old format)
         if (!data.gameContractAddress) {
-          console.log("🔄 Backup file missing Game contract address (old format)");
-          console.log(`   Current Game contract: ${currentGameContractAddress}`);
+          console.log(
+            "🔄 Backup file missing Game contract address (old format)"
+          );
+          console.log(
+            `   Current Game contract: ${currentGameContractAddress}`
+          );
           console.log(`   Generating new pilots for current deployment...`);
           return false;
         }
-        
+
         // If addresses don't match, reject the backup
-        if (data.gameContractAddress.toLowerCase() !== currentGameContractAddress.toLowerCase()) {
-          console.log("🔄 Backup pilots are from a different Game contract deployment");
+        if (
+          data.gameContractAddress.toLowerCase() !==
+          currentGameContractAddress.toLowerCase()
+        ) {
+          console.log(
+            "🔄 Backup pilots are from a different Game contract deployment"
+          );
           console.log(`   Backup Game contract: ${data.gameContractAddress}`);
-          console.log(`   Current Game contract: ${currentGameContractAddress}`);
+          console.log(
+            `   Current Game contract: ${currentGameContractAddress}`
+          );
           console.log(`   Generating new pilots for current deployment...`);
           return false;
         }
@@ -543,7 +554,8 @@ export class CharacterManager {
       }
 
       // Store the Game contract address these characters belong to
-      this.gameContractAddressForCharacters = currentGameContractAddress || null;
+      this.gameContractAddressForCharacters =
+        currentGameContractAddress || null;
 
       console.log(
         `📂 Loaded ${data.characters.length} pilots from backup file`
@@ -625,7 +637,7 @@ export class CharacterManager {
   /**
    * Initialize characters and register them as pilots
    * This is the main orchestration method that handles the full character initialization flow
-   * 
+   *
    * Pilots are generated using a combination of:
    * - Game contract address (ensures unique pilots per deployment)
    * - Universe entropy (ensures deterministic generation)
@@ -638,7 +650,8 @@ export class CharacterManager {
       this.debugLog("Starting character initialization...");
 
       // Get Game contract address for pilot generation validation
-      const gameContractAddress = blockchainManager.getContract("Game")?.address;
+      const gameContractAddress =
+        blockchainManager.getContract("Game")?.address;
       if (!gameContractAddress) {
         throw new Error("Game contract not found - cannot initialize pilots");
       }
@@ -648,8 +661,11 @@ export class CharacterManager {
 
       if (existingCharacterCount > 0) {
         // Validate that in-memory characters match the current Game contract
-        if (this.gameContractAddressForCharacters && 
-            this.gameContractAddressForCharacters.toLowerCase() === gameContractAddress.toLowerCase()) {
+        if (
+          this.gameContractAddressForCharacters &&
+          this.gameContractAddressForCharacters.toLowerCase() ===
+            gameContractAddress.toLowerCase()
+        ) {
           console.log(
             `🎭 Found existing ${existingCharacterCount} characters in memory (matching Game contract)`
           );
@@ -661,9 +677,13 @@ export class CharacterManager {
           return;
         } else {
           // Game contract has changed - clear old characters
-          console.log(`🔄 Game contract changed, clearing old pilots from memory`);
+          console.log(
+            `🔄 Game contract changed, clearing old pilots from memory`
+          );
           if (this.gameContractAddressForCharacters) {
-            console.log(`   Old Game contract: ${this.gameContractAddressForCharacters}`);
+            console.log(
+              `   Old Game contract: ${this.gameContractAddressForCharacters}`
+            );
           }
           console.log(`   New Game contract: ${gameContractAddress}`);
           this.clearCharacters();
@@ -678,14 +698,18 @@ export class CharacterManager {
         // Double-check: if Game contract has 0 pilots but we have backup,
         // this might be a fresh deployment - verify backup is still valid
         const contractPilotCount = await blockchainManager.getPilotCount();
-        
+
         if (contractPilotCount === 0 && this.getCharacterCount() > 0) {
           console.log(`⚠️  Game contract has 0 pilots but backup exists`);
-          console.log(`   This might be a fresh deployment - generating new pilots...`);
+          console.log(
+            `   This might be a fresh deployment - generating new pilots...`
+          );
           this.clearCharacters();
           // Fall through to generate new pilots
         } else {
-          console.log(`✅ Successfully loaded pilots from backup (matching Game contract)`);
+          console.log(
+            `✅ Successfully loaded pilots from backup (matching Game contract)`
+          );
 
           // Check if they need to be added as pilots to the contract
           await this.addCharactersAsPilots(blockchainManager);
@@ -732,12 +756,15 @@ export class CharacterManager {
     // This ensures each new deployment creates a unique set of pilots
     const universeEntropy = await entropyManager.getUniverseEntropy();
     const entropyPart = universeEntropy || "default_seed_for_characters";
-    
+
     // Combine Game contract address with universe entropy for unique pilot set per deployment
     const baseSeed = keccak256(toHex(gameContractAddress + entropyPart));
 
     console.log(
-      `🎲 Generating pilots using Game contract (${gameContractAddress.slice(0, 10)}...) + universe entropy`
+      `🎲 Generating pilots using Game contract (${gameContractAddress.slice(
+        0,
+        10
+      )}...) + universe entropy`
     );
     console.log(
       `   Combined seed: ${baseSeed.slice(0, 10)}...${baseSeed.slice(-8)}`

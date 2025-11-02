@@ -38,11 +38,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
         // Deploy Game contract (buy-in price and end time are hardcoded in contract)
         Game game = new Game(address(universe));
         
-        // Hardcoded auditor address
-        address auditorAddress = 0x3FB7c3260e8Dcd7F8019c814799049648C5c0116;
-        
-        // Deploy Auditor contract with Game and auditor address set in constructor
-        Auditor auditor = new Auditor(address(universe), address(game), auditorAddress);
+        // Deploy Auditor contract (auditor address is hardcoded as immutable)
+        Auditor auditor = new Auditor(address(universe), address(game));
         
         // Stop broadcasting to wire up Game contract as GOD
         vm.stopBroadcast();
@@ -66,7 +63,7 @@ contract DeployYourContract is ScaffoldETHDeploy {
         console.log("Auditor deployed at:", address(auditor));
         console.log("Game ends at timestamp:", game.gameEndTime());
         console.log("Buy-in price:", game.BUY_IN_PRICE());
-        console.log("Auditor address set to:", auditorAddress);
+        console.log("Auditor address (immutable):", auditor.AUDITOR_ADDRESS());
         
         // DEVELOPMENT MODE: Auto-setup entropy
         // For production, comment out the line below and manually run commit-reveal

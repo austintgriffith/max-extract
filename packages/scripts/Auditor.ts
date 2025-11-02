@@ -29,6 +29,13 @@ let lastProcessedIndex = -1;
 const auditorAbi = [
   {
     inputs: [],
+    name: "AUDITOR_ADDRESS",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "getAuditRequestCount",
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "view",
@@ -336,6 +343,44 @@ class AuditorService {
 
     // Initialize current address
     this.currentAuditorAddress = this.auditorContract.toLowerCase();
+
+    // Verify that our private key matches the contract's AUDITOR_ADDRESS
+    console.log("\n🔐 Verifying auditor address...");
+    try {
+      const contractAuditorAddress = (await this.publicClient.readContract({
+        address: this.auditorContract,
+        abi: auditorAbi,
+        functionName: "AUDITOR_ADDRESS",
+      })) as Address;
+
+      console.log("   Contract AUDITOR_ADDRESS:", contractAuditorAddress);
+      console.log("   Script Auditor Address:  ", this.account.address);
+
+      if (
+        contractAuditorAddress.toLowerCase() !==
+        this.account.address.toLowerCase()
+      ) {
+        console.error("\n❌ FATAL ERROR: Auditor address mismatch!");
+        console.error(`   The contract expects: ${contractAuditorAddress}`);
+        console.error(`   But you are using:    ${this.account.address}`);
+        console.error("\n💡 Solutions:");
+        console.error(
+          "   1. Update your AUDITORPRIVATEKEY in .env to match the contract's AUDITOR_ADDRESS"
+        );
+        console.error(
+          "   2. Or redeploy the contract with the correct auditor address\n"
+        );
+        process.exit(1);
+      }
+
+      console.log("   ✅ Auditor address matches!\n");
+    } catch (error: any) {
+      console.error("\n❌ Error verifying auditor address:", error.message);
+      console.error(
+        "   Make sure the Auditor contract is deployed and accessible.\n"
+      );
+      process.exit(1);
+    }
 
     // Start polling loop
     while (true) {
@@ -1506,35 +1551,62 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
       // Use Etherscan API to get source code
       const url = `${ETHERSCAN_API_BASE}?chainid=42161&module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
 
-      this.debugLog(
-        `Fetching from Etherscan URL: ${url.replace(
-          ETHERSCAN_API_KEY,
-          "***API_KEY***"
-        )}`
+      // Always log the API call details (not just in debug mode)
+      const maskedUrl = url.replace(
+        ETHERSCAN_API_KEY,
+        ETHERSCAN_API_KEY ? "***API_KEY***" : "***NO_KEY***"
       );
+      console.log(`\n   🌐 Fetching source code from Etherscan V2 API...`);
+      console.log(`   Chain ID: 42161 (Arbitrum One)`);
+      console.log(`   Address: ${contractAddress}`);
+      console.log(`   API Key: ${ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"}`);
+      this.debugLog(`Full API URL: ${maskedUrl}`);
 
       const response = await fetch(url);
 
+      // Log HTTP response details
+      console.log(`   HTTP Status: ${response.status} ${response.statusText}`);
+      this.debugLog(`Response headers:`, {
+        contentType: response.headers.get("content-type"),
+        contentLength: response.headers.get("content-length"),
+      });
+
       // Check if response is actually JSON
       const contentType = response.headers.get("content-type");
-      this.debugLog(`Response content-type: ${contentType}`);
 
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        this.debugLog(
-          "Non-JSON response from Etherscan (first 200 chars)",
-          text.substring(0, 200)
-        );
-        console.error(
-          `   Error: Etherscan returned non-JSON response (${contentType})`
-        );
-        if (!ETHERSCAN_API_KEY) {
-          console.error(`   💡 Tip: Set ETHERSCAN_API_KEY in your .env file`);
+
+        // Show detailed error information (not just in debug mode)
+        console.error(`\n   ❌ ERROR: Etherscan returned non-JSON response`);
+        console.error(`   Content-Type: ${contentType || "(none)"}`);
+        console.error(`   HTTP Status: ${response.status}`);
+        console.error(`\n   📄 Response body (first 1000 chars):`);
+        console.error(`   ${text.substring(0, 1000)}`);
+        if (text.length > 1000) {
+          console.error(`   ... (${text.length} total characters)`);
         }
+
+        console.error(`\n   💡 Possible causes:`);
+        if (!ETHERSCAN_API_KEY) {
+          console.error(`      - ETHERSCAN_API_KEY is not set`);
+        }
+        console.error(`      - The contract may not be verified on Arbiscan`);
+        console.error(`      - Etherscan API may be having issues`);
+        console.error(`      - The API endpoint or format may have changed`);
+        console.error(`\n   💡 To verify manually, visit:`);
+        console.error(
+          `      https://arbiscan.io/address/${contractAddress}#code\n`
+        );
+
+        this.debugLog("Full non-JSON response", text);
         return null;
       }
 
       const data: EtherscanSourceCodeResponse = await response.json();
+
+      console.log(`   ✓ Received JSON response from Etherscan`);
+      console.log(`   API Status: ${data.status} (${data.message})`);
 
       this.debugLog("Etherscan API response", {
         status: data.status,
@@ -1551,10 +1623,27 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         return data.result[0];
       }
 
-      this.debugLog("No verification data from Etherscan");
+      // If we got JSON but no results
+      console.error(`\n   ❌ No verification data found`);
+      console.error(`   API returned status: ${data.status}`);
+      console.error(`   API message: ${data.message}`);
+      console.error(`\n   💡 This usually means the contract is not verified.`);
+      console.error(`   Please verify the contract at:`);
+      console.error(
+        `      https://arbiscan.io/address/${contractAddress}#code\n`
+      );
+
+      this.debugLog("No verification data from Etherscan", data);
       return null;
     } catch (error: any) {
-      console.error(`   Error fetching from Etherscan:`, error.message);
+      console.error(
+        `\n   ❌ Exception while fetching from Etherscan:`,
+        error.message
+      );
+      console.error(`   Error type: ${error.name}`);
+      if (error.cause) {
+        console.error(`   Cause: ${error.cause}`);
+      }
       this.debugLog("Etherscan fetch error", error);
       return null;
     }

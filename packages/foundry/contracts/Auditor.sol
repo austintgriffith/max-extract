@@ -33,7 +33,7 @@ contract Auditor {
     AuditRequest[] public auditRequests;
     mapping(address => uint8) public isAudited; // Returns chapter number (0 = not audited)
     mapping(address => uint256[]) public auditsByAddress;
-    address public auditorAddress;
+    address public immutable AUDITOR_ADDRESS = 0x578E3541760Fe6A68803e60fF20DBcf9E5bCf3da;
     Game public gameContract;
     Universe public immutable universe;
     
@@ -48,7 +48,6 @@ contract Auditor {
     event AuditCompleted(uint256 indexed requestId, address indexed contractAddress);
     event AuditFailed(uint256 indexed requestId, address indexed contractAddress, string reason);
     event AuditAlreadyCompleted(address indexed contractAddress, address indexed requester);
-    event AuditorAddressSet(address indexed newAuditor);
     event GameContractSet(address indexed newGame);
     
     // Errors
@@ -63,14 +62,13 @@ contract Auditor {
     }
     
     modifier onlyAuditor() {
-        if (msg.sender != auditorAddress) revert OnlyAuditor();
+        if (msg.sender != AUDITOR_ADDRESS) revert OnlyAuditor();
         _;
     }
     
-    constructor(address _universe, address _game, address _auditor) {
+    constructor(address _universe, address _game) {
         universe = Universe(_universe);
         gameContract = Game(_game);
-        auditorAddress = _auditor;
     }
     
     /**
@@ -222,17 +220,6 @@ contract Auditor {
         // Get the last request ID (most recent)
         uint256 lastRequestId = requestIds[requestIds.length - 1];
         return auditRequests[lastRequestId];
-    }
-    
-    /**
-     * Set the authorized auditor address
-     * Only callable by God
-     * @param _auditor The new auditor address
-     */
-    function setAuditorAddress(address _auditor) external onlyGod {
-        require(_auditor != address(0), "Invalid auditor address");
-        auditorAddress = _auditor;
-        emit AuditorAddressSet(_auditor);
     }
     
     /**

@@ -807,21 +807,6 @@ export class Sector {
           timestamp: Date.now(),
           data: {
             shipId: ship.id,
-            position: ship.position,
-            velocity: ship.velocity,
-            targetAsteroidId: ship.targetAsteroidId,
-            targetShipId: ship.targetShipId,
-            state: ship.state,
-            fuel: ship.fuel,
-          },
-        });
-
-        // Broadcast the ship targeting event
-        this.broadcastEvent({
-          type: "ship_retarget",
-          timestamp: Date.now(),
-          data: {
-            shipId: ship.id,
             position: currentPos,
             velocity: ship.velocity,
             targetAsteroidId: null,
@@ -877,21 +862,6 @@ export class Sector {
             oldAsteroidTarget || "none"
           }, ship: ${oldShipTarget || "none"})`
         );
-
-        // Broadcast the asteroid targeting event
-        this.broadcastEvent({
-          type: "ship_retarget",
-          timestamp: Date.now(),
-          data: {
-            shipId: ship.id,
-            position: ship.position,
-            velocity: ship.velocity,
-            targetAsteroidId: ship.targetAsteroidId,
-            targetShipId: ship.targetShipId,
-            state: ship.state,
-            fuel: ship.fuel,
-          },
-        });
 
         // Broadcast the asteroid targeting event
         this.broadcastEvent({
@@ -1576,21 +1546,7 @@ export class Sector {
               ship.position = currentShipPos;
               ship.spawnTime = currentTime;
               ship.lastCourseUpdate = this.gameLoopCounter; // Update the cycle counter
-
-              // Broadcast course recalculation event
-              this.broadcastEvent({
-                type: "ship_retarget",
-                timestamp: currentTime,
-                data: {
-                  shipId: ship.id,
-                  position: ship.position,
-                  velocity: ship.velocity,
-                  targetAsteroidId: ship.targetAsteroidId,
-                  targetShipId: ship.targetShipId,
-                  state: ship.state,
-                  fuel: ship.fuel,
-                },
-              });
+              // Note: No broadcast needed - this is just a course adjustment to the same target
             }
           }
           // Handle asteroid targeting recalculation
@@ -1607,21 +1563,7 @@ export class Sector {
               ship.position = currentShipPos;
               ship.spawnTime = currentTime;
               ship.lastCourseUpdate = this.gameLoopCounter; // Update the cycle counter
-
-              // Broadcast course recalculation event
-              this.broadcastEvent({
-                type: "ship_retarget",
-                timestamp: currentTime,
-                data: {
-                  shipId: ship.id,
-                  position: ship.position,
-                  velocity: ship.velocity,
-                  targetAsteroidId: ship.targetAsteroidId,
-                  targetShipId: ship.targetShipId,
-                  state: ship.state,
-                  fuel: ship.fuel,
-                },
-              });
+              // Note: No broadcast needed - this is just a course adjustment to the same target
             }
           }
         }
@@ -1868,14 +1810,15 @@ export class Sector {
    * Outer loop update - heavy operations (spawning new entities)
    */
   public async updateOuterLoop(): Promise<void> {
-    // Roll dice for spawning new entities
-    const roll = this.getRandom();
-    if (roll < SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE) {
+    // Roll independently for asteroids
+    const asteroidRoll = this.getRandom();
+    if (asteroidRoll < SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE) {
       this.spawnAsteroid();
-    } else if (
-      roll <
-      SECTOR_CONFIG.ASTEROID_SPAWN_CHANCE + SECTOR_CONFIG.SHIP_SPAWN_CHANCE
-    ) {
+    }
+
+    // Roll independently for ships (can spawn both in same cycle)
+    const shipRoll = this.getRandom();
+    if (shipRoll < SECTOR_CONFIG.SHIP_SPAWN_CHANCE) {
       try {
         await this.spawnShip();
       } catch (error: any) {
@@ -1945,15 +1888,26 @@ export class Sector {
       }
 
       // Execute the deadMansSwitch transaction (marks pilot dead, penalizes player, returns remaining ETH to GOD)
-      const { deadMansSwitchHash, ethTransferHash } = await this.blockchainManager.executeDeadMansSwitch(
-        victimShip.privateKey,
-        killerShip.pilotAddress,
-        playerAddress
-      );
+      const { deadMansSwitchHash, ethTransferHash } =
+        await this.blockchainManager.executeDeadMansSwitch(
+          victimShip.privateKey,
+          killerShip.pilotAddress,
+          playerAddress
+        );
 
-      const ethMessage = ethTransferHash ? ` ETH returned to GOD (tx: ${ethTransferHash.slice(0, 10)}...)` : '';
+      const ethMessage = ethTransferHash
+        ? ` ETH returned to GOD (tx: ${ethTransferHash.slice(0, 10)}...)`
+        : "";
       console.log(
-        `💀 DeadMansSwitch executed! Pilot ${victimShip.pilotName} killed by ${killerShip.pilotName}. Player ${playerAddress.slice(0, 8)}... penalized -10 points. (tx: ${deadMansSwitchHash.slice(0, 10)}...)${ethMessage}`
+        `💀 DeadMansSwitch executed! Pilot ${victimShip.pilotName} killed by ${
+          killerShip.pilotName
+        }. Player ${playerAddress.slice(
+          0,
+          8
+        )}... penalized -10 points. (tx: ${deadMansSwitchHash.slice(
+          0,
+          10
+        )}...)${ethMessage}`
       );
 
       // Broadcast deadMansSwitch event
@@ -2221,15 +2175,9 @@ export class Sector {
         return;
       }
 
-      console.log(
-        `   ├─ Sector owner: ${playerAddress}`
-      );
-      console.log(
-        `   ├─ Pilot address: ${ship.pilotAddress}`
-      );
-      console.log(
-        `   └─ Tip amount: ${tipAmount} points`
-      );
+      console.log(`   ├─ Sector owner: ${playerAddress}`);
+      console.log(`   ├─ Pilot address: ${ship.pilotAddress}`);
+      console.log(`   └─ Tip amount: ${tipAmount} points`);
 
       // Execute the tip transaction
       try {

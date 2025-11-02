@@ -118,13 +118,15 @@ export const AnimatedSubtitle = () => {
   // No longer need this cleanup effect - characters are now cleaned up individually
 
   return (
-    <div className="relative flex justify-center -mt-6 mb-8 z-10">
+    <div className="relative -mt-6 mb-8 z-10 overflow-hidden w-full">
       <div
         className="text-sm md:text-base lg:text-lg text-white font-medium relative"
         style={{
           fontFamily: '"Tektur", "Share Tech Mono", monospace',
           height: "6rem",
           width: `${totalWidth * 0.575}rem`,
+          left: "50%",
+          transform: "translateX(-50%)",
         }}
       >
         {/* Top line with animated underscores */}

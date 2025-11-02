@@ -17,7 +17,7 @@ export const Chapter1 = () => {
         {/* Main Content */}
         <div className="prose prose-lg max-w-none text-base-content">
           <h3 className="text-xl font-semibold mb-4 text-secondary">Overview</h3>
-          <p className="mb-4">
+          <div className="mb-4">
             To participate in the Max Extract Protocol, you need to deploy a <strong>Registry Contract</strong> that
             calls the <code className="bg-base-100 px-2 py-1 rounded text-sm">broadcast</code> function on the
             MaxExtract contract (
@@ -27,7 +27,7 @@ export const Chapter1 = () => {
               </span>
             )}
             ).
-          </p>
+          </div>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Your Registry Contract</h3>
           <p className="mb-4">

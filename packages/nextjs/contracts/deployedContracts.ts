@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x84e94874f0ed99e0d5c2526dd58bcc674ceb02c8",
+      address: "0x5621d0b4d8043524ac5837918d6a95b1050ef228",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3394,
+      deployedOnBlock: 376,
     },
     Credits: {
-      address: "0xc7534de00d4f7352d757fcec2bafa87df384ef3e",
+      address: "0x2c4b93b614ddbfaf0807e8f4ca982e9f9c2e2aa4",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3395,
+      deployedOnBlock: 377,
     },
     Game: {
-      address: "0xe10772ed33e56949fd2807b2e193603cd0536e54",
+      address: "0x04fc820176617a99ae134904935bc854b2e51628",
       abi: [
         {
           type: "constructor",
@@ -1930,10 +1930,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3395,
+      deployedOnBlock: 378,
     },
     Auditor: {
-      address: "0x59b9fccc343d014b6fdd0c028282e9a6a23cfbc3",
+      address: "0xf1078fd568ad76e49e6f88d1ff485402a086976b",
       abi: [
         {
           type: "constructor",
@@ -1948,13 +1948,21 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "AUDITOR_ADDRESS",
+          inputs: [],
+          outputs: [
             {
-              name: "_auditor",
+              name: "",
               type: "address",
               internalType: "address",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -2001,19 +2009,6 @@ const deployedContracts = {
               name: "failureReason",
               type: "string",
               internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "auditorAddress",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -2287,19 +2282,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setAuditorAddress",
-          inputs: [
-            {
-              name: "_auditor",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setGameContract",
           inputs: [
             {
@@ -2426,19 +2408,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "AuditorAddressSet",
-          inputs: [
-            {
-              name: "newAuditor",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "GameContractSet",
           inputs: [
             {
@@ -2472,10 +2441,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3396,
+      deployedOnBlock: 378,
     },
     MaxExtract: {
-      address: "0x301b93da70e28195b5800855ef4e2d6335f2d660",
+      address: "0xe8f76a822b57b973c7a89006092364fff8f69040",
       abi: [
         {
           type: "constructor",
@@ -2920,7 +2889,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3396,
+      deployedOnBlock: 378,
     },
   },
   42161: {
@@ -5314,13 +5283,21 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "AUDITOR_ADDRESS",
+          inputs: [],
+          outputs: [
             {
-              name: "_auditor",
+              name: "",
               type: "address",
               internalType: "address",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -5367,19 +5344,6 @@ const deployedContracts = {
               name: "failureReason",
               type: "string",
               internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "auditorAddress",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -5653,19 +5617,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setAuditorAddress",
-          inputs: [
-            {
-              name: "_auditor",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setGameContract",
           inputs: [
             {
@@ -5786,19 +5737,6 @@ const deployedContracts = {
               type: "string",
               indexed: false,
               internalType: "string",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "AuditorAddressSet",
-          inputs: [
-            {
-              name: "newAuditor",
-              type: "address",
-              indexed: true,
-              internalType: "address",
             },
           ],
           anonymous: false,
