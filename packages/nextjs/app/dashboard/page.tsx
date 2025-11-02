@@ -386,7 +386,9 @@ const Dashboard: NextPage = () => {
   // Get the site URL from window.location
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setSiteUrl(window.location.hostname);
+      // Remove www. prefix if present
+      const hostname = window.location.hostname.replace(/^www\./, "");
+      setSiteUrl(hostname);
     }
   }, []);
 
