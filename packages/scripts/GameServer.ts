@@ -159,7 +159,20 @@ export class GameServer {
    * Wait for GOD account to have sufficient balance before starting
    */
   private async waitForSufficientBalance(): Promise<void> {
-    const MINIMUM_ETH = 0.1; // Conservative estimate for ~200+ cycles on Arbitrum, 10+ on local
+    if (!process.env.REQUIRED_GOD_ETH) {
+      throw new Error(
+        "REQUIRED_GOD_ETH environment variable is not set. Please set it in your .env file."
+      );
+    }
+    
+    const MINIMUM_ETH = parseFloat(process.env.REQUIRED_GOD_ETH);
+    
+    if (isNaN(MINIMUM_ETH) || MINIMUM_ETH <= 0) {
+      throw new Error(
+        `REQUIRED_GOD_ETH must be a positive number. Got: ${process.env.REQUIRED_GOD_ETH}`
+      );
+    }
+    
     const CHECK_INTERVAL_MS = 10000; // 10 seconds between checks
 
     const godAddress = this.blockchainManager.getGodAccount().address;
