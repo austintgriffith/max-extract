@@ -157,6 +157,13 @@ const SectorPage = () => {
     },
   });
 
+  // Get the base type for this sector's station (1-6)
+  const { data: baseType } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "getSectorBaseType" as any,
+    args: [sectorIdBigInt] as any,
+  });
+
   // Game logic hooks
   useVectorMatching({ sectorData, setSectorData, wsRef, sectorId, showDebug });
   useParticleCleanup({ particles, setParticles, setSectorData });
@@ -186,6 +193,9 @@ const SectorPage = () => {
             const aboutData = aboutInfo && Array.isArray(aboutInfo) ? aboutInfo : ["", ""];
             const [aboutName, aboutSocial] = aboutData as [string, string];
 
+            // Only use aboutName if it's not "(pending audit)" - otherwise fall back to sectorName
+            const validAboutName = aboutName && aboutName !== "(pending audit)" ? aboutName : undefined;
+
             const stationDetails: StationDetails = {
               sectorId: sectorId || "unknown",
               ownerAddress: owner,
@@ -200,7 +210,7 @@ const SectorPage = () => {
                   ? credentialAddress
                   : undefined,
               credentialAuditedChapter: credentialAuditedChapter ? Number(credentialAuditedChapter) : undefined,
-              stationName: aboutName || sectorName,
+              stationName: validAboutName || sectorName,
               social: aboutSocial || undefined,
               score: playerScore !== undefined ? Number(playerScore) : 0,
               auditStatus:
@@ -530,14 +540,23 @@ const SectorPage = () => {
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back to Home
         </Link>
-        <div className="alert alert-error">
-          <div>
-            <span>{error}</span>
+        <div className="card bg-base-200 shadow-xl">
+          <div className="card-body items-center text-center">
+            <div className="text-4xl mb-4 animate-pulse">🛰️</div>
+            <h3 className="text-lg font-semibold">
+              Searching for a signal from sector {sectorId ? `${sectorId.slice(0, 12)}` : ""}
+              <span className="inline-flex">
+                <span className="animate-[bounce_1s_ease-in-out_0s_infinite]">.</span>
+                <span className="animate-[bounce_1s_ease-in-out_0.2s_infinite]">.</span>
+                <span className="animate-[bounce_1s_ease-in-out_0.4s_infinite]">.</span>
+              </span>
+            </h3>
             {countdown !== null && (
-              <div className="mt-2 text-sm">
-                Auto-reloading in {countdown} second{countdown !== 1 ? "s" : ""}...
+              <div className="mt-2 text-sm opacity-60">
+                Retrying in {countdown} second{countdown !== 1 ? "s" : ""}
               </div>
             )}
+            <progress className="progress progress-primary w-56 mt-4"></progress>
           </div>
         </div>
       </div>
@@ -623,6 +642,7 @@ const SectorPage = () => {
             selectedObject={selectedObject}
             onObjectSelect={handleObjectSelect}
             infoBoxPosition={adjustedBoxPosition}
+            baseType={baseType ? Number(baseType) : 1}
           />
           <div className="text-xs text-center mt-2">
             <span style={{ opacity: showGrid ? 1 : 0.77 }}>

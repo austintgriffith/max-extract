@@ -14,6 +14,8 @@ packages/foundry:
 
     Universe.sol has 0x43D9B634006B4fCe2523a710990a397AC3d18D7a as god
 
+    Auditor.sol has corred auditor address at the top 0x578E3541760Fe6A68803e60fF20DBcf9E5bCf3da ?
+
     decide BUY_IN_PRICE and gameEndTime in Game.sol
 
 `yarn deploy`

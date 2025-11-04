@@ -1996,6 +1996,11 @@ export class Sector {
 
       // Step 0: Check if pilot is actually active on blockchain
       const isPilot = await this.blockchainManager.isPilot(ship.pilotAddress);
+      const isDead = await this.blockchainManager.isPilotDead(ship.pilotAddress);
+
+      this.debugLog(
+        `🔍 Pilot ${ship.pilotName} (${ship.pilotAddress.slice(0, 10)}...) status check - isPilot: ${isPilot}, isDead: ${isDead}`
+      );
 
       if (!isPilot) {
         this.debugLog(
@@ -2003,6 +2008,16 @@ export class Sector {
         );
         console.log(
           `ℹ️  Pilot ${ship.pilotName} is not active on blockchain, skipping credential minting`
+        );
+        return;
+      }
+
+      if (isDead) {
+        this.debugLog(
+          `Pilot ${ship.pilotName} is marked as dead on blockchain, skipping credential minting`
+        );
+        console.log(
+          `ℹ️  Pilot ${ship.pilotName} is dead, skipping credential minting`
         );
         return;
       }
@@ -2070,6 +2085,10 @@ export class Sector {
       }
 
       // Step 3: Attempt to mint credential
+      this.debugLog(
+        `🎫 Attempting credential mint for pilot ${ship.pilotName} (${ship.pilotAddress.slice(0, 10)}...) from credential ${credentialAddress.slice(0, 10)}... at timestamp ${Date.now()}`
+      );
+
       const result = await this.blockchainManager.attemptCredentialMint(
         ship.privateKey,
         credentialAddress,
@@ -2127,6 +2146,17 @@ export class Sector {
             `⚠️  Pilot ${ship.pilotName} couldn't mint credential - the player's credential contract has implementation issues`
           );
 
+          // Extract error signature from error message
+          let errorSignature = "";
+          const signatureMatch = result.error?.match(/0x[0-9a-fA-F]{8}/);
+          if (signatureMatch) {
+            errorSignature = signatureMatch[0];
+          }
+
+          // Use errorDetails as the primary reason if available, otherwise use generic message
+          const reason = result.errorDetails || 
+            "Contract simulation failed - check your credential contract implementation";
+
           // Broadcast credential mint failure event to notify the player
           this.broadcastEvent({
             type: "credential_mint_failed",
@@ -2138,8 +2168,8 @@ export class Sector {
               credentialAddress: credentialAddress,
               error: result.error,
               errorDetails: result.errorDetails,
-              reason:
-                "Contract simulation failed - check your credential contract implementation",
+              errorSignature: errorSignature,
+              reason: reason,
             },
           });
         } else {
@@ -2194,7 +2224,7 @@ export class Sector {
       }
 
       const tipType = aboutInfo.hasAboutContract ? "enhanced" : "standard";
-      const stationInfo = aboutInfo.stationName
+      const stationInfo = aboutInfo.hasAboutContract && aboutInfo.stationName
         ? ` (station: "${aboutInfo.stationName}")`
         : "";
 

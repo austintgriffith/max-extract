@@ -76,8 +76,9 @@ contract Game {
     // Track which pilots have minted credentials from which players (one per pilot per player)
     mapping(address => mapping(address => bool)) public pilotPlayerCredentialMinted;
     
-    // Track which stations have been upgraded
-    mapping(uint256 => bool) public upgradedStations;
+    // Track the base type for each sector (1-6, where 1 is default/starter)
+    // Base types represent different station tiers/visuals
+    mapping(uint256 => uint8) public sectorBaseType;
     
     // Events
     event ChaptersUpdated(uint8[] newVisibleChapters);
@@ -91,7 +92,8 @@ contract Game {
     event GameSettled(address[] winners, uint256 winningScore, uint256 totalPayout, uint256 payoutPerWinner);
     event CredentialMinted(address indexed pilot, address indexed player, address indexed credentialContract);
     event PointsDeducted(address indexed player, uint256 amount, uint256 newScore);
-    event StationUpgraded(uint256 indexed sectorId, address indexed player, address indexed pilotCaller);
+    event StationUpgraded(uint256 indexed sectorId, address indexed player, address indexed pilotCaller, uint8 newBaseType);
+    event StationBaseTypeSet(uint256 indexed sectorId, uint8 newBaseType, address indexed setBy);
     
     // Errors
     error OnlyGod();
@@ -112,10 +114,12 @@ contract Game {
     error MaxExtractNotSet();
     error PilotAlreadyMintedFromPlayer();
     error OnlyAuditor();
+    error InsufficientPoints();
     error NotARegistry();
-    error StationAlreadyUpgraded();
     error InsufficientCreditsForUpgrade();
     error NotAFuelContract();
+    error StationMaxLevel();
+    error InvalidBaseType();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -704,8 +708,12 @@ contract Game {
         address player = maxExtract.sectorToOwner(_sectorId);
         if (player == address(0)) revert NotAPlayer();
         
-        // Check if station is already upgraded
-        if (upgradedStations[_sectorId]) revert StationAlreadyUpgraded();
+        // Get current base type (defaults to 1 if never upgraded)
+        uint8 currentBaseType = sectorBaseType[_sectorId];
+        if (currentBaseType == 0) currentBaseType = 1; // First time, start at base1
+        
+        // Check if station is already at max level
+        if (currentBaseType >= 6) revert StationMaxLevel();
         
         // Verify the fuel contract has at least 49,500 credits
         uint256 upgradeAmount = 49_500 * 10**18;
@@ -716,13 +724,37 @@ contract Game {
         // Transfer 49,500 credits from fuel contract to Game contract (requires prior approval)
         creditsContract.transferFrom(fuelContract, address(this), upgradeAmount);
         
-        // Award 50 points to the player for upgrading their station
-        scores[player] += 50;
+        // Award 10 points to the player for upgrading their station
+        scores[player] += 10;
         
-        // Mark station as upgraded
-        upgradedStations[_sectorId] = true;
+        // Upgrade station to next level
+        uint8 newBaseType = currentBaseType + 1;
+        sectorBaseType[_sectorId] = newBaseType;
         
-        emit StationUpgraded(_sectorId, player, tx.origin);
+        emit StationUpgraded(_sectorId, player, tx.origin, newBaseType);
+    }
+    
+    /**
+     * Get the base type for a sector
+     * Returns the base type (1-6) for rendering the correct station image
+     * @param _sectorId The sector ID to query
+     * @return baseType The base type (1-6), defaults to 1 if never upgraded
+     */
+    function getSectorBaseType(uint256 _sectorId) external view returns (uint8) {
+        uint8 baseType = sectorBaseType[_sectorId];
+        return baseType == 0 ? 1 : baseType; // Default to base1 if not set
+    }
+    
+    /**
+     * Set the base type for a sector (God only - for testing/admin)
+     * Allows the God account to manually set any sector's base type
+     * @param _sectorId The sector ID to set
+     * @param _baseType The base type to set (1-6)
+     */
+    function setSectorBaseType(uint256 _sectorId, uint8 _baseType) external onlyGod {
+        if (_baseType < 1 || _baseType > 6) revert InvalidBaseType();
+        sectorBaseType[_sectorId] = _baseType;
+        emit StationBaseTypeSet(_sectorId, _baseType, msg.sender);
     }
     
     /**
@@ -745,12 +777,14 @@ contract Game {
         }
         if (!isValidPlayer) revert NotAPlayer();
         
-        // Deduct points (can go to 0 but not below)
+        // Check if player has enough points
         uint256 currentScore = scores[_player];
-        uint256 deduction = currentScore >= _amount ? _amount : currentScore;
-        scores[_player] = currentScore - deduction;
+        if (currentScore < _amount) revert InsufficientPoints();
         
-        emit PointsDeducted(_player, deduction, scores[_player]);
+        // Deduct points
+        scores[_player] = currentScore - _amount;
+        
+        emit PointsDeducted(_player, _amount, scores[_player]);
     }
     
     /**

@@ -122,7 +122,7 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                               <span>
                                 {event.data.reason === "refueling"
                                   ? `to ${event.data.stationName || "the station owner"} for fuel.`
-                                  : `to ${event.data.aboutInfo?.stationName || event.data.stationName || "the sector owner"}.`}
+                                  : `to ${event.data.aboutInfo?.hasAboutContract && event.data.aboutInfo?.stationName ? event.data.aboutInfo.stationName : "the sector owner"}.`}
                               </span>
                             </>
                           )}
@@ -147,12 +147,139 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                             <span>⚠️ {event.data.pilotName} could not mint credential</span>
                           </div>
                           <div className="text-xs bg-warning/10 rounded px-2 py-1 border border-warning/30">
-                            <div className="font-semibold text-warning">Your credential contract has issues:</div>
-                            <div className="mt-1">{event.data.reason}</div>
-                            {event.data.credentialAddress && (
-                              <div className="mt-1 opacity-70">
-                                Contract: {event.data.credentialAddress.slice(0, 10)}...
+                            <div className="font-semibold text-warning mb-1">Your credential contract has issues:</div>
+
+                            {/* Show decoded error if available, otherwise show reason */}
+                            {event.data.errorDetails ? (
+                              <div className="mt-1 p-2 bg-error/10 border border-error/30 rounded">
+                                <div className="font-mono text-error text-xs">{event.data.errorDetails}</div>
                               </div>
+                            ) : (
+                              <div className="mt-1">{event.data.reason}</div>
+                            )}
+
+                            {/* Show contract address */}
+                            {event.data.credentialAddress && (
+                              <div className="mt-2 opacity-70">
+                                Contract: {event.data.credentialAddress.slice(0, 10)}...
+                                {event.data.credentialAddress.slice(-8)}
+                              </div>
+                            )}
+
+                            {/* Show error signature for debugging */}
+                            {event.data.errorSignature && (
+                              <div className="mt-1 opacity-60 font-mono">Error Code: {event.data.errorSignature}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "fuel_token_purchase" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1">
+                            <span>
+                              🛒 {event.data.pilotName} bought {event.data.tokensPurchased} fuel tokens
+                            </span>
+                          </div>
+                          <div className="text-xs bg-success/10 rounded px-2 py-1 border border-success/30">
+                            <div className="flex justify-between">
+                              <span>Cost:</span>
+                              <span className="font-mono">{event.data.creditsCost.toLocaleString()} CREDITS</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Pilot now owns:</span>
+                              <span className="font-mono">{event.data.totalTokensOwned} tokens</span>
+                            </div>
+                            <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-success/30">
+                              <span>Contract total:</span>
+                              <span className="font-mono">
+                                {event.data.contractTotalCredits.toLocaleString()} CREDITS
+                              </span>
+                            </div>
+                            {event.data.transactionHash && (
+                              <div className="mt-1 opacity-70">(tx: {event.data.transactionHash.slice(0, 10)}...)</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "fuel_token_purchase_failed" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-warning">
+                            <span>⚠️ {event.data.pilotName} could not buy fuel tokens</span>
+                          </div>
+                          <div className="text-xs bg-warning/10 rounded px-2 py-1 border border-warning/30">
+                            <div className="font-semibold text-warning mb-1">Your fuel contract has issues:</div>
+
+                            {/* Show decoded error if available, otherwise show reason */}
+                            {event.data.errorDetails ? (
+                              <div className="mt-1 p-2 bg-error/10 border border-error/30 rounded">
+                                <div className="font-mono text-error text-xs">{event.data.errorDetails}</div>
+                              </div>
+                            ) : (
+                              <div className="mt-1">{event.data.reason}</div>
+                            )}
+
+                            {/* Show contract address */}
+                            {event.data.fuelContractAddress && (
+                              <div className="mt-2 opacity-70">
+                                Contract: {event.data.fuelContractAddress.slice(0, 10)}...
+                                {event.data.fuelContractAddress.slice(-8)}
+                              </div>
+                            )}
+
+                            {/* Show error signature for debugging */}
+                            {event.data.errorSignature && (
+                              <div className="mt-1 opacity-60 font-mono">Error Code: {event.data.errorSignature}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "station_upgraded" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1">
+                            <span>✅ Station upgraded by {event.data.pilotName}</span>
+                          </div>
+                          <div className="text-xs bg-success/10 rounded px-2 py-1 border border-success/30">
+                            <div className="flex justify-between">
+                              <span>Pilot bounty:</span>
+                              <span className="font-mono">{event.data.pilotBounty} CREDITS</span>
+                            </div>
+                            {event.data.transactionHash && (
+                              <div className="mt-1 opacity-70">(tx: {event.data.transactionHash.slice(0, 10)}...)</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "station_upgrade_failed" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-warning">
+                            <span>
+                              ⚠️ {event.data.pilotName} tried to upgrade (attempt {event.data.attemptNumber}/
+                              {event.data.maxAttempts})
+                            </span>
+                          </div>
+                          <div className="text-xs bg-warning/10 rounded px-2 py-1 border border-warning/30">
+                            <div className="font-semibold text-warning mb-1">Upgrade failed:</div>
+
+                            {/* Show decoded error if available, otherwise show reason */}
+                            {event.data.errorDetails ? (
+                              <div className="mt-1 p-2 bg-error/10 border border-error/30 rounded">
+                                <div className="font-mono text-error text-xs">{event.data.errorDetails}</div>
+                              </div>
+                            ) : (
+                              <div className="mt-1">{event.data.reason}</div>
+                            )}
+
+                            {/* Show contract address */}
+                            {event.data.fuelContractAddress && (
+                              <div className="mt-2 opacity-70">
+                                Contract: {event.data.fuelContractAddress.slice(0, 10)}...
+                                {event.data.fuelContractAddress.slice(-8)}
+                              </div>
+                            )}
+
+                            {/* Show error signature for debugging */}
+                            {event.data.errorSignature && (
+                              <div className="mt-1 opacity-60 font-mono">Error Code: {event.data.errorSignature}</div>
                             )}
                           </div>
                         </div>

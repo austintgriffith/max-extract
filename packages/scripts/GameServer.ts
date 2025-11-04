@@ -17,6 +17,7 @@ import { CharacterManager } from "./managers/CharacterManager";
 import { SimulationManager } from "./managers/SimulationManager";
 import { GameCycleManager } from "./managers/GameCycleManager";
 import { CrowdsaleManager } from "./managers/CrowdsaleManager";
+import { BaseUpgradeManager } from "./managers/BaseUpgradeManager";
 
 export class GameServer {
   private app: express.Application;
@@ -36,6 +37,7 @@ export class GameServer {
   private simulationManager: SimulationManager;
   private gameCycleManager: GameCycleManager;
   private crowdsaleManager: CrowdsaleManager;
+  private baseUpgradeManager: BaseUpgradeManager;
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
@@ -102,6 +104,11 @@ export class GameServer {
     this.crowdsaleManager = new CrowdsaleManager(
       this.blockchainManager,
       this.characterManager,
+      this.sectors,
+      debugMode
+    );
+    this.baseUpgradeManager = new BaseUpgradeManager(
+      this.blockchainManager,
       debugMode
     );
 
@@ -124,7 +131,8 @@ export class GameServer {
       this.stop.bind(this),
       this.checkForContractChanges.bind(this),
       this.gameCycleManager.onGameSettled.bind(this.gameCycleManager),
-      this.crowdsaleManager
+      this.crowdsaleManager,
+      this.baseUpgradeManager
     );
     this.routeManager = new RouteManager(
       this.app,
@@ -172,15 +180,15 @@ export class GameServer {
         "REQUIRED_GOD_ETH environment variable is not set. Please set it in your .env file."
       );
     }
-    
+
     const MINIMUM_ETH = parseFloat(process.env.REQUIRED_GOD_ETH);
-    
+
     if (isNaN(MINIMUM_ETH) || MINIMUM_ETH <= 0) {
       throw new Error(
         `REQUIRED_GOD_ETH must be a positive number. Got: ${process.env.REQUIRED_GOD_ETH}`
       );
     }
-    
+
     const CHECK_INTERVAL_MS = 10000; // 10 seconds between checks
 
     const godAddress = this.blockchainManager.getGodAccount().address;
@@ -394,7 +402,8 @@ export class GameServer {
         this.stop.bind(this),
         this.checkForContractChanges.bind(this),
         this.gameCycleManager.onGameSettled.bind(this.gameCycleManager),
-        this.crowdsaleManager
+        this.crowdsaleManager,
+        this.baseUpgradeManager
       );
       this.debugLog("Simulation manager reinitialized");
 
@@ -442,7 +451,9 @@ export class GameServer {
       if (creditsContract) {
         console.log("🔗 Setting Credits contract address in Game contract...");
         try {
-          await this.blockchainManager.setCreditsContract(creditsContract.address);
+          await this.blockchainManager.setCreditsContract(
+            creditsContract.address
+          );
         } catch (error: any) {
           console.error(
             `⚠️  Warning: Failed to set Credits contract address in Game contract: ${error.message}`
@@ -603,7 +614,9 @@ export class GameServer {
     if (creditsContract) {
       console.log("🔗 Setting Credits contract address in Game contract...");
       try {
-        await this.blockchainManager.setCreditsContract(creditsContract.address);
+        await this.blockchainManager.setCreditsContract(
+          creditsContract.address
+        );
       } catch (error: any) {
         console.error(
           `⚠️  Warning: Failed to set Credits contract address in Game contract: ${error.message}`
@@ -707,6 +720,13 @@ export class GameServer {
    */
   public getCrowdsaleManager(): CrowdsaleManager {
     return this.crowdsaleManager;
+  }
+
+  /**
+   * Get the base upgrade manager for direct access
+   */
+  public getBaseUpgradeManager(): BaseUpgradeManager {
+    return this.baseUpgradeManager;
   }
 
   /**

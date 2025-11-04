@@ -1390,18 +1390,27 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
   /**
    * Strip Solidity metadata hash from bytecode
    * Metadata hash is appended by the compiler and differs between compilations
-   * Format: 0xa264697066735822{32-byte-hash}64736f6c63{compiler-version}
+   *
+   * CBOR-encoded metadata formats:
+   * - a1: Map with 1 entry (solc version only): a164736f6c63{version}{end}
+   * - a2: Map with 2 entries (IPFS + solc): a264697066735822{ipfs-hash}64736f6c63{version}{end}
+   * - a3+: Future formats with additional entries
+   *
+   * This function strips everything from the CBOR map prefix (a0-af) through the end,
+   * as all of this is compiler-generated metadata that can vary between compilations.
    */
   private stripMetadata(bytecode: string): string {
     if (!bytecode || bytecode.length < 100) {
       return bytecode;
     }
 
-    // Look for the metadata prefix 'a264697066735822' (CBOR-encoded 'ipfs' in hex)
-    // This is followed by 64 hex chars (32 bytes) for the IPFS hash
-    // Then '64736f6c63' ('solc' in hex) and version info
-    const metadataPattern =
-      /a264697066735822[a-f0-9]{64}64736f6c63[a-f0-9]{6}0033$/i;
+    // Match any CBOR metadata format:
+    // - a[0-9a-f]: CBOR map with 0-15 entries (a0-af in hex)
+    // - .*: Any content (e.g., IPFS hash, experimental fields)
+    // - 64736f6c63: The 'solc' marker (always present)
+    // - [a-f0-9]+: Compiler version and end marker (variable length)
+    // - $: End of bytecode
+    const metadataPattern = /a[0-9a-f].*64736f6c63[a-f0-9]+$/i;
 
     const stripped = bytecode.replace(metadataPattern, "");
 

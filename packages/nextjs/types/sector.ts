@@ -63,6 +63,66 @@ export interface TipEventData {
   };
 }
 
+export interface CredentialMintFailedEventData {
+  pilotAddress: string; // Address of the pilot who tried to mint
+  pilotName: string; // Name of the pilot for display
+  sectorId: string; // Sector ID where the mint was attempted
+  credentialAddress: string; // Address of the credential contract
+  error: string; // Raw error message from the blockchain
+  errorDetails?: string; // Decoded human-readable error explanation
+  errorSignature?: string; // Raw error signature (e.g., "0x4632ffe3")
+  reason: string; // User-friendly explanation of what went wrong
+}
+
+export interface FuelTokenPurchaseEventData {
+  pilotAddress: string; // Address of the pilot who purchased tokens
+  pilotName: string; // Name of the pilot for display
+  sectorId: string; // Sector ID where the purchase happened
+  fuelContractAddress: string; // Address of the fuel contract
+  tokensPurchased: number; // Number of tokens purchased
+  creditsCost: number; // Cost in CREDITS
+  totalTokensOwned: number; // Total tokens the pilot now owns
+  contractTotalCredits: number; // Total CREDITS in the fuel contract
+  transactionHash?: string; // Transaction hash
+}
+
+export interface FuelTokenPurchaseFailedEventData {
+  pilotAddress: string; // Address of the pilot who tried to purchase
+  pilotName: string; // Name of the pilot for display
+  sectorId: string; // Sector ID where the purchase was attempted
+  fuelContractAddress: string; // Address of the fuel contract
+  tokensTried?: number; // Number of tokens they tried to buy
+  creditsCost?: number; // Cost in CREDITS
+  error: string; // Raw error message from the blockchain
+  errorDetails?: string; // Decoded human-readable error explanation
+  errorSignature?: string; // Raw error signature (e.g., "0xf4d678b8")
+  reason: string; // User-friendly explanation of what went wrong
+}
+
+export interface StationUpgradedEventData {
+  pilotAddress: string; // Address of the pilot who called upgrade
+  pilotName: string; // Name of the pilot for display
+  sectorId: string; // Sector ID where the upgrade happened
+  fuelContractAddress: string; // Address of the fuel contract
+  newStationClass: number; // New station class (1, 2, 3, etc.)
+  pilotBounty: number; // Bounty in CREDITS the pilot received
+  playerPoints: number; // Points the player earned
+  transactionHash?: string; // Transaction hash
+}
+
+export interface StationUpgradeFailedEventData {
+  pilotAddress: string; // Address of the pilot who tried to upgrade
+  pilotName: string; // Name of the pilot for display
+  sectorId: string; // Sector ID where the upgrade was attempted
+  fuelContractAddress: string; // Address of the fuel contract
+  attemptNumber: number; // Which attempt this was
+  maxAttempts: number; // Maximum number of attempts allowed
+  error: string; // Raw error message from the blockchain
+  errorDetails?: string; // Decoded human-readable error explanation
+  errorSignature?: string; // Raw error signature (e.g., "0x356680b7")
+  reason: string; // User-friendly explanation of what went wrong
+}
+
 export interface SectorEvent {
   type:
     | "asteroid_spawn"
@@ -80,9 +140,13 @@ export interface SectorEvent {
     | "pilot_tip" // New event for when a pilot tips a player
     | "credential_minted" // New event for when a pilot mints a sector credential
     | "credential_mint_failed" // New event for when credential minting fails (contract issues)
+    | "fuel_token_purchase" // New event for successful fuel token purchase
+    | "fuel_token_purchase_failed" // New event for failed fuel token purchase
+    | "station_upgraded" // New event for successful station upgrade
+    | "station_upgrade_failed" // New event for failed station upgrade
     | "ship_refuel"; // New event for when a ship refuels at a station
   timestamp: number;
-  data: any;
+  data: any; // Type varies by event type: TipEventData, CredentialMintFailedEventData, FuelTokenPurchaseEventData, etc.
 }
 
 export type ScrapType = "scrap1" | "scrap2" | "scrap3" | "scrap4";

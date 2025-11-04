@@ -16,6 +16,7 @@ interface SectorCanvasProps {
   selectedObject: SelectedObject | null;
   onObjectSelect: (object: SelectedObject | null) => void;
   infoBoxPosition: Vector2D | null;
+  baseType?: number;
 }
 
 // Utility functions
@@ -48,6 +49,7 @@ export const SectorCanvas = ({
   selectedObject,
   onObjectSelect,
   infoBoxPosition,
+  baseType = 1,
 }: SectorCanvasProps) => {
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const baseCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,9 +77,6 @@ export const SectorCanvas = ({
     scrap3: null,
     scrap4: null,
   });
-
-  // For now, everyone starts with base1 (will be dynamic per sector/player later)
-  const baseIndex = 1;
 
   // Handle canvas click for object selection
   const handleCanvasClick = useCallback(
@@ -107,7 +106,7 @@ export const SectorCanvas = ({
       const stationX = SECTOR_CONFIG.WIDTH / 2;
       const stationY = SECTOR_CONFIG.HEIGHT / 2;
       const stationRadius =
-        ((baseImageRef.current?.naturalWidth || 100) * scale * BASE_SCALE_FACTORS[baseIndex - 1]) / 2;
+        ((baseImageRef.current?.naturalWidth || 100) * scale * BASE_SCALE_FACTORS[baseType - 1]) / 2;
       const stationDistance = Math.sqrt((sectorX - stationX) ** 2 + (sectorY - stationY) ** 2);
 
       if (stationDistance <= stationRadius / scale) {
@@ -157,7 +156,7 @@ export const SectorCanvas = ({
       // No object clicked, clear selection
       onObjectSelect(null);
     },
-    [sectorData, onObjectSelect, baseIndex],
+    [sectorData, onObjectSelect, baseType],
   );
 
   // Load ship images (1-12)
@@ -179,11 +178,11 @@ export const SectorCanvas = ({
   // Load base image
   useEffect(() => {
     const img = new Image();
-    img.src = `/bases/base${baseIndex}.png`;
+    img.src = `/bases/base${baseType}.png`;
     img.onload = () => {
       baseImageRef.current = img;
     };
-  }, []);
+  }, [baseType]);
 
   // Load asteroid images
   useEffect(() => {
@@ -318,7 +317,7 @@ export const SectorCanvas = ({
 
     // Draw base image centered at the middle of the sector
     // Use natural image dimensions scaled by canvas scale factor and custom base scale
-    const customScale = BASE_SCALE_FACTORS[baseIndex - 1]; // baseIndex is 1-6, array is 0-5
+    const customScale = BASE_SCALE_FACTORS[baseType - 1]; // baseType is 1-6, array is 0-5
     const baseWidth = baseImageRef.current.naturalWidth * scale * customScale;
     const baseHeight = baseImageRef.current.naturalHeight * scale * customScale;
     ctx.drawImage(
@@ -330,7 +329,7 @@ export const SectorCanvas = ({
     );
 
     ctx.restore();
-  }, [sectorData]);
+  }, [sectorData, baseType]);
 
   const drawForeground = useCallback(() => {
     const canvas = foregroundCanvasRef.current;
@@ -635,7 +634,7 @@ export const SectorCanvas = ({
         infoBoxPosition={infoBoxPosition}
         canvasWidth={canvasWidth}
         canvasHeight={canvasHeight}
-        baseSize={(baseImageRef.current?.naturalWidth || 100) * BASE_SCALE_FACTORS[baseIndex - 1]}
+        baseSize={(baseImageRef.current?.naturalWidth || 100) * BASE_SCALE_FACTORS[baseType - 1]}
         sectorData={sectorData}
       />
     </div>

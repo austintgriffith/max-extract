@@ -2,6 +2,7 @@ import { BlockchainManager } from "./BlockchainManager";
 import { CharacterManager } from "./CharacterManager";
 import { SECTOR_CONFIG } from "../types";
 import { privateKeyToAccount } from "viem/accounts";
+import { Sector } from "../Sector";
 
 /**
  * State tracking for a player's crowdsale
@@ -31,15 +32,18 @@ export class CrowdsaleManager {
   private activeCrowdsales: Map<string, PlayerCrowdsaleState> = new Map();
   private blockchainManager: BlockchainManager;
   private characterManager: CharacterManager;
+  private sectors: Map<string, Sector>;
   private debugMode: boolean;
 
   constructor(
     blockchainManager: BlockchainManager,
     characterManager: CharacterManager,
+    sectors: Map<string, Sector>,
     debugMode: boolean = false
   ) {
     this.blockchainManager = blockchainManager;
     this.characterManager = characterManager;
+    this.sectors = sectors;
     this.debugMode = debugMode;
   }
 
@@ -52,6 +56,37 @@ export class CrowdsaleManager {
         console.log(`🎫 [${timestamp}] CrowdsaleManager - ${message}`);
       }
     }
+  }
+
+  /**
+   * Broadcast an event to all subscribers of a sector
+   */
+  private broadcastToSector(sectorId: string, eventData: any): void {
+    const sector = this.sectors.get(sectorId);
+    if (sector) {
+      sector.broadcastEvent(eventData);
+    } else {
+      this.debugLog(`Cannot broadcast to sector ${sectorId} - sector not found`);
+    }
+  }
+
+  /**
+   * Find sector ID for a player address
+   */
+  private async findSectorIdForPlayer(playerAddress: string): Promise<string | null> {
+    try {
+      // Get all active sectors and find the one owned by this player
+      const activeSectors = await this.blockchainManager.getActiveSectors();
+      for (const sectorId of activeSectors) {
+        const owner = await this.blockchainManager.getSectorOwner(sectorId.toString());
+        if (owner && owner.toLowerCase() === playerAddress.toLowerCase()) {
+          return sectorId.toString();
+        }
+      }
+    } catch (error: any) {
+      this.debugLog(`Error finding sector for player ${playerAddress}:`, error);
+    }
+    return null;
   }
 
   /**
@@ -152,12 +187,33 @@ export class CrowdsaleManager {
           continue;
         }
 
+        // Check if the sector has already been upgraded (station baseType > 1)
+        console.log(`   🔍 Checking if sector has already been upgraded...`);
+        const isUpgraded = await this.blockchainManager.isSectorUpgraded(sectorId.toString());
+        console.log(`   🏗️  Upgraded: ${isUpgraded}`);
+
+        if (isUpgraded) {
+          console.log(`   ⏭️  Skipping - Station already upgraded (crowdsale complete)`);
+          // Mark as complete so we don't check again
+          this.activeCrowdsales.set(playerAddress.toLowerCase(), {
+            playerAddress: playerAddress.toLowerCase(),
+            fuelContractAddress,
+            pilotPurchases: new Map(),
+            upgradeAttemptCount: 0,
+            isComplete: true,
+            pricePerToken: 0n,
+            registryAddress,
+          });
+          continue;
+        }
+
         // All conditions met! Initialize new crowdsale
         console.log(`   ✅ ALL CONDITIONS MET! Initializing crowdsale...`);
         await this.initializeCrowdsale(
           playerAddress,
           fuelContractAddress,
-          registryAddress
+          registryAddress,
+          sectorId.toString()
         );
       }
     } catch (error: any) {
@@ -172,7 +228,8 @@ export class CrowdsaleManager {
   private async initializeCrowdsale(
     playerAddress: string,
     fuelContractAddress: string,
-    registryAddress: string
+    registryAddress: string,
+    sectorId: string
   ): Promise<void> {
     try {
       console.log(
@@ -180,6 +237,23 @@ export class CrowdsaleManager {
       );
       console.log(`   Fuel contract: ${fuelContractAddress}`);
       console.log(`   Registry: ${registryAddress}`);
+      console.log(`   Sector ID: ${sectorId.slice(0, 10)}...`);
+
+      // Double-check if the sector has already been upgraded
+      const isUpgraded = await this.blockchainManager.isSectorUpgraded(sectorId);
+      if (isUpgraded) {
+        console.log(`   ⚠️  Sector already upgraded, marking crowdsale as complete`);
+        this.activeCrowdsales.set(playerAddress.toLowerCase(), {
+          playerAddress: playerAddress.toLowerCase(),
+          fuelContractAddress,
+          pilotPurchases: new Map(),
+          upgradeAttemptCount: 0,
+          isComplete: true,
+          pricePerToken: 0n,
+          registryAddress,
+        });
+        return;
+      }
 
       // Get fuel token price
       const pricePerToken = await this.blockchainManager.getFuelTokenPrice(
@@ -255,6 +329,18 @@ export class CrowdsaleManager {
     try {
       console.log(`\n🎫 [Crowdsale] Processing player ${playerAddress.slice(0, 10)}...`);
 
+      // First, check if the sector has already been upgraded
+      // This handles the case where the script restarts after upgrade was called
+      const sectorId = await this.findSectorIdForPlayer(playerAddress);
+      if (sectorId) {
+        const isUpgraded = await this.blockchainManager.isSectorUpgraded(sectorId);
+        if (isUpgraded) {
+          console.log(`   ⚠️  Sector already upgraded! Marking crowdsale as complete.`);
+          state.isComplete = true;
+          return;
+        }
+      }
+
       // Check current credit balance
       const contractBalance = await this.blockchainManager.getContractCreditBalance(
         state.fuelContractAddress
@@ -273,9 +359,9 @@ export class CrowdsaleManager {
         return;
       }
 
-      // Target not reached - try 3 random pilot purchases
-      console.log(`   🎲 Attempting purchases with 3 random pilots...`);
-      for (let i = 0; i < 3; i++) {
+      // Target not reached - try 5 random pilot purchases
+      console.log(`   🎲 Attempting purchases with 5 random pilots...`);
+      for (let i = 0; i < 5; i++) {
         await this.tryRandomPilotPurchase(playerAddress, state);
       }
 
@@ -370,20 +456,101 @@ export class CrowdsaleManager {
       );
 
       // Step 2: Buy tokens
-      await this.blockchainManager.buyFuelTokens(
+      const buyResult = await this.blockchainManager.buyFuelTokens(
         pilotAccount,
         state.fuelContractAddress,
         tokensToBuyWei
       );
 
-      // Record purchase
-      const previousPurchases = state.pilotPurchases.get(pilotAddress) || 0;
-      state.pilotPurchases.set(pilotAddress, previousPurchases + tokensToBuy);
+      // Get current total balance in contract
+      const contractBalance = await this.blockchainManager.getContractCreditBalance(
+        state.fuelContractAddress
+      );
 
-      console.log(`   ✅ Purchase successful! Pilot now owns ${previousPurchases + tokensToBuy} fuel tokens total`);
+      // Find the sector ID to broadcast to
+      const sectorId = await this.findSectorIdForPlayer(playerAddress);
+
+      if (buyResult.success) {
+        // Record purchase
+        const previousPurchases = state.pilotPurchases.get(pilotAddress) || 0;
+        state.pilotPurchases.set(pilotAddress, previousPurchases + tokensToBuy);
+
+        console.log(`   ✅ Purchase successful! Pilot now owns ${previousPurchases + tokensToBuy} fuel tokens total`);
+
+        // Broadcast success event
+        if (sectorId) {
+          this.broadcastToSector(sectorId, {
+            type: "fuel_token_purchase",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: pilotAddress,
+              pilotName: pilotName,
+              sectorId: sectorId,
+              fuelContractAddress: state.fuelContractAddress,
+              tokensPurchased: tokensToBuy,
+              creditsCost: Number(cost) / 1e18,
+              totalTokensOwned: previousPurchases + tokensToBuy,
+              contractTotalCredits: Number(contractBalance) / 1e18,
+              transactionHash: buyResult.txHash,
+            },
+          });
+        }
+      } else {
+        console.error(`   ⚠️  Purchase failed: ${buyResult.error}`);
+        if (buyResult.errorDetails) {
+          console.log(`   ℹ️  ${buyResult.errorDetails}`);
+        }
+        this.debugLog("Buy error details:", buyResult);
+
+        // Extract error signature
+        let errorSignature = "";
+        if (buyResult.error) {
+          const signatureMatch = buyResult.error.match(/0x[0-9a-fA-F]{8}/);
+          if (signatureMatch) {
+            errorSignature = signatureMatch[0];
+          }
+        }
+
+        // Broadcast failure event
+        if (sectorId) {
+          this.broadcastToSector(sectorId, {
+            type: "fuel_token_purchase_failed",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: pilotAddress,
+              pilotName: pilotName,
+              sectorId: sectorId,
+              fuelContractAddress: state.fuelContractAddress,
+              tokensTried: tokensToBuy,
+              creditsCost: Number(cost) / 1e18,
+              error: buyResult.error,
+              errorDetails: buyResult.errorDetails,
+              errorSignature: errorSignature,
+              reason: buyResult.errorDetails || buyResult.error || "Purchase failed",
+            },
+          });
+        }
+      }
     } catch (error: any) {
       console.error(`   ⚠️  Purchase failed: ${error.message}`);
       this.debugLog("Buy error:", error);
+
+      // Broadcast failure event for unexpected errors
+      const sectorId = await this.findSectorIdForPlayer(playerAddress);
+      if (sectorId) {
+        this.broadcastToSector(sectorId, {
+          type: "fuel_token_purchase_failed",
+          timestamp: Date.now(),
+          data: {
+            pilotAddress: pilotAddress,
+            pilotName: character ? `${character.firstname} ${character.lastname}` : "Unknown",
+            sectorId: sectorId,
+            fuelContractAddress: state.fuelContractAddress,
+            error: error.message,
+            reason: "Unexpected error during purchase",
+          },
+        });
+      }
     }
   }
 
@@ -451,24 +618,77 @@ export class CrowdsaleManager {
       const pilotAccount = privateKeyToAccount(character.privateKey);
 
       // Call upgrade
-      const success = await this.blockchainManager.callUpgrade(
+      const upgradeResult = await this.blockchainManager.callUpgrade(
         pilotAccount,
         state.fuelContractAddress
       );
 
       state.upgradeAttemptCount++;
 
-      if (success) {
+      // Find the sector ID to broadcast to
+      const sectorId = await this.findSectorIdForPlayer(playerAddress);
+
+      if (upgradeResult.success) {
         console.log(
           `   🎉 Upgrade successful! Station upgraded to class 1`
         );
         console.log(`   💰 Pilot ${pilotName} received 500 credit bounty`);
-        console.log(`   🏆 Player earned 50 points`);
+        console.log(`   🏆 Player earned 10 points`);
         state.isComplete = true;
+
+        // Broadcast success event
+        if (sectorId) {
+          this.broadcastToSector(sectorId, {
+            type: "station_upgraded",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: randomPilotAddress,
+              pilotName: pilotName,
+              sectorId: sectorId,
+              fuelContractAddress: state.fuelContractAddress,
+              newStationClass: 1,
+              pilotBounty: 500,
+              playerPoints: 10,
+              transactionHash: upgradeResult.txHash,
+            },
+          });
+        }
       } else {
         console.log(
           `   ⚠️  Upgrade attempt ${state.upgradeAttemptCount} failed`
         );
+        if (upgradeResult.errorDetails) {
+          console.log(`   ℹ️  ${upgradeResult.errorDetails}`);
+        }
+
+        // Extract error signature
+        let errorSignature = "";
+        if (upgradeResult.error) {
+          const signatureMatch = upgradeResult.error.match(/0x[0-9a-fA-F]{8}/);
+          if (signatureMatch) {
+            errorSignature = signatureMatch[0];
+          }
+        }
+
+        // Broadcast failure event
+        if (sectorId) {
+          this.broadcastToSector(sectorId, {
+            type: "station_upgrade_failed",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: randomPilotAddress,
+              pilotName: pilotName,
+              sectorId: sectorId,
+              fuelContractAddress: state.fuelContractAddress,
+              attemptNumber: state.upgradeAttemptCount,
+              maxAttempts: SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS,
+              error: upgradeResult.error,
+              errorDetails: upgradeResult.errorDetails,
+              errorSignature: errorSignature,
+              reason: upgradeResult.errorDetails || upgradeResult.error || "Upgrade failed",
+            },
+          });
+        }
 
         // Mark as complete if we've hit max attempts
         if (state.upgradeAttemptCount >= SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS) {

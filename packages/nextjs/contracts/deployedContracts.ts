@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x0f043de293e7bf56857c22d88da3289a0c6e68d9",
+      address: "0xb80a6e68f09a8d95318833414e4a737f2f7df730",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1320,
+      deployedOnBlock: 2771,
     },
     Credits: {
-      address: "0xbbeea9d7938877d1cc7e0c39f725a10a4558f346",
+      address: "0xbe25da4a86e140d88580d0fd54941d5836d31571",
       abi: [
         {
           type: "constructor",
@@ -852,10 +852,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1321,
+      deployedOnBlock: 2772,
     },
     Game: {
-      address: "0x099abf3d2fd566a5cb60accd473b7b6e55259007",
+      address: "0x83bd54e5495daa90c5b6c734668cf48347122642",
       abi: [
         {
           type: "constructor",
@@ -1258,6 +1258,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getSectorBaseType",
+          inputs: [
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getTimeRemaining",
           inputs: [],
           outputs: [
@@ -1485,6 +1504,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "sectorBaseType",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "setAuditorContract",
           inputs: [
             {
@@ -1517,6 +1555,24 @@ const deployedContracts = {
               name: "_maxExtract",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setSectorBaseType",
+          inputs: [
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_baseType",
+              type: "uint8",
+              internalType: "uint8",
             },
           ],
           outputs: [],
@@ -1611,25 +1667,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradedStations",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -1886,6 +1923,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "StationBaseTypeSet",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "newBaseType",
+              type: "uint8",
+              indexed: false,
+              internalType: "uint8",
+            },
+            {
+              name: "setBy",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "StationUpgraded",
           inputs: [
             {
@@ -1905,6 +1967,12 @@ const deployedContracts = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+            {
+              name: "newBaseType",
+              type: "uint8",
+              indexed: false,
+              internalType: "uint8",
             },
           ],
           anonymous: false,
@@ -1966,7 +2034,17 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "InsufficientPoints",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InvalidArrayLengths",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidBaseType",
           inputs: [],
         },
         {
@@ -2041,15 +2119,15 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "StationAlreadyUpgraded",
+          name: "StationMaxLevel",
           inputs: [],
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1321,
+      deployedOnBlock: 2772,
     },
     Auditor: {
-      address: "0x19bccbb4708870d945e91c968c6c7aecacebd74b",
+      address: "0x4a198a675e99db50f6c3fc208df1abd8711709d0",
       abi: [
         {
           type: "constructor",
@@ -2557,10 +2635,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1321,
+      deployedOnBlock: 2772,
     },
     MaxExtract: {
-      address: "0xb06d3ac86e43fd99a7bb03e8ca082904eb2e4301",
+      address: "0x40e102f66d3a9621c1202772db573d4f526a7fe0",
       abi: [
         {
           type: "constructor",
@@ -3005,7 +3083,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1321,
+      deployedOnBlock: 2772,
     },
   },
   42161: {
@@ -4261,6 +4339,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getSectorBaseType",
+          inputs: [
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getTimeRemaining",
           inputs: [],
           outputs: [
@@ -4488,6 +4585,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "sectorBaseType",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "setAuditorContract",
           inputs: [
             {
@@ -4520,6 +4636,24 @@ const deployedContracts = {
               name: "_maxExtract",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setSectorBaseType",
+          inputs: [
+            {
+              name: "_sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_baseType",
+              type: "uint8",
+              internalType: "uint8",
             },
           ],
           outputs: [],
@@ -4614,25 +4748,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradedStations",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -4889,6 +5004,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "StationBaseTypeSet",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "newBaseType",
+              type: "uint8",
+              indexed: false,
+              internalType: "uint8",
+            },
+            {
+              name: "setBy",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "StationUpgraded",
           inputs: [
             {
@@ -4908,6 +5048,12 @@ const deployedContracts = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+            {
+              name: "newBaseType",
+              type: "uint8",
+              indexed: false,
+              internalType: "uint8",
             },
           ],
           anonymous: false,
@@ -4969,7 +5115,17 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "InsufficientPoints",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InvalidArrayLengths",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidBaseType",
           inputs: [],
         },
         {
@@ -5044,7 +5200,7 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "StationAlreadyUpgraded",
+          name: "StationMaxLevel",
           inputs: [],
         },
       ],

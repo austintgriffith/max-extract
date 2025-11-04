@@ -75,15 +75,15 @@ STRICT REQUIREMENTS:
    - Must reference the Credits ERC-20 contract correctly
    - Must use transferFrom to take credits from pilots
    - Must use transfer to reward the upgrade caller
-   - Must use approve to allow Game contract to take 100k credits
+   - Must use approve to allow Game contract to take 49,500 credits
    - Must use balanceOf to check contract's credit balance
 
 9. Game Contract Integration
    - Must reference the Game contract correctly
    - Must call game.upgradeStation(sectorId) with the player's sector ID
    - The Game contract will verify tx.origin is a pilot
-   - The Game contract will pull 100k credits via transferFrom
-   - The Game contract will award 50 points to the player
+   - The Game contract will pull 49,500 credits via transferFrom
+   - The Game contract will award 10 points to the player
 
 10. Additional Features (optional but allowed):
     - Maximum supply caps
@@ -137,7 +137,7 @@ IMPORTANT NOTES:
 - After upgrade, the sale ends permanently (buy must revert)
 - Pilots can still redeem existing tokens after upgrade
 - This is a one-time crowdsale - get it right the first time
-- The Game contract performs verification and awards 50 points to the player upon upgrade
+- The Game contract performs verification and awards 10 points to the player upon upgrade
 - Focus on functional correctness and security
 - Be strict about function signatures and implementations
 - Verify all credit transfers happen correctly

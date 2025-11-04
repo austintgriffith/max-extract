@@ -4,6 +4,7 @@ import { BlockchainManager } from "./BlockchainManager";
 import { EntropyManager } from "./EntropyManager";
 import { CharacterManager, PilotManager } from "./CharacterManager";
 import { CrowdsaleManager } from "./CrowdsaleManager";
+import { BaseUpgradeManager } from "./BaseUpgradeManager";
 
 export class SimulationManager {
   private innerLoopInterval: NodeJS.Timeout | null = null;
@@ -15,6 +16,7 @@ export class SimulationManager {
   private isStopped: boolean = false;
   private entropySetMessageShown: boolean = false;
   private crowdsaleManager: CrowdsaleManager;
+  private baseUpgradeManager: BaseUpgradeManager;
 
   constructor(
     private sectors: Map<string, Sector>,
@@ -26,12 +28,14 @@ export class SimulationManager {
     private stopGameServer?: () => void,
     private checkContractChanges?: () => Promise<void>,
     private onGameSettled?: () => Promise<void>,
-    crowdsaleManager?: CrowdsaleManager
+    crowdsaleManager?: CrowdsaleManager,
+    baseUpgradeManager?: BaseUpgradeManager
   ) {
     this.debugMode = debugMode;
     this.characterManager = characterManager;
     this.pilotManager = new PilotManager(debugMode);
     this.crowdsaleManager = crowdsaleManager!;
+    this.baseUpgradeManager = baseUpgradeManager!;
   }
 
   private debugLog(message: string, data?: any): void {
@@ -172,6 +176,11 @@ export class SimulationManager {
 
     // Reload sectors from contract periodically
     await this.loadSectorsFromContract();
+
+    // Check and update base types for sectors (bases 1-3 automatic management)
+    if (this.baseUpgradeManager) {
+      await this.baseUpgradeManager.checkForBaseUpgrades();
+    }
 
     // Only update sectors if we have rolling entropy
     // (sectors need deterministic dice for spawning operations)

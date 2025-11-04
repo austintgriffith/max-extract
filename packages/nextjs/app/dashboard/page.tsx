@@ -135,8 +135,17 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
   // Check if station name contains "(pending audit)"
   const isPendingAudit = player.name && player.name.includes("(pending audit)");
 
-  // For now, everyone starts with base1 (will be dynamic per player later)
-  const baseType = 1;
+  // Query base type for this sector from the Game contract
+  const { data: baseTypeData } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "getSectorBaseType" as any,
+    args: [BigInt(sectorId || "0")] as any,
+    query: {
+      enabled: !!sectorId,
+    },
+  });
+
+  const baseType = baseTypeData ? Number(baseTypeData) : 1;
   const baseScale = BASE_SCALE_FACTORS[baseType - 1];
   // Container size for consistent row heights
   const containerSize = 50;

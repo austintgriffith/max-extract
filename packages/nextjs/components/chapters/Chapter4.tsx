@@ -254,7 +254,7 @@ export const Chapter4 = () => {
                 <Address address={gameAddress} />
               </span>
             )}
-            ) will pull 49,500 credits from your fuel contract and award you 50 points for upgrading your station.
+            ) will pull 49,500 credits from your fuel contract and award you 10 points for upgrading your station.
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">After Upgrade</h3>
@@ -266,7 +266,7 @@ export const Chapter4 = () => {
               </li>
               <li>Pilots can still redeem their existing fuel tokens</li>
               <li>Your station is now upgraded and can process asteroids</li>
-              <li>You earned 50 points from the Game contract</li>
+              <li>You earned 10 points from the Game contract</li>
             </ul>
           </div>
 
@@ -378,7 +378,7 @@ export const Chapter4 = () => {
               fuel. Pilots can redeem their tokens for refueling services.
             </p>
             <p>
-              You&apos;ll earn <strong>50 points</strong> for the upgrade, and your sector becomes more attractive to
+              You&apos;ll earn <strong>10 points</strong> for the upgrade, and your sector becomes more attractive to
               pilots who need fuel for long expeditions.
             </p>
           </div>

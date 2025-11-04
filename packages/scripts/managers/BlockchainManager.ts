@@ -1155,9 +1155,11 @@ export class BlockchainManager {
         // Calculate amount to send (balance - gas cost)
         if (remainingBalance > gasCost) {
           const amountToSend = remainingBalance - gasCost;
-          
+
           this.debugLog(
-            `Sending ${formatEther(amountToSend)} ETH to GOD (${formatEther(remainingBalance)} - ${formatEther(gasCost)} gas)`
+            `Sending ${formatEther(amountToSend)} ETH to GOD (${formatEther(
+              remainingBalance
+            )} - ${formatEther(gasCost)} gas)`
           );
 
           // Send ETH to GOD
@@ -1174,7 +1176,9 @@ export class BlockchainManager {
           this.debugLog(`ETH transfer to GOD mined`);
         } else {
           this.debugLog(
-            `Pilot balance (${formatEther(remainingBalance)}) too low to send ETH after gas costs`
+            `Pilot balance (${formatEther(
+              remainingBalance
+            )}) too low to send ETH after gas costs`
           );
         }
       } catch (ethError: any) {
@@ -1476,7 +1480,8 @@ export class BlockchainManager {
 
       return {
         hasAboutContract,
-        stationName: stationName || "",
+        // Only return station name if audited for Chapter 2
+        stationName: isAudited ? stationName || "" : "",
         registryAddress,
         aboutAddress,
         isAudited,
@@ -1847,11 +1852,94 @@ export class BlockchainManager {
         console.log(`⚠️  Simulation failed: ${simErrorMsg}`);
         this.debugLog(`Simulation error details:`, simError);
 
+        // Decode error signature for better diagnostics
+        let errorSignature = "";
+        let decodedError = "";
+
+        // Complete mapping of ALL contract error signatures for better debugging
+        const errorSignatures: { [key: string]: string } = {
+          // ===== Game Contract Errors (Game.sol) =====
+          "0x32dcf6cc":
+            "OnlyGod() - Only the GOD address can call this function",
+          "0x4632ffe3":
+            "OnlyPilot() - Caller is not a registered pilot or pilot is dead",
+          "0xb80f6dae": "GameNotOpen() - Game is not in open state for buy-in",
+          "0xcd1c8867":
+            "InsufficientPayment() - Not enough ETH sent for buy-in",
+          "0xa627f538":
+            "PlayerAlreadyJoined() - Player has already bought into the game",
+          "0xe0dbb1a7": "PilotAlreadyAdded() - Pilot is already registered",
+          "0xa9854bc9":
+            "InvalidArrayLengths() - Array length mismatch in parameters",
+          "0x6d2fd3c9":
+            "InvalidPercentages() - Payout percentages don't sum to 100%",
+          "0x3b1ab104": "PayoutFailed() - ETH transfer failed during payout",
+          "0x625018cc":
+            "PilotAlreadyDead() - Pilot has already been marked as dead",
+          "0xabca3517":
+            "NotAPlayer() - Address is not a registered player or has no sector",
+          "0x8f86c6b3": "GameNotEnded() - Game end time has not passed yet",
+          "0xdc557126": "GameAlreadySettled() - Game has already been settled",
+          "0xa1427b3a": "NotACredential() - Contract is not a valid credential",
+          "0xbcb63aea":
+            "CredentialNotRegistered() - Credential contract not registered in player's registry",
+          "0x782a830c":
+            "MaxExtractNotSet() - MaxExtract contract address not configured in Game",
+          "0x933099c1":
+            "PilotAlreadyMintedFromPlayer() - Pilot already bought a credential from this player (one-time purchase rule)",
+          "0x81d522f5":
+            "NotARegistry() - Caller or address is not a valid registry contract",
+
+          // ===== Credential Contract Errors (Chapter 3) =====
+          "0xa7a99435":
+            "SectorNotBroadcast() - Registry does not have a sector ID set (call registry.broadcastSectorId first)",
+          "0x4e3f67f9":
+            "InvalidGameContract() - Game contract address not set in credential contract",
+          "0xd6a72296":
+            "InvalidRegistryContract() - Registry contract address not set in credential contract",
+
+          // ===== Universe Contract Errors (Universe.sol) =====
+          "0x411354e3":
+            "EntropyAlreadySet() - Universe entropy has already been set",
+          "0x11b70ea7":
+            "NoCommitmentMade() - No entropy commitment has been made yet",
+          "0xc349402d":
+            "RevealTooEarly() - Attempting to reveal entropy before minimum wait time",
+          "0x9ea6d127":
+            "InvalidReveal() - Revealed entropy doesn't match commitment",
+          "0x3703b169":
+            "CommitmentAlreadyMade() - Commitment has already been made for this period",
+        };
+
+        // Try to extract error signature from error data
+        if (simError.data || simError.cause?.data) {
+          const errorData = simError.data || simError.cause?.data;
+          errorSignature =
+            typeof errorData === "string" ? errorData.slice(0, 10) : "";
+        }
+
+        // Try to parse signature from error message if not found in data
+        if (!errorSignature) {
+          const signatureMatch = simErrorMsg.match(/0x[0-9a-fA-F]{8}/);
+          if (signatureMatch) {
+            errorSignature = signatureMatch[0];
+          }
+        }
+
+        // Decode the signature if found
+        if (errorSignature && errorSignatures[errorSignature]) {
+          decodedError = errorSignatures[errorSignature];
+          console.log(`🔍 Decoded error: ${decodedError}`);
+        } else if (errorSignature) {
+          decodedError = `Unknown error signature: ${errorSignature}`;
+        }
+
         // If simulation fails, don't try to execute the transaction
         // This likely means the credential contract has issues or additional requirements
         return {
           success: false,
-          error: `Simulation failed: ${simErrorMsg}. The credential contract may have implementation issues.`,
+          error: `Simulation failed: ${simErrorMsg}`,
+          errorDetails: decodedError || undefined,
         };
       }
 
@@ -1994,9 +2082,7 @@ export class BlockchainManager {
         []
       )) as number[];
 
-      this.debugLog(
-        `Visible chapters: [${visibleChapters.join(", ")}]`
-      );
+      this.debugLog(`Visible chapters: [${visibleChapters.join(", ")}]`);
 
       // Check if chapter 4 is in the array
       const isVisible = visibleChapters.includes(4);
@@ -2190,7 +2276,9 @@ export class BlockchainManager {
       }
 
       this.debugLog(
-        `Approving ${Number(amount) / 1e18} credits for ${spenderAddress} from pilot ${fromPilot.address}`
+        `Approving ${
+          Number(amount) / 1e18
+        } credits for ${spenderAddress} from pilot ${fromPilot.address}`
       );
 
       // Create wallet client for the pilot
@@ -2224,10 +2312,17 @@ export class BlockchainManager {
     fromPilot: any,
     fuelAddress: string,
     amount: bigint
-  ): Promise<void> {
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+    errorDetails?: string;
+  }> {
     try {
       this.debugLog(
-        `Buying ${Number(amount) / 1e18} fuel tokens from ${fuelAddress} as pilot ${fromPilot.address}`
+        `Buying ${
+          Number(amount) / 1e18
+        } fuel tokens from ${fuelAddress} as pilot ${fromPilot.address}`
       );
 
       // Create wallet client for the pilot
@@ -2256,20 +2351,121 @@ export class BlockchainManager {
       this.debugLog(`Buy fuel tokens transaction sent: ${hash}`);
       await this.waitForTransactionReceipt(hash);
       this.debugLog(`Buy fuel tokens confirmed`);
+      return { success: true, txHash: hash };
     } catch (error: any) {
       this.debugLog(`Failed to buy fuel tokens:`, error);
-      throw error;
+
+      // Decode error signature for better diagnostics
+      const errorMessage =
+        error.shortMessage || error.message || "Unknown error";
+      let errorSignature = "";
+      let decodedError = "";
+
+      // Error signature mapping (same as credential minting)
+      const errorSignatures: { [key: string]: string } = {
+        // ===== Game Contract Errors (Game.sol) =====
+        "0x32dcf6cc": "OnlyGod() - Only the GOD address can call this function",
+        "0x4632ffe3":
+          "OnlyPilot() - Caller is not a registered pilot or pilot is dead",
+        "0xb80f6dae": "GameNotOpen() - Game is not in open state for buy-in",
+        "0xcd1c8867": "InsufficientPayment() - Not enough ETH sent for buy-in",
+        "0xa627f538":
+          "PlayerAlreadyJoined() - Player has already bought into the game",
+        "0xe0dbb1a7": "PilotAlreadyAdded() - Pilot is already registered",
+        "0xa9854bc9":
+          "InvalidArrayLengths() - Array length mismatch in parameters",
+        "0x6d2fd3c9":
+          "InvalidPercentages() - Payout percentages don't sum to 100%",
+        "0x3b1ab104": "PayoutFailed() - ETH transfer failed during payout",
+        "0x625018cc":
+          "PilotAlreadyDead() - Pilot has already been marked as dead",
+        "0xabca3517":
+          "NotAPlayer() - Address is not a registered player or has no sector",
+        "0x8f86c6b3": "GameNotEnded() - Game end time has not passed yet",
+        "0xdc557126": "GameAlreadySettled() - Game has already been settled",
+        "0xa1427b3a": "NotACredential() - Contract is not a valid credential",
+        "0xbcb63aea":
+          "CredentialNotRegistered() - Credential contract not registered in player's registry",
+        "0x782a830c":
+          "MaxExtractNotSet() - MaxExtract contract address not configured in Game",
+        "0x933099c1":
+          "PilotAlreadyMintedFromPlayer() - Pilot already bought a credential from this player (one-time purchase rule)",
+        "0x81d522f5":
+          "NotARegistry() - Caller or address is not a valid registry contract",
+
+        // ===== Credential Contract Errors (Chapter 3) =====
+        "0xa7a99435":
+          "SectorNotBroadcast() - Registry does not have a sector ID set (call registry.broadcastSectorId first)",
+        "0x4e3f67f9":
+          "InvalidGameContract() - Game contract address not set in credential contract",
+        "0xd6a72296":
+          "InvalidRegistryContract() - Registry contract address not set in credential contract",
+
+        // ===== Chapter 4 Fuel Contract Errors =====
+        "0xcd786059":
+          "InsufficientAllowance() - Credits allowance too low for purchase",
+        "0xf4d678b8": "InsufficientBalance() - Not enough CREDITS balance",
+        "0x356680b7":
+          "InsufficientCreditsInContract() - Fuel contract hasn't reached target credits for upgrade",
+        "0x0bd8a3eb":
+          "CrowdsaleEnded() / AlreadyUpgraded() - Station upgrade already completed, crowdsale is closed",
+
+        // ===== Universe Contract Errors (Universe.sol) =====
+        "0x411354e3":
+          "EntropyAlreadySet() - Universe entropy has already been set",
+        "0x11b70ea7":
+          "NoCommitmentMade() - No entropy commitment has been made yet",
+        "0xc349402d":
+          "RevealTooEarly() - Attempting to reveal entropy before minimum wait time",
+        "0x9ea6d127":
+          "InvalidReveal() - Revealed entropy doesn't match commitment",
+        "0x3703b169":
+          "CommitmentAlreadyMade() - Commitment has already been made for this period",
+      };
+
+      // Try to extract error signature from error data
+      if (error.data || error.cause?.data) {
+        const errorData = error.data || error.cause?.data;
+        errorSignature =
+          typeof errorData === "string" ? errorData.slice(0, 10) : "";
+      }
+
+      // Try to parse signature from error message if not found in data
+      if (!errorSignature) {
+        const signatureMatch = errorMessage.match(/0x[0-9a-fA-F]{8}/);
+        if (signatureMatch) {
+          errorSignature = signatureMatch[0];
+        }
+      }
+
+      // Decode the signature if found
+      if (errorSignature && errorSignatures[errorSignature]) {
+        decodedError = errorSignatures[errorSignature];
+        this.debugLog(`Decoded buy error: ${decodedError}`);
+      } else if (errorSignature) {
+        decodedError = `Unknown error signature: ${errorSignature}`;
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        errorDetails: decodedError || undefined,
+      };
     }
   }
 
   /**
    * Chapter 4: Call upgrade function on fuel contract from a pilot wallet
-   * @returns true if successful, false otherwise
    */
   public async callUpgrade(
     fromPilot: any,
     fuelAddress: string
-  ): Promise<boolean> {
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+    errorDetails?: string;
+  }> {
     try {
       this.debugLog(
         `Calling upgrade() on ${fuelAddress} as pilot ${fromPilot.address}`
@@ -2300,9 +2496,134 @@ export class BlockchainManager {
       this.debugLog(`Upgrade transaction sent: ${hash}`);
       await this.waitForTransactionReceipt(hash);
       this.debugLog(`Upgrade confirmed successfully`);
-      return true;
+      return { success: true, txHash: hash };
     } catch (error: any) {
       this.debugLog(`Upgrade call failed:`, error);
+
+      // Decode error signature for better diagnostics
+      const errorMessage =
+        error.shortMessage || error.message || "Unknown error";
+      let errorSignature = "";
+      let decodedError = "";
+
+      // Error signature mapping
+      const errorSignatures: { [key: string]: string } = {
+        // ===== Game Contract Errors (Game.sol) =====
+        "0x32dcf6cc": "OnlyGod() - Only the GOD address can call this function",
+        "0x4632ffe3":
+          "OnlyPilot() - Caller is not a registered pilot or pilot is dead",
+        "0xb80f6dae": "GameNotOpen() - Game is not in open state for buy-in",
+        "0xcd1c8867": "InsufficientPayment() - Not enough ETH sent for buy-in",
+        "0xa627f538":
+          "PlayerAlreadyJoined() - Player has already bought into the game",
+        "0xe0dbb1a7": "PilotAlreadyAdded() - Pilot is already registered",
+        "0xa9854bc9":
+          "InvalidArrayLengths() - Array length mismatch in parameters",
+        "0x6d2fd3c9":
+          "InvalidPercentages() - Payout percentages don't sum to 100%",
+        "0x3b1ab104": "PayoutFailed() - ETH transfer failed during payout",
+        "0x625018cc":
+          "PilotAlreadyDead() - Pilot has already been marked as dead",
+        "0xabca3517":
+          "NotAPlayer() - Address is not a registered player or has no sector",
+        "0x8f86c6b3": "GameNotEnded() - Game end time has not passed yet",
+        "0xdc557126": "GameAlreadySettled() - Game has already been settled",
+        "0xa1427b3a": "NotACredential() - Contract is not a valid credential",
+        "0xbcb63aea":
+          "CredentialNotRegistered() - Credential contract not registered in player's registry",
+        "0x782a830c":
+          "MaxExtractNotSet() - MaxExtract contract address not configured in Game",
+        "0x933099c1":
+          "PilotAlreadyMintedFromPlayer() - Pilot already bought a credential from this player (one-time purchase rule)",
+        "0x81d522f5":
+          "NotARegistry() - Caller or address is not a valid registry contract",
+
+        // ===== Credential Contract Errors (Chapter 3) =====
+        "0xa7a99435":
+          "SectorNotBroadcast() - Registry does not have a sector ID set (call registry.broadcastSectorId first)",
+        "0x4e3f67f9":
+          "InvalidGameContract() - Game contract address not set in credential contract",
+        "0xd6a72296":
+          "InvalidRegistryContract() - Registry contract address not set in credential contract",
+
+        // ===== Chapter 4 Fuel Contract Errors =====
+        "0xcd786059":
+          "InsufficientAllowance() - Credits allowance too low for purchase",
+        "0xf4d678b8": "InsufficientBalance() - Not enough CREDITS balance",
+        "0x356680b7":
+          "InsufficientCreditsInContract() - Fuel contract hasn't reached target credits for upgrade",
+        "0x0bd8a3eb":
+          "CrowdsaleEnded() / AlreadyUpgraded() - Station upgrade already completed, crowdsale is closed",
+
+        // ===== Universe Contract Errors (Universe.sol) =====
+        "0x411354e3":
+          "EntropyAlreadySet() - Universe entropy has already been set",
+        "0x11b70ea7":
+          "NoCommitmentMade() - No entropy commitment has been made yet",
+        "0xc349402d":
+          "RevealTooEarly() - Attempting to reveal entropy before minimum wait time",
+        "0x9ea6d127":
+          "InvalidReveal() - Revealed entropy doesn't match commitment",
+        "0x3703b169":
+          "CommitmentAlreadyMade() - Commitment has already been made for this period",
+      };
+
+      // Try to extract error signature from error data
+      if (error.data || error.cause?.data) {
+        const errorData = error.data || error.cause?.data;
+        errorSignature =
+          typeof errorData === "string" ? errorData.slice(0, 10) : "";
+      }
+
+      // Try to parse signature from error message if not found in data
+      if (!errorSignature) {
+        const signatureMatch = errorMessage.match(/0x[0-9a-fA-F]{8}/);
+        if (signatureMatch) {
+          errorSignature = signatureMatch[0];
+        }
+      }
+
+      // Decode the signature if found
+      if (errorSignature && errorSignatures[errorSignature]) {
+        decodedError = errorSignatures[errorSignature];
+        this.debugLog(`Decoded upgrade error: ${decodedError}`);
+      } else if (errorSignature) {
+        decodedError = `Unknown error signature: ${errorSignature}`;
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        errorDetails: decodedError || undefined,
+      };
+    }
+  }
+
+  /**
+   * Chapter 4: Check if a sector has been upgraded via crowdsale
+   * Returns true if the crowdsale upgrade has been called (baseType >= 4)
+   * Note: Bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 2-3
+   */
+  public async isSectorUpgraded(sectorId: string): Promise<boolean> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        this.debugLog("Game contract not found for sector upgrade check");
+        return false;
+      }
+
+      const baseType = (await this.readContract(
+        gameContract.address,
+        gameContract.abi,
+        "getSectorBaseType",
+        [BigInt(sectorId)]
+      )) as number;
+
+      // baseType >= 4 means crowdsale upgrade has been called
+      // (bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 2-3)
+      return baseType >= 4;
+    } catch (error: any) {
+      this.debugLog(`Failed to check sector upgrade status:`, error);
       return false;
     }
   }
@@ -2381,6 +2702,184 @@ export class BlockchainManager {
         error
       );
       return 0n;
+    }
+  }
+
+  /**
+   * Get the base type for a sector (1-6)
+   */
+  public async getSectorBaseType(sectorId: string): Promise<number> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      const baseType = await this.publicClient.readContract({
+        address: gameContract.address as `0x${string}`,
+        abi: gameContract.abi,
+        functionName: "getSectorBaseType",
+        args: [BigInt(sectorId)],
+      });
+
+      this.debugLog(`Sector ${sectorId} base type: ${baseType}`);
+      return Number(baseType);
+    } catch (error: any) {
+      this.debugLog(`Failed to get base type for sector ${sectorId}:`, error);
+      return 1; // Default to base 1 on error
+    }
+  }
+
+  /**
+   * Set the base type for a sector (God account only)
+   */
+  public async setSectorBaseType(
+    sectorId: string,
+    baseType: number
+  ): Promise<string | null> {
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      this.debugLog(`Setting sector ${sectorId} base type to ${baseType}...`);
+
+      const hash = await this.walletClient.writeContract({
+        address: gameContract.address as `0x${string}`,
+        abi: gameContract.abi,
+        functionName: "setSectorBaseType",
+        args: [BigInt(sectorId), baseType],
+        chain: this.selectedChain,
+      });
+
+      console.log(
+        `🏗️  Base set to ${baseType} for sector ${sectorId}: ${hash}`
+      );
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Base type update confirmed`);
+      return hash;
+    } catch (error: any) {
+      this.debugLog(`Failed to set base type for sector ${sectorId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a sector has a valid credential contract in registry modules
+   */
+  public async getCredentialContractInfo(sectorId: string): Promise<{
+    hasCredentialContract: boolean;
+    credentialAddress?: string;
+    registryAddress?: string;
+    isAudited?: boolean;
+    auditedChapter?: number;
+    error?: string;
+  }> {
+    try {
+      // Get the registry address for this sector
+      const maxExtractContract = this.getContract("MaxExtract");
+      if (!maxExtractContract) {
+        return {
+          hasCredentialContract: false,
+          error: "MaxExtract contract not found",
+        };
+      }
+
+      const registryAddress = await this.readContract(
+        maxExtractContract.address,
+        maxExtractContract.abi,
+        "sectors",
+        [BigInt(sectorId)]
+      );
+
+      this.debugLog(
+        `Registry address for sector ${sectorId}: ${registryAddress}`
+      );
+
+      if (
+        !registryAddress ||
+        registryAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        return {
+          hasCredentialContract: false,
+          error: "No registry found for sector",
+        };
+      }
+
+      // Get the credential contract address from the registry
+      const credentialAddress = await this.getCredentialAddress(
+        registryAddress as string
+      );
+
+      this.debugLog(
+        `Credential address for sector ${sectorId}: ${credentialAddress}`
+      );
+
+      if (
+        !credentialAddress ||
+        credentialAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        return {
+          hasCredentialContract: false,
+          registryAddress: registryAddress as string,
+          error: "No credential contract in registry modules",
+        };
+      }
+
+      // Check if the credential contract is audited
+      let isAudited = false;
+      let auditedChapter = 0;
+      try {
+        const auditorContract = this.getContract("Auditor");
+        if (auditorContract) {
+          auditedChapter = (await this.publicClient.readContract({
+            address: auditorContract.address as `0x${string}`,
+            abi: auditorContract.abi,
+            functionName: "isAudited",
+            args: [credentialAddress as `0x${string}`],
+          })) as number;
+
+          // Credential is audited for Chapter 3
+          isAudited = auditedChapter === 3;
+
+          this.debugLog(
+            `Audit check for credential contract ${credentialAddress}: chapter=${auditedChapter}, isChapter3=${isAudited}`
+          );
+        } else {
+          this.debugLog("Auditor contract not found, skipping audit check");
+        }
+      } catch (error: any) {
+        this.debugLog(
+          `Failed to check audit status for credential contract ${credentialAddress}:`,
+          error
+        );
+        // Continue without audit check - treat as not audited
+      }
+
+      // Credential contract is valid if it exists AND is audited for Chapter 3
+      const hasCredentialContract = isAudited;
+
+      this.debugLog(
+        `Credential contract check for sector ${sectorId}: credentialAddress="${credentialAddress}", isAudited=${isAudited}, hasCredentialContract=${hasCredentialContract}`
+      );
+
+      return {
+        hasCredentialContract,
+        credentialAddress,
+        registryAddress: registryAddress as string,
+        isAudited,
+        auditedChapter,
+      };
+    } catch (error: any) {
+      this.debugLog(
+        `Error checking credential contract for sector ${sectorId}:`,
+        error
+      );
+      return {
+        hasCredentialContract: false,
+        error: error.message,
+      };
     }
   }
 }
