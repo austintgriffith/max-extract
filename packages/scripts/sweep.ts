@@ -126,24 +126,24 @@ async function sweepPilots() {
         address: address as `0x${string}`,
       });
 
-      const balanceEth = parseFloat(formatEther(balance));
-
-      // Skip if balance is too low
-      const minBalance = chainId === 31337 ? 0.001 : 0.0001;
-      if (balanceEth < minBalance) {
+      // Skip if balance is zero
+      if (balance === 0n) {
         console.log(
-          `⏭️  Skipping ${pilot.name} (${address.slice(0, 8)}...) - balance too low: ${balanceEth.toFixed(6)} ETH`
+          `⏭️  Skipping ${pilot.name} (${address.slice(0, 8)}...) - balance: 0 ETH`
         );
         results.push({
           address,
           name: pilot.name,
-          initialBalance: formatEther(balance),
+          initialBalance: "0",
           swept: "0",
           success: false,
-          error: "Balance too low",
+          error: "Zero balance",
         });
         continue;
       }
+
+      console.log(`\n🔍 Checking ${pilot.name} (${address.slice(0, 8)}...):`);
+      console.log(`   📊 Balance: ${formatEther(balance)} ETH`);
 
       // Create wallet client for this pilot
       const pilotAccount = privateKeyToAccount(
@@ -157,9 +157,10 @@ async function sweepPilots() {
 
       // Get gas price
       const gasPrice = await publicClient.getGasPrice();
+      console.log(`   ⛽ Gas price: ${formatEther(gasPrice)} ETH per gas unit`);
 
-      // Estimate gas for the transaction by simulating with a small amount first
-      // This handles different chain gas requirements (Arbitrum needs more than 21000)
+      // Estimate gas for the transaction
+      // Standard ETH transfer is 21000 gas, but Arbitrum might need more
       let gasLimit: bigint;
       try {
         gasLimit = await publicClient.estimateGas({
@@ -167,36 +168,40 @@ async function sweepPilots() {
           to: godAccount.address,
           value: 1n, // Estimate with minimal value
         });
-        // Add 20% buffer to be safe
-        gasLimit = (gasLimit * 120n) / 100n;
+        console.log(`   📏 Estimated gas limit: ${gasLimit}`);
+        
+        // For Arbitrum, use the estimate directly (it's very accurate)
+        // For localhost, add a 50% buffer to account for variability
+        if (chainId === 42161) {
+          gasLimit = (gasLimit * 105n) / 100n; // 5% buffer for Arbitrum
+        } else {
+          gasLimit = (gasLimit * 150n) / 100n; // 50% buffer for localhost
+        }
       } catch (estimateError) {
+        console.log(`   ⚠️  Gas estimation failed, using fallback`);
         // Fallback: use higher limit for L2s, standard for others
         gasLimit = chainId === 42161 ? 100000n : 21000n;
       }
 
       const gasCost = gasLimit * gasPrice;
+      console.log(`   💸 Total gas cost: ${formatEther(gasCost)} ETH`);
 
       if (balance <= gasCost) {
-        console.log(
-          `⏭️  Skipping ${pilot.name} (${address.slice(0, 8)}...) - balance too low after gas`
-        );
+        console.log(`   ⏭️  Cannot sweep - insufficient balance after gas`);
         results.push({
           address,
           name: pilot.name,
           initialBalance: formatEther(balance),
           swept: "0",
           success: false,
-          error: "Balance too low after gas",
+          error: `Insufficient: balance ${formatEther(balance)} ETH, gas ${formatEther(gasCost)} ETH`,
         });
         continue;
       }
 
       const amountToSend = balance - gasCost;
-
-      console.log(`🔍 Sweeping ${pilot.name} (${address.slice(0, 8)}...):`);
-      console.log(`   📊 Balance: ${formatEther(balance)} ETH`);
-      console.log(`   💰 Sending: ${formatEther(amountToSend)} ETH`);
-      console.log(`   🔒 Gas cost: ${formatEther(gasCost)} ETH (limit: ${gasLimit})`);
+      console.log(`   💰 Amount to sweep: ${formatEther(amountToSend)} ETH`);
+      console.log(`   🚀 Sending transaction...`);
 
       // Send ETH to GOD
       const hash = await pilotWalletClient.sendTransaction({
@@ -207,7 +212,8 @@ async function sweepPilots() {
         chain,
       });
 
-      console.log(`✅ Swept ${formatEther(amountToSend)} ETH (tx: ${hash.slice(0, 10)}...)\n`);
+      console.log(`   ✅ Success! Swept ${formatEther(amountToSend)} ETH`);
+      console.log(`   📝 Tx: ${hash}`);
 
       totalSwept += amountToSend;
       successCount++;
@@ -265,6 +271,7 @@ async function sweepPilots() {
       } else {
         console.log(`❌ ${result.name}`);
         console.log(`   Address: ${result.address}`);
+        console.log(`   Balance: ${result.initialBalance} ETH`);
         console.log(`   Error: ${result.error}`);
       }
       console.log("");
