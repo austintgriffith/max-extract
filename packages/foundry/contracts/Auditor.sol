@@ -33,7 +33,8 @@ contract Auditor {
     AuditRequest[] public auditRequests;
     mapping(address => uint8) public isAudited; // Returns chapter number (0 = not audited)
     mapping(address => uint256[]) public auditsByAddress;
-    address public immutable AUDITOR_ADDRESS = 0x578E3541760Fe6A68803e60fF20DBcf9E5bCf3da;
+    //address public immutable AUDITOR_ADDRESS = 0x578E3541760Fe6A68803e60fF20DBcf9E5bCf3da;
+    address public immutable AUDITOR_ADDRESS = 0x3FB7c3260e8Dcd7F8019c814799049648C5c0116;
     Game public gameContract;
     Universe public immutable universe;
     
