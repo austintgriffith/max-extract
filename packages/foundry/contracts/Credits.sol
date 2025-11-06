@@ -19,6 +19,7 @@ contract Credits is ERC20, Ownable {
     
     // Events
     event CreditsInitialized(address indexed owner, uint256 initialSupply);
+    event CreditsBatchMinted(uint256 recipientCount, uint256 totalAmount);
 
     // Constructor
     constructor(address _owner) ERC20("Extract Credits", "CREDITS") Ownable(_owner) {
@@ -37,6 +38,22 @@ contract Credits is ERC20, Ownable {
     function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
         console.log("Minted credits, amount:", amount);
+    }
+
+    /**
+     * Batch mint credits to multiple addresses - only owner can mint
+     * @param recipients Array of addresses to mint credits to
+     * @param amounts Array of amounts to mint (must match recipients length)
+     */
+    function batchMint(address[] calldata recipients, uint256[] calldata amounts) external onlyOwner {
+        require(recipients.length == amounts.length, "Credits: arrays length mismatch");
+        require(recipients.length > 0, "Credits: empty arrays");
+        
+        for (uint256 i = 0; i < recipients.length; i++) {
+            _mint(recipients[i], amounts[i]);
+        }
+        
+        console.log("Batch minted credits to addresses, count:", recipients.length);
     }
 
     /**

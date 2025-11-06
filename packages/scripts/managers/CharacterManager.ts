@@ -957,7 +957,9 @@ export class CharacterManager {
 
       // Mint CREDITS tokens to pilots that don't have any yet
       console.log(`💰 Checking and minting CREDITS tokens to pilots...`);
-      let creditsMintedCount = 0;
+
+      const recipientsToMint: string[] = [];
+      const amountsToMint: bigint[] = [];
 
       for (const character of this.listCharacters()) {
         try {
@@ -971,19 +973,13 @@ export class CharacterManager {
             const creditsToMint = BigInt(character.credits) * BigInt(10 ** 18);
 
             this.debugLog(
-              `Minting ${character.credits.toLocaleString()} CREDITS to ${
+              `Queuing ${character.credits.toLocaleString()} CREDITS for ${
                 character.firstname
-              } ${character.lastname} (${character.publicAddress.slice(
-                0,
-                10
-              )}...)`
+              } ${character.lastname} (${character.publicAddress.slice(0, 10)}...)`
             );
 
-            await blockchainManager.mintCredits(
-              character.publicAddress,
-              creditsToMint
-            );
-            creditsMintedCount++;
+            recipientsToMint.push(character.publicAddress);
+            amountsToMint.push(creditsToMint);
           } else {
             // Pilot already has credits
             const creditsFormatted = (
@@ -995,14 +991,26 @@ export class CharacterManager {
           }
         } catch (error: any) {
           console.error(
-            `⚠️  Failed to mint credits to ${character.firstname} ${character.lastname}: ${error.message}`
+            `⚠️  Failed to check credits for ${character.firstname} ${character.lastname}:`,
+            error.message
           );
-          // Continue with other pilots even if one fails
         }
       }
 
-      if (creditsMintedCount > 0) {
-        console.log(`💰 Minted CREDITS to ${creditsMintedCount} pilots`);
+      // Batch mint all at once if there are any recipients
+      if (recipientsToMint.length > 0) {
+        try {
+          await blockchainManager.batchMintCredits(
+            recipientsToMint,
+            amountsToMint
+          );
+          console.log(`💰 Minted CREDITS to ${recipientsToMint.length} pilots in single transaction`);
+        } catch (error: any) {
+          console.error(
+            `⚠️  Failed to batch mint credits:`,
+            error.message
+          );
+        }
       } else {
         console.log(`✅ All pilots already have CREDITS tokens`);
       }

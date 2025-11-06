@@ -32,22 +32,17 @@ export const Chapter2 = () => {
                 <h4 className="font-semibold text-info mb-3">The Two-Part Challenge</h4>
                 <p className="text-sm text-base-content mb-2">This chapter has two distinct parts:</p>
                 <ol className="list-decimal list-inside space-y-2 text-sm ml-2">
+                  <li>Deploy an Announcement contract with your canonical information (name and social link)</li>
                   <li>
-                    <strong>Part 1:</strong> Deploy an Announcement contract with your canonical information (name and
-                    social link)
-                  </li>
-                  <li>
-                    <div>
-                      <strong>Part 2:</strong> Navigate the official audit system to get your contract verified by the
-                      Pirate Council. This is an onchain audit system powered by an AI pirate auditor system. You will
-                      request audits by spending points, view audit progress by reading from the Auditor contract (
-                      {auditorAddress && (
-                        <span className="inline-flex">
-                          <Address address={auditorAddress} />
-                        </span>
-                      )}
-                      ), and pirates will only use successfully audited contracts.
-                    </div>
+                    Navigate the official audit system to get your contract verified by the Pirate Council. This is an
+                    onchain audit system powered by an AI pirate auditor system. You will request audits by spending
+                    points, view audit progress by reading from the Auditor contract (
+                    {auditorAddress && (
+                      <span className="inline-flex">
+                        <Address address={auditorAddress} />
+                      </span>
+                    )}
+                    ), and pirates will only use successfully audited contracts.
                   </li>
                 </ol>
               </div>

@@ -57,7 +57,7 @@ mapping(string => address) public modules; // Your module registry`}</code>
             <p className="mb-3">
               <strong>Account Verification:</strong> Must be triggered by the same account that bought into the game{" "}
               <a
-                href="https://arbiscan.io/address/0x7dacc49eB4C0539252d5FCf6653d596bB2DFF26F#code#F1#L115"
+                href="https://arbiscan.io/address/0x7dacc49eB4C0539252d5FCf6653d596bB2DFF26F#code#F1#L121"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent hover:underline"

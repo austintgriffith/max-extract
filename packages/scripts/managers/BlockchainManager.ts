@@ -778,6 +778,45 @@ export class BlockchainManager {
   }
 
   /**
+   * Batch mint CREDITS tokens to multiple addresses (only GOD can call)
+   * @param recipients Array of addresses to mint credits to
+   * @param amounts Array of amounts to mint in wei (with 18 decimals)
+   */
+  public async batchMintCredits(
+    recipients: string[],
+    amounts: bigint[]
+  ): Promise<void> {
+    const creditsContract = this.getContract("Credits");
+    if (!creditsContract) {
+      throw new Error("Credits contract not found. Run: yarn deploy");
+    }
+
+    if (recipients.length !== amounts.length) {
+      throw new Error("Recipients and amounts arrays must have the same length");
+    }
+
+    if (recipients.length === 0) {
+      this.debugLog("No recipients to mint credits to");
+      return;
+    }
+
+    this.debugLog(
+      `Batch minting credits to ${recipients.length} addresses...`
+    );
+
+    const hash = await this.writeContract(
+      creditsContract.address,
+      creditsContract.abi,
+      "batchMint",
+      [recipients, amounts]
+    );
+
+    this.debugLog(
+      `Credits batch minted to ${recipients.length} addresses, transaction: ${hash}`
+    );
+  }
+
+  /**
    * Set the Credits contract address in the Game contract
    * @param creditsAddress Address of the Credits token contract
    */
