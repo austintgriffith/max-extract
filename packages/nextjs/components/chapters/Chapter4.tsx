@@ -54,7 +54,7 @@ export const Chapter4 = () => {
                 </ol>
                 <p className="text-sm text-base-content mt-3">
                   <strong>Either way works!</strong> The contract you register under the{" "}
-                  <code className="bg-base-100 px-1 rounded">&ldquo;fuel&rdquo;</code> module just needs to have the
+                  <code className="bg-base-100 px-1 rounded">&ldquo;sale&rdquo;</code> module just needs to have the
                   required interface (see below).
                 </p>
               </div>
@@ -63,7 +63,7 @@ export const Chapter4 = () => {
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Required Interface</h3>
           <p className="mb-4">
-            The contract registered under the <code className="bg-base-100 px-2 py-1 rounded text-sm">fuel</code> module
+            The contract registered under the <code className="bg-base-100 px-2 py-1 rounded text-sm">sale</code> module
             key in your registry MUST have these functions:
           </p>
 
@@ -132,8 +132,8 @@ export const Chapter4 = () => {
               <code className="text-accent">{`function buy(uint256 amount) external {
     require(!upgraded, "Sale ended");
     
-    // Calculate cost
-    uint256 cost = amount * pricePerTokenInCredits();
+    // Calculate cost (amount is in wei, price is in wei, divide to get correct result)
+    uint256 cost = (amount * pricePerTokenInCredits()) / 10**18;
     
     // Transfer credits from pilot to this contract
     creditsContract.transferFrom(msg.sender, address(this), cost);
@@ -225,24 +225,24 @@ export const Chapter4 = () => {
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
             <pre className="text-sm overflow-x-auto">
               <code className="text-accent">{`function upgrade() external {
-    // Must have raised at least 50,000 credits
+    // Checks
     uint256 balance = creditsContract.balanceOf(address(this));
     require(balance >= 50_000 * 10**18, "Not enough credits");
     require(!upgraded, "Already upgraded");
     
-    // Mark as upgraded (prevents future buys)
+    // Effects - MUST set state before external calls (CEI pattern)
     upgraded = true;
     
-    // Reward the pilot caller with 500 credits
+    // Interactions - external calls
+    creditsContract.approve(gameAddress, 49_500 * 10**18);
+    game.upgradeStation(YOUR_SECTOR_ID);  // Game pulls 49,500 HERE
     creditsContract.transfer(msg.sender, 500 * 10**18);
     
-    // Approve Game contract to take 49,500 credits
-    creditsContract.approve(gameAddress, 49_500 * 10**18);
-    
-    // Call Game contract to upgrade station
-    game.upgradeStation(YOUR_SECTOR_ID);
-    
-    // Game contract will transferFrom 49,500 credits
+    // Optional: handle excess credits (get balance AFTER Game took 49,500)
+    // uint256 remaining = creditsContract.balanceOf(address(this));
+    // if (remaining > 0) {
+    //     creditsContract.transfer(stationOwner, remaining);
+    // }
 }`}</code>
             </pre>
           </div>
@@ -256,6 +256,57 @@ export const Chapter4 = () => {
             )}
             ) will pull 49,500 credits from your fuel contract and award you 10 points for upgrading your station.
           </p>
+
+          <div className="bg-warning/10 border-2 border-warning rounded-lg p-6 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="text-warning text-2xl">⚠️</div>
+              <div>
+                <h4 className="font-semibold text-warning mb-2">Critical: CEI Pattern Required</h4>
+                <p className="text-sm text-base-content">
+                  Set <code className="bg-base-100 px-1 rounded">upgraded = true</code> BEFORE any external calls
+                  (approve, upgradeStation, transfer). This prevents reentrancy attacks. Your audit will fail if state
+                  changes come after external calls.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="text-info text-2xl">💡</div>
+              <div>
+                <h4 className="font-semibold text-info mb-3">What About Excess Credits?</h4>
+                <p className="text-sm text-base-content mb-3">
+                  Pilots can keep buying tokens even after your contract reaches 50k credits. When{" "}
+                  <code className="bg-base-100 px-1 rounded">upgrade()</code> is finally called, you might have 60k,
+                  70k, or more!
+                </p>
+                <p className="text-sm text-base-content mb-3">
+                  <strong>Required distributions:</strong>
+                </p>
+                <ul className="space-y-1 text-sm list-disc list-inside ml-2">
+                  <li>
+                    <strong>Exactly 49,500 credits</strong> to Game contract (no more, no less)
+                  </li>
+                  <li>
+                    <strong>At least 500 credits</strong> to the pilot who calls upgrade
+                  </li>
+                </ul>
+                <p className="text-sm text-base-content mt-3">
+                  <strong>Excess credits</strong> (beyond 50k) can be handled however you want:
+                </p>
+                <ul className="space-y-1 text-sm list-disc list-inside ml-2">
+                  <li>Leave them in the contract for future use</li>
+                  <li>Send them to yourself (you ran the crowdsale!)</li>
+                  <li>Send them as an extra bonus to the pilot caller</li>
+                </ul>
+                <p className="text-sm text-base-content mt-3">
+                  The auditor will accept any reasonable handling of excess credits as long as the required amounts are
+                  met.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">After Upgrade</h3>
           <div className="bg-base-200 rounded-lg p-4 mb-4">
@@ -292,7 +343,7 @@ export const Chapter4 = () => {
           <p className="mb-4">
             After deploying your fuel token contract (or crowdsale contract if using two-contract architecture),
             register it in your Registry contract under the{" "}
-            <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;fuel&rdquo;</code> key.
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;sale&rdquo;</code> key.
           </p>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Verify and Audit</h3>
@@ -339,7 +390,7 @@ export const Chapter4 = () => {
               </div>
               <p>
                 Deploy your contract(s) and register under{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;fuel&rdquo;</code> module in your
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;sale&rdquo;</code> module in your
                 Registry
               </p>
             </div>

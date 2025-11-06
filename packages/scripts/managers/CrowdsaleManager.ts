@@ -21,11 +21,11 @@ interface PlayerCrowdsaleState {
  * CrowdsaleManager handles the automated simulation of Chapter 4 fuel token crowdsales
  * 
  * Workflow:
- * 1. Detect players with audited fuel contracts (Chapter 4 visible + fuel module audited)
+ * 1. Detect players with audited sale contracts (Chapter 4 visible + sale module audited)
  * 2. Randomize pilot order for purchasing
  * 3. Process pilots in batches (5 per outer loop)
  * 4. Each pilot decides randomly whether to buy based on price
- * 5. Once 100,500 credits reached, pilots call upgrade()
+ * 5. Once 50,000 credits reached, pilots call upgrade()
  * 6. After upgrade or 3 attempts, mark crowdsale complete
  */
 export class CrowdsaleManager {
@@ -94,98 +94,90 @@ export class CrowdsaleManager {
    */
   public async checkForNewCrowdsales(): Promise<void> {
     try {
-      console.log("🔍 [Crowdsale] Checking for new crowdsales...");
+      this.debugLog("Checking for new crowdsales...");
 
       // Get all players from MaxExtract contract
       const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
       if (!maxExtractContract) {
-        console.log("⚠️  [Crowdsale] MaxExtract contract not found");
+        this.debugLog("MaxExtract contract not found");
         return;
       }
 
       // Get all active sectors and their owners
       const activeSectors = await this.blockchainManager.getActiveSectors();
-      console.log(`📊 [Crowdsale] Found ${activeSectors.length} active sectors`);
+      this.debugLog(`Found ${activeSectors.length} active sectors`);
 
       for (const sectorId of activeSectors) {
         const playerAddress = await this.blockchainManager.getSectorOwner(
           sectorId.toString()
         );
 
-        console.log(`\n🔎 [Crowdsale] Checking sector ${sectorId}...`);
-
         if (!playerAddress || playerAddress === "0x0000000000000000000000000000000000000000") {
-          console.log(`   ❌ No player address for sector ${sectorId}`);
+          this.debugLog(`No player address for sector ${sectorId}`);
           continue;
         }
-
-        console.log(`   👤 Player: ${playerAddress}`);
 
         // Skip if already tracking this player's crowdsale
         if (this.activeCrowdsales.has(playerAddress.toLowerCase())) {
           const state = this.activeCrowdsales.get(playerAddress.toLowerCase())!;
-          if (state.isComplete) {
-            console.log(`   ✅ Crowdsale already complete for player ${playerAddress.slice(0, 10)}...`);
-          } else {
-            console.log(`   🔄 Crowdsale already active for player ${playerAddress.slice(0, 10)}...`);
-          }
+          this.debugLog(`Crowdsale ${state.isComplete ? 'complete' : 'active'} for player ${playerAddress.slice(0, 10)}...`);
           continue;
         }
 
         // Check if Chapter 4 is visible for this player
-        console.log(`   🔍 Checking if Chapter 4 is visible...`);
         const isChapter4Visible = await this.blockchainManager.isChapter4Visible(
           playerAddress
         );
-        console.log(`   📖 Chapter 4 visible: ${isChapter4Visible}`);
 
         if (!isChapter4Visible) {
-          console.log(`   ⏭️  Skipping - Chapter 4 not visible`);
+          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - Chapter 4 not visible`);
           continue;
         }
 
         // Get player's registry address
-        console.log(`   🔍 Getting registry address...`);
         const registryAddress = await this.blockchainManager.getRegistryAddressForSector(
           sectorId.toString()
         );
-        console.log(`   📋 Registry: ${registryAddress || "NOT FOUND"}`);
 
         if (
           !registryAddress ||
           registryAddress === "0x0000000000000000000000000000000000000000"
         ) {
-          console.log(`   ⏭️  Skipping - No registry found`);
+          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - No registry found`);
           continue;
         }
 
-        // Check for "fuel" module in registry
-        console.log(`   🔍 Checking for "fuel" module in registry...`);
+        // Check for "sale" module in registry
         const fuelContractAddress = await this.blockchainManager.getRegistryModule(
           registryAddress,
-          "fuel"
+          "sale"
         );
-        console.log(`   ⛽ Fuel contract: ${fuelContractAddress || "NOT FOUND"}`);
 
         if (
           !fuelContractAddress ||
           fuelContractAddress === "0x0000000000000000000000000000000000000000"
         ) {
-          console.log(`   ⏭️  Skipping - No fuel module found`);
+          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - No sale module found`);
           continue;
         }
 
-        // Check if fuel contract is audited for Chapter 4
-        console.log(`   🔍 Checking audit status...`);
+        // Check if sale contract is audited for Chapter 4
         const auditStatus = await this.blockchainManager.checkAuditStatus(
           fuelContractAddress
         );
-        console.log(`   🔐 Audit status: ${auditStatus} (need 4 for Chapter 4)`);
 
         if (auditStatus !== 4) {
-          console.log(`   ⏭️  Skipping - Not audited for Chapter 4`);
+          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - Audit status ${auditStatus} (need 4)`);
           continue;
         }
+
+        // If we get here, all conditions are met - log detailed info
+        console.log(`\n🔎 [Crowdsale] New eligible crowdsale found for sector ${sectorId.toString().slice(0, 10)}...`);
+        console.log(`   👤 Player: ${playerAddress}`);
+        console.log(`   📋 Registry: ${registryAddress}`);
+        console.log(`   🎫 Sale contract: ${fuelContractAddress}`);
+        console.log(`   🔐 Audit status: ${auditStatus}`);
+        
 
         // Check if the sector has already been upgraded (station baseType > 1)
         console.log(`   🔍 Checking if sector has already been upgraded...`);
@@ -235,7 +227,7 @@ export class CrowdsaleManager {
       console.log(
         `🎫 Special token buying mode for player ${playerAddress.slice(0, 10)}...`
       );
-      console.log(`   Fuel contract: ${fuelContractAddress}`);
+      console.log(`   Sale contract: ${fuelContractAddress}`);
       console.log(`   Registry: ${registryAddress}`);
       console.log(`   Sector ID: ${sectorId.slice(0, 10)}...`);
 
@@ -254,6 +246,10 @@ export class CrowdsaleManager {
         });
         return;
       }
+
+      // NOTE: Player's crowdsale contract should already be fully initialized
+      // The player sets all required addresses (Game, Credits, Registry) during deployment
+      // We do NOT call initialization functions here as they are owner-only on player contracts
 
       // Get fuel token price
       const pricePerToken = await this.blockchainManager.getFuelTokenPrice(

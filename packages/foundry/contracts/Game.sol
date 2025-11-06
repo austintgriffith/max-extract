@@ -697,11 +697,11 @@ contract Game {
         address registryAddress = maxExtract.sectors(_sectorId);
         if (registryAddress == address(0)) revert NotARegistry();
         
-        // Get the registered fuel contract from the registry using library
-        address fuelContract = registryAddress.getModule("fuel");
+        // Get the registered sale contract from the registry using library
+        address fuelContract = registryAddress.getModule("sale");
         if (fuelContract == address(0)) revert NotAFuelContract();
         
-        // Verify that msg.sender (the fuel contract) matches the registered fuel contract
+        // Verify that msg.sender (the sale contract) matches the registered sale contract
         if (fuelContract != msg.sender) revert NotAFuelContract();
         
         // Get the player who owns this sector

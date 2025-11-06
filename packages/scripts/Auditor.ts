@@ -1210,14 +1210,48 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           comparison.exactMatch ? "✅ YES" : "❌ NO"
         }`
       );
+      console.log(
+        `   📏 Length difference: ${Math.abs(
+          localBytecode.length - remoteBytecode.length
+        )} characters`
+      );
+
+      // ALWAYS show detailed bytecode comparison for debugging
+      console.log(`\n   📊 DETAILED BYTECODE DUMP:`);
+      console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      
+      console.log(`\n   🔵 LOCAL BYTECODE (Full):`);
+      console.log(`   First 500 chars: ${localBytecode.substring(0, 500)}`);
+      console.log(`   Last 500 chars:  ${localBytecode.substring(Math.max(0, localBytecode.length - 500))}`);
+      console.log(`   Total length: ${localBytecode.length}`);
+      
+      console.log(`\n   🟢 REMOTE BYTECODE (Full):`);
+      console.log(`   First 500 chars: ${remoteBytecode.substring(0, 500)}`);
+      console.log(`   Last 500 chars:  ${remoteBytecode.substring(Math.max(0, remoteBytecode.length - 500))}`);
+      console.log(`   Total length: ${remoteBytecode.length}`);
+
+      // Strip metadata and show those too
+      const localStripped = this.stripMetadata(localBytecode);
+      const remoteStripped = this.stripMetadata(remoteBytecode);
+      
+      console.log(`\n   🔵 LOCAL BYTECODE (Stripped):`);
+      console.log(`   First 500 chars: ${localStripped.substring(0, 500)}`);
+      console.log(`   Last 500 chars:  ${localStripped.substring(Math.max(0, localStripped.length - 500))}`);
+      console.log(`   Total length: ${localStripped.length}`);
+      console.log(`   Removed: ${localBytecode.length - localStripped.length} chars`);
+      
+      console.log(`\n   🟢 REMOTE BYTECODE (Stripped):`);
+      console.log(`   First 500 chars: ${remoteStripped.substring(0, 500)}`);
+      console.log(`   Last 500 chars:  ${remoteStripped.substring(Math.max(0, remoteStripped.length - 500))}`);
+      console.log(`   Total length: ${remoteStripped.length}`);
+      console.log(`   Removed: ${remoteBytecode.length - remoteStripped.length} chars`);
+      
+      console.log(`\n   🔍 COMPARISON RESULTS:`);
+      console.log(`   Exact match: ${comparison.exactMatch ? "✅ YES" : "❌ NO"}`);
+      console.log(`   Code match (stripped): ${comparison.codeMatch ? "✅ YES" : "❌ NO"}`);
+      console.log(`   Stripped match: ${localStripped === remoteStripped ? "✅ YES" : "❌ NO"}`);
 
       if (!comparison.exactMatch) {
-        console.log(
-          `   📏 Length difference: ${Math.abs(
-            localBytecode.length - remoteBytecode.length
-          )} characters`
-        );
-
         // Find first difference
         let firstDiff = -1;
         for (
@@ -1232,7 +1266,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         }
 
         if (firstDiff >= 0) {
-          console.log(`   📍 First difference at position: ${firstDiff}`);
+          console.log(`\n   📍 First difference at position: ${firstDiff}`);
           console.log(
             `   Local:  ...${localBytecode.substring(
               Math.max(0, firstDiff - 20),
@@ -1282,13 +1316,37 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           }
         }
 
-        console.log(
-          `\n   🔍 Code Match (excluding metadata): ${
-            comparison.codeMatch ? "✅ YES" : "❌ NO"
-          }`
-        );
+        // Also check stripped versions for first difference
+        let firstDiffStripped = -1;
+        for (
+          let i = 0;
+          i < Math.min(localStripped.length, remoteStripped.length);
+          i++
+        ) {
+          if (localStripped[i] !== remoteStripped[i]) {
+            firstDiffStripped = i;
+            break;
+          }
+        }
+
+        if (firstDiffStripped >= 0) {
+          console.log(`\n   📍 First difference in STRIPPED bytecode at position: ${firstDiffStripped}`);
+          console.log(
+            `   Local:  ...${localStripped.substring(
+              Math.max(0, firstDiffStripped - 20),
+              firstDiffStripped + 80
+            )}...`
+          );
+          console.log(
+            `   Remote: ...${remoteStripped.substring(
+              Math.max(0, firstDiffStripped - 20),
+              firstDiffStripped + 80
+            )}...`
+          );
+        }
+
         if (comparison.reason) {
-          console.log(`   📝 ${comparison.reason}`);
+          console.log(`\n   📝 ${comparison.reason}`);
         }
       }
       console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
@@ -1398,27 +1456,44 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
    *
    * This function strips everything from the CBOR map prefix (a0-af) through the end,
    * as all of this is compiler-generated metadata that can vary between compilations.
+   *
+   * The metadata is ALWAYS at the very end and is relatively short (typically 50-100 bytes).
+   * We look for the pattern starting from the end to avoid matching random 'a[0-9a-f]' in the code.
    */
   private stripMetadata(bytecode: string): string {
     if (!bytecode || bytecode.length < 100) {
       return bytecode;
     }
 
-    // Match any CBOR metadata format:
-    // - a[0-9a-f]: CBOR map with 0-15 entries (a0-af in hex)
-    // - .*: Any content (e.g., IPFS hash, experimental fields)
-    // - 64736f6c63: The 'solc' marker (always present)
-    // - [a-f0-9]+: Compiler version and end marker (variable length)
-    // - $: End of bytecode
-    const metadataPattern = /a[0-9a-f].*64736f6c63[a-f0-9]+$/i;
+    // Match CBOR metadata at the END of bytecode:
+    // The metadata section is always at the end and follows this pattern:
+    // - Starts with 'a[0-9a-f]' (CBOR map with 0-15 entries)
+    // - Contains '64736f6c63' (hex for "solc") 
+    // - Followed by version and length bytes
+    // - Ends with '00[0-9a-f]{2}' (CBOR length encoding)
+    //
+    // We use a non-greedy match and limit to last ~300 chars to avoid
+    // accidentally matching 'a[0-9a-f]' that appears in the actual code.
+    //
+    // Match from the last 300 characters only (metadata is typically 50-150 chars)
+    const tailLength = Math.min(300, bytecode.length);
+    const tail = bytecode.slice(-tailLength);
+    const head = bytecode.slice(0, -tailLength);
 
-    const stripped = bytecode.replace(metadataPattern, "");
+    // Look for metadata pattern only in the tail
+    // Use non-greedy match (.*?) and be more specific about the end pattern
+    const metadataPattern = /a[0-9a-f](?:.*?)64736f6c63[a-f0-9]{6,}00[0-9a-f]{2}$/i;
+    
+    const strippedTail = tail.replace(metadataPattern, "");
+    const stripped = head + strippedTail;
 
     this.debugLog("Metadata stripping", {
       originalLength: bytecode.length,
       strippedLength: stripped.length,
       removedBytes: bytecode.length - stripped.length,
       hadMetadata: bytecode !== stripped,
+      tailOriginal: tail.slice(-100),
+      tailStripped: strippedTail.slice(-100),
     });
 
     return stripped;
@@ -1554,108 +1629,163 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
   }
 
   private async fetchSourceCodeFromEtherscan(
-    contractAddress: Address
+    contractAddress: Address,
+    maxRetries: number = 3
   ): Promise<any | null> {
-    try {
-      // Use Etherscan API to get source code
-      const url = `${ETHERSCAN_API_BASE}?chainid=42161&module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
-
-      // Always log the API call details (not just in debug mode)
-      const maskedUrl = url.replace(
-        ETHERSCAN_API_KEY,
-        ETHERSCAN_API_KEY ? "***API_KEY***" : "***NO_KEY***"
-      );
-      console.log(`\n   🌐 Fetching source code from Etherscan V2 API...`);
-      console.log(`   Chain ID: 42161 (Arbitrum One)`);
-      console.log(`   Address: ${contractAddress}`);
-      console.log(`   API Key: ${ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"}`);
-      this.debugLog(`Full API URL: ${maskedUrl}`);
-
-      const response = await fetch(url);
-
-      // Log HTTP response details
-      console.log(`   HTTP Status: ${response.status} ${response.statusText}`);
-      this.debugLog(`Response headers:`, {
-        contentType: response.headers.get("content-type"),
-        contentLength: response.headers.get("content-length"),
-      });
-
-      // Check if response is actually JSON
-      const contentType = response.headers.get("content-type");
-
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-
-        // Show detailed error information (not just in debug mode)
-        console.error(`\n   ❌ ERROR: Etherscan returned non-JSON response`);
-        console.error(`   Content-Type: ${contentType || "(none)"}`);
-        console.error(`   HTTP Status: ${response.status}`);
-        console.error(`\n   📄 Response body (first 1000 chars):`);
-        console.error(`   ${text.substring(0, 1000)}`);
-        if (text.length > 1000) {
-          console.error(`   ... (${text.length} total characters)`);
+    const url = `${ETHERSCAN_API_BASE}?chainid=42161&module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
+    
+    // Always log the API call details (not just in debug mode)
+    const maskedUrl = url.replace(
+      ETHERSCAN_API_KEY,
+      ETHERSCAN_API_KEY ? "***API_KEY***" : "***NO_KEY***"
+    );
+    
+    // Retry loop for handling temporary network issues
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt === 1) {
+          console.log(`\n   🌐 Fetching source code from Etherscan V2 API...`);
+          console.log(`   Chain ID: 42161 (Arbitrum One)`);
+          console.log(`   Address: ${contractAddress}`);
+          console.log(`   API Key: ${ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"}`);
+          this.debugLog(`Full API URL: ${maskedUrl}`);
+        } else {
+          console.log(`\n   🔄 Retry attempt ${attempt}/${maxRetries} for Etherscan API...`);
         }
 
-        console.error(`\n   💡 Possible causes:`);
-        if (!ETHERSCAN_API_KEY) {
-          console.error(`      - ETHERSCAN_API_KEY is not set`);
+        const response = await fetch(url);
+
+        // Log HTTP response details
+        console.log(`   HTTP Status: ${response.status} ${response.statusText}`);
+        this.debugLog(`Response headers:`, {
+          contentType: response.headers.get("content-type"),
+          contentLength: response.headers.get("content-length"),
+        });
+
+        // Check for temporary server errors (502, 503, 504)
+        const isTemporaryError = response.status === 502 || response.status === 503 || response.status === 504;
+        
+        // Check if response is actually JSON
+        const contentType = response.headers.get("content-type");
+
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await response.text();
+
+          // Check if it's a temporary server error
+          if (isTemporaryError) {
+            console.error(`\n   ⚠️  Temporary server error (${response.status}): ${response.statusText}`);
+            console.error(`   Response: ${text.substring(0, 200)}`);
+            
+            // If we have more retries, wait and try again
+            if (attempt < maxRetries) {
+              const waitTime = 7000; // 7 seconds
+              console.log(`   ⏳ Waiting ${waitTime / 1000}s before retry...`);
+              await new Promise((resolve) => setTimeout(resolve, waitTime));
+              continue; // Try again
+            }
+            
+            // No more retries - fail permanently
+            console.error(`\n   ❌ ERROR: Etherscan API still unavailable after ${maxRetries} attempts`);
+            console.error(`   This appears to be a temporary server issue on Etherscan's side.`);
+            console.error(`\n   💡 To verify manually, visit:`);
+            console.error(
+              `      https://arbiscan.io/address/${contractAddress}#code\n`
+            );
+            return null;
+          }
+
+          // Not a temporary error - show detailed error information
+          console.error(`\n   ❌ ERROR: Etherscan returned non-JSON response`);
+          console.error(`   Content-Type: ${contentType || "(none)"}`);
+          console.error(`   HTTP Status: ${response.status}`);
+          console.error(`\n   📄 Response body (first 1000 chars):`);
+          console.error(`   ${text.substring(0, 1000)}`);
+          if (text.length > 1000) {
+            console.error(`   ... (${text.length} total characters)`);
+          }
+
+          console.error(`\n   💡 Possible causes:`);
+          if (!ETHERSCAN_API_KEY) {
+            console.error(`      - ETHERSCAN_API_KEY is not set`);
+          }
+          console.error(`      - The contract may not be verified on Arbiscan`);
+          console.error(`      - Etherscan API may be having issues`);
+          console.error(`      - The API endpoint or format may have changed`);
+          console.error(`\n   💡 To verify manually, visit:`);
+          console.error(
+            `      https://arbiscan.io/address/${contractAddress}#code\n`
+          );
+
+          this.debugLog("Full non-JSON response", text);
+          return null;
         }
-        console.error(`      - The contract may not be verified on Arbiscan`);
-        console.error(`      - Etherscan API may be having issues`);
-        console.error(`      - The API endpoint or format may have changed`);
-        console.error(`\n   💡 To verify manually, visit:`);
+
+        const data: EtherscanSourceCodeResponse = await response.json();
+
+        console.log(`   ✓ Received JSON response from Etherscan`);
+        console.log(`   API Status: ${data.status} (${data.message})`);
+
+        this.debugLog("Etherscan API response", {
+          status: data.status,
+          message: data.message,
+          resultCount: data.result?.length || 0,
+        });
+
+        if (data.status === "1" && data.result && data.result.length > 0) {
+          this.debugLog("Etherscan verification found", {
+            contractName: data.result[0].ContractName,
+            compilerVersion: data.result[0].CompilerVersion,
+            hasSourceCode: !!data.result[0].SourceCode,
+          });
+          
+          if (attempt > 1) {
+            console.log(`   ✅ Successfully retrieved data after ${attempt} attempt(s)`);
+          }
+          
+          return data.result[0];
+        }
+
+        // If we got JSON but no results - this is a permanent error (not verified)
+        console.error(`\n   ❌ No verification data found`);
+        console.error(`   API returned status: ${data.status}`);
+        console.error(`   API message: ${data.message}`);
+        console.error(`\n   💡 This usually means the contract is not verified.`);
+        console.error(`   Please verify the contract at:`);
         console.error(
           `      https://arbiscan.io/address/${contractAddress}#code\n`
         );
 
-        this.debugLog("Full non-JSON response", text);
+        this.debugLog("No verification data from Etherscan", data);
+        return null; // No point retrying if contract is not verified
+        
+      } catch (error: any) {
+        // Network/fetch errors - retry if we have attempts left
+        console.error(
+          `\n   ⚠️  Exception while fetching from Etherscan (attempt ${attempt}/${maxRetries}):`,
+          error.message
+        );
+        console.error(`   Error type: ${error.name}`);
+        if (error.cause) {
+          console.error(`   Cause: ${error.cause}`);
+        }
+        this.debugLog("Etherscan fetch error", error);
+        
+        // If we have more retries, wait and try again
+        if (attempt < maxRetries) {
+          const waitTime = 7000; // 7 seconds
+          console.log(`   ⏳ Waiting ${waitTime / 1000}s before retry...`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          continue; // Try again
+        }
+        
+        // No more retries
+        console.error(`\n   ❌ Failed to fetch from Etherscan after ${maxRetries} attempts`);
         return null;
       }
-
-      const data: EtherscanSourceCodeResponse = await response.json();
-
-      console.log(`   ✓ Received JSON response from Etherscan`);
-      console.log(`   API Status: ${data.status} (${data.message})`);
-
-      this.debugLog("Etherscan API response", {
-        status: data.status,
-        message: data.message,
-        resultCount: data.result?.length || 0,
-      });
-
-      if (data.status === "1" && data.result && data.result.length > 0) {
-        this.debugLog("Etherscan verification found", {
-          contractName: data.result[0].ContractName,
-          compilerVersion: data.result[0].CompilerVersion,
-          hasSourceCode: !!data.result[0].SourceCode,
-        });
-        return data.result[0];
-      }
-
-      // If we got JSON but no results
-      console.error(`\n   ❌ No verification data found`);
-      console.error(`   API returned status: ${data.status}`);
-      console.error(`   API message: ${data.message}`);
-      console.error(`\n   💡 This usually means the contract is not verified.`);
-      console.error(`   Please verify the contract at:`);
-      console.error(
-        `      https://arbiscan.io/address/${contractAddress}#code\n`
-      );
-
-      this.debugLog("No verification data from Etherscan", data);
-      return null;
-    } catch (error: any) {
-      console.error(
-        `\n   ❌ Exception while fetching from Etherscan:`,
-        error.message
-      );
-      console.error(`   Error type: ${error.name}`);
-      if (error.cause) {
-        console.error(`   Cause: ${error.cause}`);
-      }
-      this.debugLog("Etherscan fetch error", error);
-      return null;
     }
+    
+    // Should never reach here, but just in case
+    return null;
   }
 
   private async markAsAudited(requestId: number) {

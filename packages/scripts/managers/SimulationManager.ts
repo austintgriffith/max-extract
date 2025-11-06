@@ -191,12 +191,10 @@ export class SimulationManager {
 
       // Check for new crowdsales and process active ones (Chapter 4)
       if (this.crowdsaleManager) {
-        console.log("\n🎫 [OuterLoop] Running Chapter 4 crowdsale checks...");
+        this.debugLog("Checking for new crowdsales...");
         await this.crowdsaleManager.checkForNewCrowdsales();
+        this.debugLog("Processing active crowdsales...");
         await this.crowdsaleManager.processCrowdsales();
-        console.log("✅ [OuterLoop] Crowdsale checks complete\n");
-      } else {
-        console.log("⚠️  [OuterLoop] CrowdsaleManager not initialized");
       }
     } else {
       this.debugLog(
@@ -289,19 +287,27 @@ export class SimulationManager {
     let totalShips = 0;
 
     for (const [sectorId, sector] of Array.from(this.sectors.entries())) {
-      const snapshot = sector.getSnapshot();
-      const asteroidCount = Object.keys(snapshot.asteroids).length;
-      const shipCount = Object.keys(snapshot.ships).length;
+      try {
+        const snapshot = sector.getSnapshot();
+        const asteroidCount = Object.keys(snapshot.asteroids).length;
+        const shipCount = Object.keys(snapshot.ships).length;
 
-      totalAsteroids += asteroidCount;
-      totalShips += shipCount;
+        totalAsteroids += asteroidCount;
+        totalShips += shipCount;
 
-      this.debugLog(
-        `Outer Loop - Sector ${sectorId}: ${asteroidCount} asteroids, ${shipCount} ships`
-      );
+        this.debugLog(
+          `Outer Loop - Sector ${sectorId}: ${asteroidCount} asteroids, ${shipCount} ships`
+        );
 
-      // Full update including spawning
-      await sector.updateOuterLoop();
+        // Full update including spawning
+        await sector.updateOuterLoop();
+      } catch (error: any) {
+        console.error(
+          `❌ Error updating sector ${sectorId} in outer loop: ${error.message}`
+        );
+        this.debugLog(`Sector ${sectorId} outer loop error details:`, error);
+        // Continue with next sector - don't let one sector's error stop all sectors
+      }
     }
 
     this.debugLog(

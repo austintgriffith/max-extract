@@ -1,148 +1,83 @@
 CHAPTER 4: Fuel Token Crowdsale Contract Audit Requirements
 
-This chapter requires deploying a fuel token crowdsale system that raises 50,000 credits to upgrade the player's station.
+This chapter requires a fuel token crowdsale system that raises 50,000 credits to upgrade a station.
 
-STRICT REQUIREMENTS:
+=== REQUIRED FUNCTIONS ===
 
-1. The contract registered under "fuel" module MUST have a buy(uint256 amount) function
-   - Function signature must be exactly: buy(uint256)
-   - Must be external or public (callable by pilots)
-   - Must transfer credits from msg.sender (pilot) to the contract using creditsContract.transferFrom()
-   - Must mint or transfer fuel tokens to msg.sender (the pilot)
-   - Must REVERT if the station has already been upgraded
-   - Look for patterns like: creditsContract.transferFrom(msg.sender, address(this), cost)
-   - If buy() function is missing or has wrong signature, audit FAILS
-   - If buy() doesn't transfer credits from caller, audit FAILS
-   - If buy() doesn't mint/transfer tokens to caller, audit FAILS
-   - If buy() doesn't check upgraded state and revert, audit FAILS
+1. buy(uint256 amount) - Purchase fuel tokens with credits
+   ✅ MUST: Be external/public
+   ✅ MUST: Calculate cost as: (amount * pricePerToken) / 10**18
+   ✅ MUST: Transfer credits from caller: creditsContract.transferFrom(msg.sender, address(this), cost)
+   ✅ MUST: Mint/transfer tokens to caller
+   ✅ MUST: Revert if upgraded == true
 
-2. The contract MUST have a pricePerTokenInCredits() public getter
-   - Function signature: pricePerTokenInCredits() returns (uint256)
-   - Must be public or external view/pure function
-   - Must return a uint256 value representing price per token in credits
-   - If function is missing or has wrong signature, audit FAILS
+2. pricePerTokenInCredits() returns (uint256) - Get token price
+   ✅ MUST: Be public/external view/pure
+   ✅ MUST: Return uint256 price
 
-3. The contract MUST have a balanceOf(address) function
-   - Function signature: balanceOf(address) returns (uint256)
-   - Standard ERC-20 balance check
-   - Must return the fuel token balance for a given address
-   - If function is missing or has wrong signature, audit FAILS
+3. balanceOf(address) returns (uint256) - ERC-20 balance check
+   ✅ MUST: Return token balance for address
 
-4. The contract MUST have a redeem() function
-   - Function signature must be exactly: redeem() (no parameters)
-   - Must be external or public (callable by pilots)
-   - Must burn exactly 1 token (1 * 10**18 with 18 decimals) from msg.sender
-   - Look for patterns like: _burn(msg.sender, 1 * 10**18) or equivalent
-   - The burned token represents payment for off-chain refueling service
-   - If function is missing or has wrong signature, audit FAILS
-   - If function takes parameters (should be parameterless), audit FAILS
-   - If function doesn't burn tokens from caller, audit FAILS
+4. redeem() - Burn token for refueling service
+   ✅ MUST: Take NO parameters
+   ✅ MUST: Burn exactly 1 * 10**18 tokens from msg.sender
 
-5. The contract MUST have an upgrade() function
-   - Function signature must be exactly: upgrade() (no parameters)
-   - Must be external or public
-   - Must verify contract has at least 50,000 credits (50000 * 10**18)
-   - Must approve the Game contract to spend 49,500 credits
-   - Must call game.upgradeStation(sectorId) with the correct sector ID
-   - Must reward msg.sender (the pilot caller) with at least 500 credits (500 * 10**18)
-   - Must set a flag/state to prevent future buy() calls
-   - Look for patterns like:
-     * require(creditsContract.balanceOf(address(this)) >= 50000 * 10**18)
-     * creditsContract.approve(gameAddress, 49500 * 10**18)
-     * game.upgradeStation(sectorId)
-     * creditsContract.transfer(msg.sender, [at least 500 * 10**18])
-   - If function is missing or has wrong signature, audit FAILS
-   - If function doesn't check for 50,000 total credits, audit FAILS
-   - If function doesn't approve Game contract for 49,500, audit FAILS
-   - If function doesn't call game.upgradeStation(sectorId), audit FAILS
-   - If function doesn't reward caller with at least 500 credits, audit FAILS
-   - If function doesn't set upgrade flag, audit FAILS
+5. upgrade() - Trigger station upgrade
+   ✅ MUST: Take NO parameters
+   ✅ MUST: Check contract has >= 50,000 * 10**18 credits
+   ✅ MUST: Set upgraded = true BEFORE any external calls
+   ✅ MUST: Approve Game for EXACTLY 49,500 * 10**18 credits
+   ✅ MUST: Call game.upgradeStation(sectorId)
+   ✅ MUST: Transfer >= 500 * 10**18 credits to msg.sender (the pilot caller)
 
-6. After upgrade() is called, buy() MUST revert
-   - There must be state tracking whether upgrade has occurred
-   - buy() must check this state and revert if true
-   - Look for patterns like: require(!upgraded, "...") or if(upgraded) revert(...)
-   - If buy() can still execute after upgrade, audit FAILS
+=== CEI PATTERN VERIFICATION ===
 
-7. Contract Architecture (both acceptable):
-   - Option A: Single contract with ERC-20 implementation + all crowdsale logic
-   - Option B: Two contracts - separate ERC-20 token + crowdsale contract
-   - Either architecture is acceptable as long as the contract registered under "fuel" has all required functions
-   - The fuel token MUST be a properly implemented ERC-20 (or compatible) token
-   - Must have standard token functions: balanceOf, transfer, totalSupply, etc.
+To verify CEI pattern in upgrade() function, follow these steps:
 
-8. Credits Contract Integration
-   - Must reference the Credits ERC-20 contract correctly
-   - Must use transferFrom to take credits from pilots
-   - Must use transfer to reward the upgrade caller
-   - Must use approve to allow Game contract to take 49,500 credits
-   - Must use balanceOf to check contract's credit balance
+STEP 1: Find the line where "upgraded = true" is set
+STEP 2: Find ALL lines with external calls (approve, transfer, upgradeStation, etc.)
+STEP 3: Verify "upgraded = true" comes BEFORE all external calls
 
-9. Game Contract Integration
-   - Must reference the Game contract correctly
-   - Must call game.upgradeStation(sectorId) with the player's sector ID
-   - The Game contract will verify tx.origin is a pilot
-   - The Game contract will pull 49,500 credits via transferFrom
-   - The Game contract will award 10 points to the player
+Example CORRECT pattern:
+```solidity
+upgraded = true;                                              // Line N (state change)
+creditsContract.approve(gameAddress, 49500 * 10**18);        // Line N+2 (external call)
+game.upgradeStation(sectorId);                                // Line N+4 (external call)
+creditsContract.transfer(msg.sender, 500 * 10**18);          // Line N+6 (external call)
+```
 
-10. Additional Features (optional but allowed):
-    - Maximum supply caps
-    - Minimum purchase amounts
-    - Whitelist or access control
-    - Dynamic pricing mechanisms
-    - Additional administrative functions
-    - Token metadata and URI functions
+If you see "upgraded = true" appearing BEFORE all external function calls in the code, the CEI pattern is CORRECT.
 
-PASS CONDITIONS:
-- Has buy(uint256) function that transfers credits from caller and mints tokens
-- Has pricePerTokenInCredits() getter returning uint256
-- Has balanceOf(address) function returning uint256
-- Has redeem() function (no params) that burns exactly 1 token from caller
-- Has upgrade() function that:
-  * Checks contract has >= 50,000 credits total
-  * Approves Game contract for 49,500 credits
-  * Calls game.upgradeStation(sectorId)
-  * Rewards caller with >= 500 credits
-  * Sets flag to prevent future buys
-- buy() reverts after upgrade is called
-- Proper ERC-20 token implementation (single or separate contract)
-- All credit transfers and approvals implemented correctly
-- No security vulnerabilities or rug vectors
+=== PASS CONDITIONS ===
 
-FAIL CONDITIONS:
-- Missing any required function (buy, pricePerTokenInCredits, balanceOf, redeem, upgrade)
-- Wrong function signatures (extra parameters, wrong names, etc.)
-- buy() doesn't transfer credits from caller
-- buy() doesn't mint tokens to caller
-- buy() can still execute after upgrade
-- redeem() doesn't burn exactly 1 token
-- redeem() takes parameters (should be parameterless)
-- upgrade() missing any required step (credit check, approval, game call, reward, flag)
-- upgrade() rewards caller with less than 500 credits
-- upgrade() approves Game contract for less than 49,500 credits
-- upgrade() doesn't call game.upgradeStation(sectorId)
-- Credits not properly transferred/approved
-- Not a functional ERC-20 token
-- Any overcomplexity or obfuscation attempt
-- Security vulnerabilities or rug mechanisms
+✅ All 5 required functions present with correct signatures
+✅ buy() calculates cost correctly and transfers credits + mints tokens
+✅ buy() reverts when upgraded == true
+✅ redeem() burns exactly 1 token, takes no parameters
+✅ upgrade() follows CEI pattern (upgraded = true BEFORE external calls)
+✅ upgrade() checks >= 50k credits, approves exactly 49.5k, calls upgradeStation, rewards caller >= 500
+✅ Proper ERC-20 implementation
+✅ No security vulnerabilities
 
-IMPORTANT NOTES:
-- The fuel contract can be a single contract or split into token + crowdsale
-- Either architecture is acceptable as long as the "fuel" module contract has all required functions
-- The price should be reasonable (around 1000 * 10**18 credits per token recommended)
-- Pilots pre-approve credits before calling buy()
-- The upgrade() function can ONLY be called by pilots (enforced by game.upgradeStation checking tx.origin)
-- Players must incentivize pilots to call upgrade() by rewarding them (minimum 500 credits)
-- Total credits needed: 50,000 (49,500 goes to Game contract + 500 to pilot caller)
-- After upgrade, the sale ends permanently (buy must revert)
-- Pilots can still redeem existing tokens after upgrade
-- This is a one-time crowdsale - get it right the first time
-- The Game contract performs verification and awards 10 points to the player upon upgrade
-- Focus on functional correctness and security
-- Be strict about function signatures and implementations
-- Verify all credit transfers happen correctly
-- Ensure proper ERC-20 token functionality
+=== FAIL CONDITIONS ===
 
-When auditing, verify ALL requirements are met. If even one requirement is missing or incorrect, the audit must FAIL with a clear explanation of what's wrong.
+❌ Missing any required function
+❌ Wrong function signatures (wrong names, extra/missing parameters)
+❌ buy() missing division by 10**18 in cost calculation
+❌ buy() doesn't revert when upgraded == true  
+❌ redeem() takes parameters or doesn't burn exactly 1 token
+❌ upgrade() sets upgraded=true AFTER external calls (CEI violation)
+❌ upgrade() doesn't approve exactly 49,500 * 10**18
+❌ upgrade() doesn't call upgradeStation
+❌ upgrade() rewards caller < 500 * 10**18
+❌ Security vulnerabilities or rug mechanisms
+
+=== NOTES ===
+
+- msg.sender in upgrade() IS the pilot caller - rewarding msg.sender is correct
+- Contract may have > 50k credits when upgrade() is called (excess is fine)
+- Order of operations AFTER state change doesn't matter (approve/upgradeStation/transfer can be in any order)
+- game.upgradeStation() synchronously pulls 49,500 credits during the call
+- Either single contract or separate token+crowdsale contract is acceptable
 
 

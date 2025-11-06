@@ -246,6 +246,8 @@ export interface StationDetails {
   aboutAuditedChapter?: number;
   credentialAddress?: string;
   credentialAuditedChapter?: number;
+  saleAddress?: string;
+  saleAuditedChapter?: number;
   stationName?: string;
   social?: string;
   score: number;

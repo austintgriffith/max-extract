@@ -157,6 +157,39 @@ const SectorPage = () => {
     },
   });
 
+  // Fetch sale module address from registry
+  const { data: saleModuleAddress } = useReadContract({
+    address: registryAddress as `0x${string}`,
+    abi: [
+      {
+        type: "function",
+        name: "modules",
+        inputs: [{ name: "", type: "string" }],
+        outputs: [{ name: "", type: "address" }],
+        stateMutability: "view",
+      },
+    ] as const,
+    functionName: "modules",
+    args: ["sale"],
+    query: {
+      enabled: shouldFetchAbout,
+    },
+  });
+
+  // Fetch audit status for sale module
+  const saleAddress = saleModuleAddress as string | undefined;
+  const shouldFetchSaleAudit = Boolean(
+    saleAddress && saleAddress !== "0x0000000000000000000000000000000000000000" && selectedObject?.type === "station",
+  );
+  const { data: saleAuditedChapter } = useScaffoldReadContract({
+    contractName: "Auditor",
+    functionName: "isAudited",
+    args: [saleAddress as `0x${string}`],
+    query: {
+      enabled: shouldFetchSaleAudit,
+    },
+  });
+
   // Get the base type for this sector's station (1-6)
   const { data: baseType } = useScaffoldReadContract({
     contractName: "Game",
@@ -210,6 +243,9 @@ const SectorPage = () => {
                   ? credentialAddress
                   : undefined,
               credentialAuditedChapter: credentialAuditedChapter ? Number(credentialAuditedChapter) : undefined,
+              saleAddress:
+                saleAddress && saleAddress !== "0x0000000000000000000000000000000000000000" ? saleAddress : undefined,
+              saleAuditedChapter: saleAuditedChapter ? Number(saleAuditedChapter) : undefined,
               stationName: validAboutName || sectorName,
               social: aboutSocial || undefined,
               score: playerScore !== undefined ? Number(playerScore) : 0,
@@ -329,6 +365,8 @@ const SectorPage = () => {
     aboutAuditedChapter,
     credentialAddress,
     credentialAuditedChapter,
+    saleAddress,
+    saleAuditedChapter,
     sectorName,
     sectorData,
   ]);

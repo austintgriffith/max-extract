@@ -17,6 +17,7 @@ export class EntropyManager {
   private currentRollingEntropy: string | null = null;
   private debugMode: boolean;
   private missingRevealWarningShown: boolean = false;
+  private revealManagerContractAddress: string | null = null; // Track which contract RevealManager is configured for
 
   constructor(
     blockchainManager: BlockchainManager,
@@ -207,6 +208,7 @@ export class EntropyManager {
 
       // Initialize contract-specific RevealManager now that we have the address
       this.revealManager = new RevealManager(universeContract.address);
+      this.revealManagerContractAddress = universeContract.address;
       this.debugLog(
         `Using reveals file for contract: ${universeContract.address}`
       );
@@ -288,6 +290,16 @@ export class EntropyManager {
         return;
       }
 
+      // Ensure we're using contract-specific RevealManager
+      // This prevents race conditions where performRollingCommitReveal runs before initializeRollingCommitReveal
+      if (this.revealManagerContractAddress !== universeContract.address) {
+        this.revealManager = new RevealManager(universeContract.address);
+        this.revealManagerContractAddress = universeContract.address;
+        this.debugLog(
+          `Initialized contract-specific RevealManager for: ${universeContract.address}`
+        );
+      }
+
       // Get current rolling state from contract
       const rollingState = (await this.blockchainManager.readContract(
         universeContract.address,
@@ -323,28 +335,33 @@ export class EntropyManager {
           currentRoundNumber - 1
         );
         if (!previousRoundReveal) {
-          // Only show the warning once to avoid log spam
+          // Missing reveal - auto-delete old reveals and start fresh
           if (!this.missingRevealWarningShown) {
-            console.error(`\n${"=".repeat(70)}`);
-            console.error(`⚠️  ROLLING COMMIT-REVEAL PAUSED - Missing reveal for round ${currentRoundNumber - 1}`);
-            console.error(`${"=".repeat(70)}`);
-            console.error(`The contract is at round ${currentRoundNumber}, but the local reveals`);
-            console.error(`file doesn't contain the reveal for round ${currentRoundNumber - 1}.`);
-            console.error(``);
-            console.error(`This can happen when:`);
-            console.error(`  • The server was restarted and lost its reveal history`);
-            console.error(`  • The reveals file was deleted or corrupted`);
-            console.error(`  • The contract is from a previous deployment`);
-            console.error(``);
-            console.error(`✅ GOOD NEWS: Using existing rolling entropy from contract!`);
-            console.error(`   Current entropy: ${contractRollingEntropy.slice(0, 18)}...`);
-            console.error(`   The game will continue normally with spawning enabled.`);
-            console.error(``);
-            console.error(`⚠️  However, entropy won't advance to new rounds until this is resolved.`);
-            console.error(`   Same entropy will be reused each cycle (deterministic but not advancing).`);
-            console.error(`${"=".repeat(70)}\n`);
+            console.log(`\n${"=".repeat(70)}`);
+            console.log(`🔄 AUTO-RECOVERY: Deleting stale reveals and starting fresh`);
+            console.log(`${"=".repeat(70)}`);
+            console.log(`Missing reveal for round ${currentRoundNumber - 1}.`);
+            console.log(`Clearing reveals file to start fresh from round ${currentRoundNumber}.`);
+            console.log(`✅ Game continues normally, rounds will advance on next cycle`);
+            console.log(`${"=".repeat(70)}\n`);
             this.missingRevealWarningShown = true;
+            
+            // Clear all reveals to start fresh
+            this.revealManager.clearReveals();
           }
+          
+          // Generate a fresh commitment for the CURRENT round
+          const { revealNumber: freshReveal, commitHash: freshCommit } =
+            this.revealManager.generateCommitment();
+          
+          // Save it as round currentRoundNumber
+          this.revealManager.saveReveal(currentRoundNumber, freshReveal, freshCommit);
+          this.debugLog(
+            `Generated fresh commitment for round ${currentRoundNumber}: ${freshReveal.slice(0, 20)}...`
+          );
+          
+          // Skip calling rollingCommitReveal this cycle
+          // Next cycle we'll have a reveal for currentRoundNumber and can advance
           return;
         }
         revealToUse = previousRoundReveal;
@@ -507,7 +524,9 @@ export class EntropyManager {
   public reset(): void {
     this.debugLog("Resetting EntropyManager for fresh contracts");
     this.revealManager = new RevealManager();
+    this.revealManagerContractAddress = null;
     this.currentRollingEntropy = null;
+    this.missingRevealWarningShown = false; // Reset warning for new contract
     console.log("🔄 EntropyManager reset for fresh contracts");
   }
 

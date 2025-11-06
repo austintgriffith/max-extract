@@ -25,6 +25,7 @@ export class Sector {
   public subscribers: Set<WebSocket> = new Set();
   private rng: () => number;
   private deterministicDice: DeterministicDice | null = null;
+  private currentEntropy: string | null = null; // Track current entropy to avoid recreating dice
   private lastUpdate: number = Date.now();
   private debugMode: boolean;
   private gameLoopCounter: number = 0; // Track game loop cycles for performance optimization
@@ -80,11 +81,17 @@ export class Sector {
 
   /**
    * Update the sector's deterministic dice with new rolling entropy
+   * Only recreates the dice if entropy has actually changed
    * @param rollingEntropy The current rolling entropy from the Universe contract
    */
   public updateRollingEntropy(rollingEntropy: string): void {
-    this.deterministicDice = createSectorDice(rollingEntropy, this.id);
-    this.debugLog(`Updated deterministic dice with new rolling entropy`);
+    // Only recreate dice if entropy has changed
+    if (this.currentEntropy !== rollingEntropy) {
+      this.currentEntropy = rollingEntropy;
+      this.deterministicDice = createSectorDice(rollingEntropy, this.id);
+      this.debugLog(`Updated deterministic dice with new rolling entropy: ${rollingEntropy.slice(0, 20)}...`);
+    }
+    // If entropy is the same, keep using the existing dice to continue the sequence
   }
 
   /**
@@ -1103,20 +1110,6 @@ export class Sector {
         }
       );
 
-      // Broadcast pilot death event
-      this.broadcastEvent({
-        type: "pilot_death",
-        timestamp: currentTime,
-        data: {
-          victimPilotAddress: targetShip.pilotAddress,
-          victimPilotName: targetShip.pilotName,
-          killerPilotAddress: attackerShip.pilotAddress,
-          killerPilotName: attackerShip.pilotName,
-          sectorId: this.id,
-          deathPosition: targetPos,
-        },
-      });
-
       // Remove the destroyed ship
       this.ships.delete(targetShip.id);
 
@@ -1255,31 +1248,6 @@ export class Sector {
         timestamp: currentTime,
         data: { asteroidId: asteroid.id, score: ship.score },
       });
-
-      // Retarget any other ships that were flying to this asteroid
-      console.log(
-        `Checking for other ships targeting asteroid ${asteroid.id}...`
-      );
-      for (const [otherShipId, otherShip] of this.ships) {
-        if (
-          otherShipId !== ship.id &&
-          otherShip.state === "flying" &&
-          otherShip.targetAsteroidId === asteroid.id
-        ) {
-          console.log(
-            `Found ship ${otherShipId} also targeting ${asteroid.id}, retargeting...`
-          );
-          // Retarget ships that were targeting the mined asteroid
-          this.assignTarget(otherShip, "target asteroid was mined", true).catch(
-            (error) => {
-              console.error(
-                `Failed to assign target for ship ${otherShipId}:`,
-                error
-              );
-            }
-          );
-        }
-      }
 
       // Ship starts flying toward nearest edge (fastest exit)
       ship.state = "exiting";

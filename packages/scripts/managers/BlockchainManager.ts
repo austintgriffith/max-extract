@@ -2409,6 +2409,10 @@ export class BlockchainManager {
           "InsufficientCreditsInContract() - Fuel contract hasn't reached target credits for upgrade",
         "0x0bd8a3eb":
           "CrowdsaleEnded() / AlreadyUpgraded() - Station upgrade already completed, crowdsale is closed",
+        "0x6cd1ce94":
+          "InvalidGameContract() - Game interface not initialized in crowdsale contract (call setGameInterface)",
+        "0xc0e2e1ab":
+          "InvalidCreditsContract() - Credits contract address not set in crowdsale contract",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
@@ -2554,6 +2558,10 @@ export class BlockchainManager {
           "InsufficientCreditsInContract() - Fuel contract hasn't reached target credits for upgrade",
         "0x0bd8a3eb":
           "CrowdsaleEnded() / AlreadyUpgraded() - Station upgrade already completed, crowdsale is closed",
+        "0x6cd1ce94":
+          "InvalidGameContract() - Game interface not initialized in crowdsale contract (call setGameInterface)",
+        "0xc0e2e1ab":
+          "InvalidCreditsContract() - Credits contract address not set in crowdsale contract",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
@@ -2625,6 +2633,153 @@ export class BlockchainManager {
     } catch (error: any) {
       this.debugLog(`Failed to check sector upgrade status:`, error);
       return false;
+    }
+  }
+
+  /**
+   * Chapter 4: Set Credits contract address on crowdsale contract
+   */
+  public async setCrowdsaleCreditsAddress(
+    crowdsaleAddress: string,
+    creditsAddress: string
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Setting Credits address ${creditsAddress} on crowdsale ${crowdsaleAddress}`
+      );
+
+      const hash = await this.walletClient.writeContract({
+        address: crowdsaleAddress as `0x${string}`,
+        abi: [
+          {
+            name: "setCreditsAddress",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [{ name: "_creditsContract", type: "address" }],
+            outputs: [],
+          },
+        ],
+        functionName: "setCreditsAddress",
+        args: [creditsAddress],
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Set Credits address transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Credits address set successfully`);
+    } catch (error: any) {
+      this.debugLog(`Failed to set Credits address:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Set Game contract address on crowdsale contract
+   */
+  public async setCrowdsaleGameAddress(
+    crowdsaleAddress: string,
+    gameAddress: string
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Setting Game address ${gameAddress} on crowdsale ${crowdsaleAddress}`
+      );
+
+      const hash = await this.walletClient.writeContract({
+        address: crowdsaleAddress as `0x${string}`,
+        abi: [
+          {
+            name: "setGameAddress",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [{ name: "_gameContract", type: "address" }],
+            outputs: [],
+          },
+        ],
+        functionName: "setGameAddress",
+        args: [gameAddress],
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Set Game address transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Game address set successfully`);
+    } catch (error: any) {
+      this.debugLog(`Failed to set Game address:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Set Game interface on crowdsale contract
+   * Must be called after setGameAddress
+   */
+  public async setCrowdsaleGameInterface(
+    crowdsaleAddress: string
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Setting Game interface on crowdsale ${crowdsaleAddress}`
+      );
+
+      const hash = await this.walletClient.writeContract({
+        address: crowdsaleAddress as `0x${string}`,
+        abi: [
+          {
+            name: "setGameInterface",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        functionName: "setGameInterface",
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Set Game interface transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Game interface set successfully`);
+    } catch (error: any) {
+      this.debugLog(`Failed to set Game interface:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chapter 4: Set Registry contract address on crowdsale contract
+   */
+  public async setCrowdsaleRegistryAddress(
+    crowdsaleAddress: string,
+    registryAddress: string
+  ): Promise<void> {
+    try {
+      this.debugLog(
+        `Setting Registry address ${registryAddress} on crowdsale ${crowdsaleAddress}`
+      );
+
+      const hash = await this.walletClient.writeContract({
+        address: crowdsaleAddress as `0x${string}`,
+        abi: [
+          {
+            name: "setRegistryAddress",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [{ name: "registryContract", type: "address" }],
+            outputs: [],
+          },
+        ],
+        functionName: "setRegistryAddress",
+        args: [registryAddress],
+        chain: this.selectedChain,
+      });
+
+      this.debugLog(`Set Registry address transaction sent: ${hash}`);
+      await this.waitForTransactionReceipt(hash);
+      this.debugLog(`Registry address set successfully`);
+    } catch (error: any) {
+      this.debugLog(`Failed to set Registry address:`, error);
+      throw error;
     }
   }
 

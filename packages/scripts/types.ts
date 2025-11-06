@@ -101,7 +101,7 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 5,
+  CHARACTER_COUNT: 50,
   get CHARACTER_ETH() {
     // Load from environment variable ONLY - no default
     if (!process.env.CHARACTER_ETH) {
@@ -128,8 +128,8 @@ export const SECTOR_CONFIG = {
   OUTER_LOOP_INTERVAL: 20000, // Slow loop for heavy operations (including rolling commit-reveal)
   // Independent spawn probabilities (0-1 range, checked each outer loop)
   // Both can spawn in the same cycle if both rolls succeed
-  ASTEROID_SPAWN_CHANCE: 0.6, // 60% chance per outer loop
-  SHIP_SPAWN_CHANCE: 0.69, // 69% chance per outer loop (slightly more ships than asteroids)
+  ASTEROID_SPAWN_CHANCE: 0.75, // % chance per outer loop
+  SHIP_SPAWN_CHANCE: 0.6, // % chance per outer loop (slightly more ships than asteroids)
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station
@@ -166,6 +166,6 @@ export const SECTOR_CONFIG = {
   AUTO_GAME_CYCLE: true, // Enable/disable automated game cycles
   // Chapter 4: Crowdsale configuration
   CROWDSALE_PILOTS_PER_LOOP: 3, // Process 3 pilots per outer loop (faster crowdsale)
-  CROWDSALE_TARGET_CREDITS: 50_000n * (10n ** 18n), // 50k total (49.5k to game + 500 reward)
+  CROWDSALE_TARGET_CREDITS: 50_000n * 10n ** 18n, // 50k total (49.5k to game + 500 reward)
   CROWDSALE_MAX_UPGRADE_ATTEMPTS: 3, // Stop after 3 pilots try upgrade
 };
