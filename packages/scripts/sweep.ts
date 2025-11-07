@@ -13,6 +13,20 @@ import { foundry, arbitrum } from "viem/chains";
 // Load environment variables from packages/scripts/.env
 dotenv.config({ path: path.join(__dirname, ".env") });
 
+// Fetch current ETH price from CoinGecko API
+async function fetchEthPrice(): Promise<number> {
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
+    );
+    const data = await response.json();
+    return data.ethereum.usd;
+  } catch (error) {
+    console.warn("⚠️  Failed to fetch ETH price, using fallback of $2500");
+    return 2500; // Fallback price
+  }
+}
+
 interface PilotBackup {
   timestamp: string;
   characterCount: number;
@@ -35,6 +49,7 @@ interface SweepResult {
   name: string;
   initialBalance: string;
   swept: string;
+  remainingBalance: string; // Balance left after sweep attempt
   success: boolean;
   error?: string;
   txHash?: string;
@@ -42,6 +57,10 @@ interface SweepResult {
 
 async function sweepPilots() {
   console.log("🧹 Starting pilot ETH sweep...\n");
+
+  // Fetch current ETH price
+  const ethPriceUsd = await fetchEthPrice();
+  console.log(`💵 Current ETH price: $${ethPriceUsd.toFixed(2)}\n`);
 
   // Load blockchain configuration
   const chainId = process.env.CHAINID ? parseInt(process.env.CHAINID) : 31337;
@@ -136,6 +155,7 @@ async function sweepPilots() {
           name: pilot.name,
           initialBalance: "0",
           swept: "0",
+          remainingBalance: "0",
           success: false,
           error: "Zero balance",
         });
@@ -155,9 +175,17 @@ async function sweepPilots() {
         transport: http(rpcUrl),
       });
 
-      // Get gas price
-      const gasPrice = await publicClient.getGasPrice();
-      console.log(`   ⛽ Gas price: ${formatEther(gasPrice)} ETH per gas unit`);
+      // Get gas price with buffer for base fee fluctuations
+      let gasPrice = await publicClient.getGasPrice();
+      console.log(`   ⛽ Base gas price: ${formatEther(gasPrice)} ETH per gas unit`);
+      
+      // On Arbitrum, add a 10% buffer to account for base fee increases
+      // This prevents "maxFeePerGas cannot be lower than block base fee" errors
+      // while minimizing dust left behind
+      if (chainId === 42161) {
+        gasPrice = (gasPrice * 110n) / 100n;
+        console.log(`   ⛽ Gas price (with 10% buffer): ${formatEther(gasPrice)} ETH per gas unit`);
+      }
 
       // Estimate gas for the transaction
       // Standard ETH transfer is 21000 gas, but Arbitrum might need more
@@ -173,7 +201,7 @@ async function sweepPilots() {
         // For Arbitrum, use the estimate directly (it's very accurate)
         // For localhost, add a 50% buffer to account for variability
         if (chainId === 42161) {
-          gasLimit = (gasLimit * 105n) / 100n; // 5% buffer for Arbitrum
+          gasLimit = (gasLimit * 103n) / 100n; // 3% buffer for Arbitrum
         } else {
           gasLimit = (gasLimit * 150n) / 100n; // 50% buffer for localhost
         }
@@ -193,6 +221,7 @@ async function sweepPilots() {
           name: pilot.name,
           initialBalance: formatEther(balance),
           swept: "0",
+          remainingBalance: formatEther(balance),
           success: false,
           error: `Insufficient: balance ${formatEther(balance)} ETH, gas ${formatEther(gasCost)} ETH`,
         });
@@ -223,16 +252,30 @@ async function sweepPilots() {
         name: pilot.name,
         initialBalance: formatEther(balance),
         swept: formatEther(amountToSend),
+        remainingBalance: "0", // Successfully swept, nothing left
         success: true,
         txHash: hash,
       });
     } catch (error: any) {
       console.error(`❌ Failed to sweep ${pilot.name} (${address.slice(0, 8)}...): ${error.message}\n`);
+      
+      // Try to get the current balance even after error
+      let remainingBalance = "unknown";
+      try {
+        const currentBalance = await publicClient.getBalance({
+          address: address as `0x${string}`,
+        });
+        remainingBalance = formatEther(currentBalance);
+      } catch {
+        // Ignore balance fetch errors
+      }
+      
       results.push({
         address,
         name: pilot.name,
-        initialBalance: "unknown",
+        initialBalance: remainingBalance !== "unknown" ? remainingBalance : "unknown",
         swept: "0",
+        remainingBalance: remainingBalance,
         success: false,
         error: error.message,
       });
@@ -244,45 +287,40 @@ async function sweepPilots() {
     address: godAccount.address,
   });
 
+  // Calculate total remaining unswept ETH
+  let totalRemaining = 0;
+  let unsweptCount = 0;
+  for (const result of results) {
+    if (!result.success && result.remainingBalance !== "unknown" && result.remainingBalance !== "0") {
+      totalRemaining += parseFloat(result.remainingBalance);
+      unsweptCount++;
+    }
+  }
+  
+  const totalRemainingUsd = totalRemaining * ethPriceUsd;
+  const totalSweptUsd = parseFloat(formatEther(totalSwept)) * ethPriceUsd;
+
   // Print summary
   console.log("\n" + "=".repeat(60));
   console.log("📊 SWEEP SUMMARY");
   console.log("=".repeat(60));
   console.log(`✅ Successful sweeps: ${successCount}/${pilotsMap.size}`);
-  console.log(`💰 Total swept: ${formatEther(totalSwept)} ETH`);
+  console.log(`💰 Total swept: ${formatEther(totalSwept)} ETH ($${totalSweptUsd.toFixed(2)} USD)`);
   console.log(`👑 GOD initial balance: ${formatEther(godInitialBalance)} ETH`);
   console.log(`👑 GOD final balance: ${formatEther(godFinalBalance)} ETH`);
   console.log(
     `📈 GOD balance change: ${formatEther(godFinalBalance - godInitialBalance)} ETH`
   );
-  console.log("=".repeat(60) + "\n");
-
-  // Print detailed results
-  if (results.length > 0) {
-    console.log("📋 DETAILED RESULTS:");
-    console.log("-".repeat(60));
-    for (const result of results) {
-      if (result.success) {
-        console.log(`✅ ${result.name}`);
-        console.log(`   Address: ${result.address}`);
-        console.log(`   Initial: ${result.initialBalance} ETH`);
-        console.log(`   Swept: ${result.swept} ETH`);
-        console.log(`   Tx: ${result.txHash}`);
-      } else {
-        console.log(`❌ ${result.name}`);
-        console.log(`   Address: ${result.address}`);
-        console.log(`   Balance: ${result.initialBalance} ETH`);
-        console.log(`   Error: ${result.error}`);
-      }
-      console.log("");
-    }
-  }
+  console.log("-".repeat(60));
+  console.log(`💸 Total remaining unswept: ${totalRemaining.toFixed(18)} ETH ($${totalRemainingUsd.toFixed(2)} USD)`);
+  console.log(`📦 Unswept wallets: ${unsweptCount}/${pilotsMap.size}`);
+  console.log("=".repeat(60));
+  console.log("\n✨ Sweep complete!");
 }
 
 // Run the sweep
 sweepPilots()
   .then(() => {
-    console.log("✨ Sweep complete!");
     process.exit(0);
   })
   .catch((error) => {
