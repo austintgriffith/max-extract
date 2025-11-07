@@ -396,7 +396,8 @@ contract Game {
 
     /**
      * Dead man's switch - called when a pilot is killed
-     * Marks the pilot as dead and penalizes the player who owned the sector
+     * Marks the pilot as dead and attempts to slash the killer via stake contract
+     * If slashing succeeds, no point penalty. If slashing fails, 10 point penalty.
      * Only callable by pilots (before they die)
      * Note: ETH should be sent to GOD in a separate transaction after this call
      * @param _killer Address of the pilot who killed this pilot
@@ -412,12 +413,62 @@ contract Game {
         // Mark pilot as dead
         deadPilots[msg.sender] = true;
         
-        // Penalize the player's score (subtract 10, minimum 0)
-        uint256 currentScore = scores[_playerToPenalize];
-        uint256 penalty = currentScore >= 10 ? 10 : currentScore;
-        scores[_playerToPenalize] = currentScore - penalty;
+        // Try to slash via stake contract
+        bool slashed = false;
+        if (address(maxExtract) != address(0)) {
+            try this.trySlash(_killer, _playerToPenalize) {
+                slashed = true;
+            } catch {
+                // Slashing failed, will penalize points
+            }
+        }
+        
+        // Penalize points only if slashing failed
+        uint256 penalty = 0;
+        if (!slashed) {
+            uint256 currentScore = scores[_playerToPenalize];
+            penalty = currentScore >= 10 ? 10 : currentScore;
+            scores[_playerToPenalize] = currentScore - penalty;
+        }
         
         emit PilotDied(msg.sender, _killer, _playerToPenalize, penalty, 0);
+    }
+    
+    /**
+     * Internal function to attempt slashing via player's stake contract
+     * Only callable by this contract via try-catch in deadMansSwitch
+     * @param _killer Address of the pilot who killed
+     * @param _playerToPenalize Address of the player whose stake contract to use
+     */
+    function trySlash(address _killer, address _playerToPenalize) external {
+        require(msg.sender == address(this), "Internal only");
+        
+        // Get player's sector
+        uint256 sectorId = maxExtract.playerToSector(_playerToPenalize);
+        require(sectorId != 0, "Player has no sector");
+        
+        // Get registry
+        address registry = maxExtract.sectors(sectorId);
+        require(registry != address(0), "No registry");
+        
+        // Get stake module using helper library
+        address stakeContract = registry.getModule("stake");
+        require(stakeContract != address(0), "No stake module");
+        
+        // Verify audited for chapter 4
+        require(auditorContract != address(0), "Auditor not set");
+        (bool success, bytes memory data) = auditorContract.staticcall(
+            abi.encodeWithSignature("isAudited(address)", stakeContract)
+        );
+        require(success && data.length >= 32, "Audit check failed");
+        uint8 auditStatus = abi.decode(data, (uint8));
+        require(auditStatus == 4, "Not audited for chapter 4");
+        
+        // Call slash on stake contract
+        (bool slashSuccess, ) = stakeContract.call(
+            abi.encodeWithSignature("slash(address)", _killer)
+        );
+        require(slashSuccess, "Slash failed");
     }
     
     /**

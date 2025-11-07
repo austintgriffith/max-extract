@@ -277,6 +277,19 @@ export default function GodPage() {
     }
   };
 
+  const handleUnlockChapter5 = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "showChapters",
+        args: [[1, 2, 3, 4, 5]], // Array containing chapters 1, 2, 3, 4, and 5
+      });
+      notification.success("Chapter 5 unlocked! All five chapters are now visible!");
+    } catch (error) {
+      console.error("Error unlocking chapter 5:", error);
+      notification.error("Error unlocking chapter 5");
+    }
+  };
+
   // MaxExtract address update handler
   const handleUpdateMaxExtract = async () => {
     if (!maxExtractAddress) {
@@ -416,7 +429,7 @@ export default function GodPage() {
           </div>
 
           {/* Chapter Control Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
               className={`btn btn-lg ${visibleChapters && visibleChapters.includes(1) ? "btn-disabled" : "btn-primary"}`}
               onClick={handleMakeChapter1Visible}
@@ -439,11 +452,18 @@ export default function GodPage() {
               🎫 Unlock Chapter 3: Access Credentials
             </button>
             <button
-              className={`btn btn-lg ${visibleChapters && visibleChapters.includes(4) ? "btn-disabled" : "btn-success"}`}
+              className={`btn btn-lg ${visibleChapters && visibleChapters.includes(4) ? "btn-disabled" : "btn-info"}`}
               onClick={handleUnlockChapter4}
               disabled={visibleChapters && visibleChapters.includes(4)}
             >
-              🏗️ Unlock Chapter 4: Infrastructure
+              🏗️ Unlock Chapter 4: Coming Soon
+            </button>
+            <button
+              className={`btn btn-lg ${visibleChapters && visibleChapters.includes(5) ? "btn-disabled" : "btn-success"}`}
+              onClick={handleUnlockChapter5}
+              disabled={visibleChapters && visibleChapters.includes(5)}
+            >
+              💰 Unlock Chapter 5: The Crowdsale
             </button>
           </div>
 
@@ -460,7 +480,10 @@ export default function GodPage() {
               per pilot mint)
             </p>
             <p>
-              <strong>Chapter 4:</strong> Players can upgrade stations to increase sector score potential
+              <strong>Chapter 4:</strong> Coming soon - new gameplay mechanics
+            </p>
+            <p>
+              <strong>Chapter 5:</strong> Players run crowdsales to raise 50k credits and upgrade stations (10 points)
             </p>
             <p>
               <strong>Note:</strong> Only visible chapters can be accessed by players in the game

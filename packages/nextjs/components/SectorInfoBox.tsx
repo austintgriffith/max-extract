@@ -342,14 +342,14 @@ export const SectorInfoBox = ({
                 <div>
                   <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
                     Sale Module
-                    {station.saleAuditedChapter === 4 ? (
+                    {station.saleAuditedChapter === 5 ? (
                       <span className="text-green-400">✓</span>
                     ) : (
                       <span className="text-yellow-400">⚠️</span>
                     )}
                     {station.saleAuditedChapter && (
                       <span className="text-gray-500 text-[9px] font-normal">
-                        {station.saleAuditedChapter === 4 ? "Ch.4" : `Ch.${station.saleAuditedChapter}`}
+                        {station.saleAuditedChapter === 5 ? "Ch.5" : `Ch.${station.saleAuditedChapter}`}
                       </span>
                     )}
                   </div>

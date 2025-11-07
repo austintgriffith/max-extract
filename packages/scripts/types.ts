@@ -86,7 +86,10 @@ export interface SectorEvent {
     | "pilot_tip" // New event for when a pilot tips a player
     | "credential_minted" // New event for when a pilot mints a sector credential
     | "credential_mint_failed" // New event for when credential minting fails (contract issues)
-    | "ship_refuel"; // New event for when a ship refuels at a station
+    | "ship_refuel" // New event for when a ship refuels at a station
+    | "pilot_staked" // Chapter 4: New event for when a pilot stakes credits
+    | "pilot_unstaked" // Chapter 4: New event for when a pilot unstakes credits
+    | "stake_failed"; // Chapter 4: New event for when staking fails
   timestamp: number;
   data: any;
 }
@@ -164,7 +167,7 @@ export const SECTOR_CONFIG = {
   COUNTDOWN_SECONDS: 10, // Countdown before game starts (buy-in period)
   ENTROPY_REVEAL_DELAY_SECONDS: 5, // Wait time before revealing entropy (Universe contract minimum)
   AUTO_GAME_CYCLE: true, // Enable/disable automated game cycles
-  // Chapter 4: Crowdsale configuration
+  // Chapter 5: Crowdsale configuration
   CROWDSALE_PILOTS_PER_LOOP: 3, // Process 3 pilots per outer loop (faster crowdsale)
   CROWDSALE_TARGET_CREDITS: 50_000n * 10n ** 18n, // 50k total (49.5k to game + 500 reward)
   CROWDSALE_MAX_UPGRADE_ATTEMPTS: 3, // Stop after 3 pilots try upgrade

@@ -32,7 +32,7 @@ export class Sector {
   private characterManager: CharacterManager;
   private pilotManager: PilotManager;
   private blockchainManager: BlockchainManager;
-  private crowdsaleManager: any; // CrowdsaleManager (optional for Chapter 4)
+  private crowdsaleManager: any; // CrowdsaleManager (optional for Chapter 5)
 
   constructor(
     id: string,
@@ -89,7 +89,12 @@ export class Sector {
     if (this.currentEntropy !== rollingEntropy) {
       this.currentEntropy = rollingEntropy;
       this.deterministicDice = createSectorDice(rollingEntropy, this.id);
-      this.debugLog(`Updated deterministic dice with new rolling entropy: ${rollingEntropy.slice(0, 20)}...`);
+      this.debugLog(
+        `Updated deterministic dice with new rolling entropy: ${rollingEntropy.slice(
+          0,
+          20
+        )}...`
+      );
     }
     // If entropy is the same, keep using the existing dice to continue the sequence
   }
@@ -637,7 +642,7 @@ export class Sector {
     // Get player address first (needed for fuel token check)
     const playerAddress = await this.blockchainManager.getSectorOwner(this.id);
 
-    // Chapter 4: Check if pilot has fuel tokens and redeem one
+    // Chapter 5: Check if pilot has fuel tokens and redeem one
     if (this.crowdsaleManager && playerAddress) {
       try {
         const fuelTokenBalance =
@@ -1353,6 +1358,80 @@ export class Sector {
     // Assign pilot to this sector
     this.pilotManager.assignPilotToSector(selectedPilot.publicAddress, this.id);
 
+    // Chapter 4: Check if sector requires staking
+    try {
+      const canStake = await this.blockchainManager.canStake(this.id);
+
+      if (canStake) {
+        this.debugLog(
+          `Sector ${this.id} requires staking for pilot ${selectedPilot.publicAddress}`
+        );
+
+        // Attempt to stake 10k credits
+        const stakeResult = await this.blockchainManager.stakePilotInSector(
+          selectedPilot.publicAddress,
+          selectedPilot.privateKey,
+          this.id
+        );
+
+        if (!stakeResult.success) {
+          console.log(
+            `❌ Pilot ${selectedPilot.firstname} ${
+              selectedPilot.lastname
+            } failed to stake in sector ${this.id.slice(0, 10)}...`
+          );
+          console.log(`   Reason: ${stakeResult.error || "Unknown error"}`);
+
+          // Release the pilot since they can't enter
+          this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
+
+          // Broadcast stake failure event
+          this.broadcastEvent({
+            type: "stake_failed",
+            timestamp: Date.now(),
+            data: {
+              pilotAddress: selectedPilot.publicAddress,
+              pilotName: `${selectedPilot.firstname} ${selectedPilot.lastname}`,
+              sectorId: this.id,
+              reason: stakeResult.error || "Staking failed",
+              errorDetails: stakeResult.errorDetails,
+            },
+          });
+
+          return; // Don't spawn the ship
+        }
+
+        console.log(
+          `✅ Pilot ${selectedPilot.firstname} ${
+            selectedPilot.lastname
+          } successfully staked 10k credits in sector ${this.id.slice(
+            0,
+            10
+          )}...`
+        );
+
+        // Broadcast successful staking
+        this.broadcastEvent({
+          type: "pilot_staked",
+          timestamp: Date.now(),
+          data: {
+            pilotAddress: selectedPilot.publicAddress,
+            pilotName: `${selectedPilot.firstname} ${selectedPilot.lastname}`,
+            sectorId: this.id,
+            stakeAmount: "10000",
+          },
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `❌ Error checking/processing stake for pilot ${selectedPilot.publicAddress}:`,
+        error
+      );
+      // Release the pilot
+      this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
+      return; // Don't spawn the ship
+    }
+
     const angle = this.getRandom() * 360;
     const { position } = this.getShipSpawnPosition(angle);
 
@@ -1966,10 +2045,15 @@ export class Sector {
 
       // Step 0: Check if pilot is actually active on blockchain
       const isPilot = await this.blockchainManager.isPilot(ship.pilotAddress);
-      const isDead = await this.blockchainManager.isPilotDead(ship.pilotAddress);
+      const isDead = await this.blockchainManager.isPilotDead(
+        ship.pilotAddress
+      );
 
       this.debugLog(
-        `🔍 Pilot ${ship.pilotName} (${ship.pilotAddress.slice(0, 10)}...) status check - isPilot: ${isPilot}, isDead: ${isDead}`
+        `🔍 Pilot ${ship.pilotName} (${ship.pilotAddress.slice(
+          0,
+          10
+        )}...) status check - isPilot: ${isPilot}, isDead: ${isDead}`
       );
 
       if (!isPilot) {
@@ -2056,7 +2140,15 @@ export class Sector {
 
       // Step 3: Attempt to mint credential
       this.debugLog(
-        `🎫 Attempting credential mint for pilot ${ship.pilotName} (${ship.pilotAddress.slice(0, 10)}...) from credential ${credentialAddress.slice(0, 10)}... at timestamp ${Date.now()}`
+        `🎫 Attempting credential mint for pilot ${
+          ship.pilotName
+        } (${ship.pilotAddress.slice(
+          0,
+          10
+        )}...) from credential ${credentialAddress.slice(
+          0,
+          10
+        )}... at timestamp ${Date.now()}`
       );
 
       const result = await this.blockchainManager.attemptCredentialMint(
@@ -2124,7 +2216,8 @@ export class Sector {
           }
 
           // Use errorDetails as the primary reason if available, otherwise use generic message
-          const reason = result.errorDetails || 
+          const reason =
+            result.errorDetails ||
             "Contract simulation failed - check your credential contract implementation";
 
           // Broadcast credential mint failure event to notify the player
@@ -2175,6 +2268,55 @@ export class Sector {
       this.pilotManager.releasePilotFromSector(ship.pilotAddress);
       this.debugLog(`Released pilot ${ship.pilotName} from sector ${this.id}`);
 
+      // Chapter 4: Unstake if sector requires staking
+      try {
+        const canStake = await this.blockchainManager.canStake(this.id);
+
+        if (canStake) {
+          this.debugLog(
+            `Unstaking pilot ${ship.pilotName} from sector ${this.id}`
+          );
+
+          const unstakeResult =
+            await this.blockchainManager.unstakePilotFromSector(
+              ship.pilotAddress,
+              ship.privateKey,
+              this.id
+            );
+
+          if (unstakeResult.success) {
+            console.log(
+              `✅ Pilot ${
+                ship.pilotName
+              } successfully unstaked 10k credits from sector ${this.id.slice(
+                0,
+                10
+              )}...`
+            );
+
+            // Broadcast unstaking event
+            this.broadcastEvent({
+              type: "pilot_unstaked",
+              timestamp: Date.now(),
+              data: {
+                pilotAddress: ship.pilotAddress,
+                pilotName: ship.pilotName,
+                sectorId: this.id,
+                returnedAmount: "10000",
+              },
+            });
+          } else {
+            console.error(
+              `⚠️ Pilot ${ship.pilotName} failed to unstake: ${unstakeResult.error}`
+            );
+            // Don't block exit - credits might be lost, but pilot should still leave
+          }
+        }
+      } catch (error: any) {
+        console.error(`⚠️ Error unstaking pilot ${ship.pilotName}:`, error);
+        // Don't block exit - let pilot leave even if unstaking fails
+      }
+
       // Update pilot's fuel level based on ship's remaining fuel
       this.characterManager.updatePilotFuel(ship.pilotAddress, ship.fuel);
       this.debugLog(`Updated pilot ${ship.pilotName} fuel to ${ship.fuel}%`);
@@ -2194,9 +2336,10 @@ export class Sector {
       }
 
       const tipType = aboutInfo.hasAboutContract ? "enhanced" : "standard";
-      const stationInfo = aboutInfo.hasAboutContract && aboutInfo.stationName
-        ? ` (station: "${aboutInfo.stationName}")`
-        : "";
+      const stationInfo =
+        aboutInfo.hasAboutContract && aboutInfo.stationName
+          ? ` (station: "${aboutInfo.stationName}")`
+          : "";
 
       console.log(
         `💰 Ship ${ship.id} (${ship.pilotName}) scored ${finalScore} - attempting ${tipType} tip of ${tipAmount}${stationInfo}`

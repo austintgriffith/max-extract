@@ -792,7 +792,9 @@ export class BlockchainManager {
     }
 
     if (recipients.length !== amounts.length) {
-      throw new Error("Recipients and amounts arrays must have the same length");
+      throw new Error(
+        "Recipients and amounts arrays must have the same length"
+      );
     }
 
     if (recipients.length === 0) {
@@ -800,9 +802,7 @@ export class BlockchainManager {
       return;
     }
 
-    this.debugLog(
-      `Batch minting credits to ${recipients.length} addresses...`
-    );
+    this.debugLog(`Batch minting credits to ${recipients.length} addresses...`);
 
     const hash = await this.writeContract(
       creditsContract.address,
@@ -2075,8 +2075,7 @@ export class BlockchainManager {
           "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
         "0xe602df05":
           "ERC20InvalidApprover(address) - Invalid approver address",
-        "0x94280d62":
-          "ERC20InvalidSpender(address) - Invalid spender address",
+        "0x94280d62": "ERC20InvalidSpender(address) - Invalid spender address",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
@@ -2131,9 +2130,9 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Check if chapter 4 is visible for a player
+   * Chapter 5: Check if chapter 5 is visible for a player
    */
-  public async isChapter4Visible(playerAddress: string): Promise<boolean> {
+  public async isChapter5Visible(playerAddress: string): Promise<boolean> {
     try {
       const gameContract = this.getContract("Game");
       if (!gameContract) {
@@ -2151,16 +2150,16 @@ export class BlockchainManager {
 
       this.debugLog(`Visible chapters: [${visibleChapters.join(", ")}]`);
 
-      // Check if chapter 4 is in the array
-      const isVisible = visibleChapters.includes(4);
+      // Check if chapter 5 is in the array
+      const isVisible = visibleChapters.includes(5);
 
       this.debugLog(
-        `Chapter 4 visibility for player ${playerAddress}: ${isVisible}`
+        `Chapter 5 visibility for player ${playerAddress}: ${isVisible}`
       );
       return isVisible;
     } catch (error: any) {
       this.debugLog(
-        `Failed to check chapter 4 visibility for ${playerAddress}:`,
+        `Failed to check chapter 5 visibility for ${playerAddress}:`,
         error
       );
       return false;
@@ -2168,7 +2167,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Get a module address from a registry contract
+   * Chapter 5: Get a module address from a registry contract
    */
   public async getRegistryModule(
     registryAddress: string,
@@ -2223,8 +2222,8 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Check audit status of a contract
-   * @returns Chapter number if audited (1-4), 0 if not audited
+   * Chapter 5: Check audit status of a contract
+   * @returns Chapter number if audited (1-5), 0 if not audited
    */
   public async checkAuditStatus(contractAddress: string): Promise<number> {
     try {
@@ -2255,7 +2254,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Get fuel token price from fuel contract
+   * Chapter 5: Get fuel token price from fuel contract
    */
   public async getFuelTokenPrice(fuelAddress: string): Promise<bigint> {
     try {
@@ -2291,7 +2290,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Get fuel token balance for an address
+   * Chapter 5: Get fuel token balance for an address
    */
   public async getFuelTokenBalance(
     fuelAddress: string,
@@ -2329,7 +2328,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Approve credit spending from a pilot wallet
+   * Chapter 5: Approve credit spending from a pilot wallet
    */
   public async approveCreditSpend(
     fromPilot: any,
@@ -2373,7 +2372,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Buy fuel tokens from a pilot wallet
+   * Chapter 5: Buy fuel tokens from a pilot wallet
    */
   public async buyFuelTokens(
     fromPilot: any,
@@ -2468,7 +2467,7 @@ export class BlockchainManager {
         "0xd6a72296":
           "InvalidRegistryContract() - Registry contract address not set in credential contract",
 
-        // ===== Chapter 4 Fuel Contract Errors =====
+        // ===== Chapter 5 Fuel Contract Errors =====
         "0xcd786059":
           "InsufficientAllowance() - Credits allowance too low for purchase",
         "0xf4d678b8": "InsufficientBalance() - Not enough CREDITS balance",
@@ -2492,8 +2491,7 @@ export class BlockchainManager {
           "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
         "0xe602df05":
           "ERC20InvalidApprover(address) - Invalid approver address",
-        "0x94280d62":
-          "ERC20InvalidSpender(address) - Invalid spender address",
+        "0x94280d62": "ERC20InvalidSpender(address) - Invalid spender address",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
@@ -2540,7 +2538,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Call upgrade function on fuel contract from a pilot wallet
+   * Chapter 5: Call upgrade function on fuel contract from a pilot wallet
    */
   public async callUpgrade(
     fromPilot: any,
@@ -2631,7 +2629,7 @@ export class BlockchainManager {
         "0xd6a72296":
           "InvalidRegistryContract() - Registry contract address not set in credential contract",
 
-        // ===== Chapter 4 Fuel Contract Errors =====
+        // ===== Chapter 5 Fuel Contract Errors =====
         "0xcd786059":
           "InsufficientAllowance() - Credits allowance too low for purchase",
         "0xf4d678b8": "InsufficientBalance() - Not enough CREDITS balance",
@@ -2655,8 +2653,7 @@ export class BlockchainManager {
           "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
         "0xe602df05":
           "ERC20InvalidApprover(address) - Invalid approver address",
-        "0x94280d62":
-          "ERC20InvalidSpender(address) - Invalid spender address",
+        "0x94280d62": "ERC20InvalidSpender(address) - Invalid spender address",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
@@ -2703,7 +2700,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Check if a sector has been upgraded via crowdsale
+   * Chapter 5: Check if a sector has been upgraded via crowdsale
    * Returns true if the crowdsale upgrade has been called (baseType >= 4)
    * Note: Bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 2-3
    */
@@ -2732,7 +2729,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Set Credits contract address on crowdsale contract
+   * Chapter 5: Set Credits contract address on crowdsale contract
    */
   public async setCrowdsaleCreditsAddress(
     crowdsaleAddress: string,
@@ -2769,7 +2766,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Set Game contract address on crowdsale contract
+   * Chapter 5: Set Game contract address on crowdsale contract
    */
   public async setCrowdsaleGameAddress(
     crowdsaleAddress: string,
@@ -2806,16 +2803,14 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Set Game interface on crowdsale contract
+   * Chapter 5: Set Game interface on crowdsale contract
    * Must be called after setGameAddress
    */
   public async setCrowdsaleGameInterface(
     crowdsaleAddress: string
   ): Promise<void> {
     try {
-      this.debugLog(
-        `Setting Game interface on crowdsale ${crowdsaleAddress}`
-      );
+      this.debugLog(`Setting Game interface on crowdsale ${crowdsaleAddress}`);
 
       const hash = await this.walletClient.writeContract({
         address: crowdsaleAddress as `0x${string}`,
@@ -2842,7 +2837,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Set Registry contract address on crowdsale contract
+   * Chapter 5: Set Registry contract address on crowdsale contract
    */
   public async setCrowdsaleRegistryAddress(
     crowdsaleAddress: string,
@@ -2879,7 +2874,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Redeem fuel token from a pilot wallet
+   * Chapter 5: Redeem fuel token from a pilot wallet
    */
   public async redeemFuelToken(
     fromPilot: any,
@@ -2922,7 +2917,7 @@ export class BlockchainManager {
   }
 
   /**
-   * Chapter 4: Get credit balance of a contract
+   * Chapter 5: Get credit balance of a contract
    */
   public async getContractCreditBalance(
     contractAddress: string
@@ -3129,6 +3124,178 @@ export class BlockchainManager {
       return {
         hasCredentialContract: false,
         error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Chapter 4: Check if a sector has staking enabled
+   */
+  public async canStake(sectorId: string): Promise<boolean> {
+    try {
+      const maxExtractContract = this.getContract("MaxExtract");
+      if (!maxExtractContract) {
+        this.debugLog("MaxExtract contract not found for canStake check");
+        return false;
+      }
+
+      const canStake = await this.readContract(
+        maxExtractContract.address,
+        maxExtractContract.abi,
+        "canStake",
+        [BigInt(sectorId)]
+      );
+
+      this.debugLog(`Sector ${sectorId} can stake: ${canStake}`);
+      return canStake as boolean;
+    } catch (error: any) {
+      this.debugLog(`Failed to check canStake for sector ${sectorId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Chapter 4: Stake pilot into a sector
+   */
+  public async stakePilotInSector(
+    pilotAddress: string,
+    privateKey: string,
+    sectorId: string
+  ): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    error?: string;
+    errorDetails?: string;
+  }> {
+    try {
+      const maxExtractContract = this.getContract("MaxExtract");
+      const creditsContract = this.getContract("Credits");
+
+      if (!maxExtractContract || !creditsContract) {
+        return {
+          success: false,
+          error: "Contracts not found",
+        };
+      }
+
+      const pilotAccount = privateKeyToAccount(privateKey as `0x${string}`);
+
+      // First, approve MaxExtract to spend 10k credits
+      const stakeAmount = 10_000n * 10n ** 18n;
+
+      this.debugLog(
+        `Approving MaxExtract to spend ${stakeAmount} credits for pilot ${pilotAddress}`
+      );
+
+      try {
+        const approveHash = await this.walletClient.writeContract({
+          address: creditsContract.address as `0x${string}`,
+          abi: creditsContract.abi,
+          functionName: "approve",
+          args: [maxExtractContract.address, stakeAmount],
+          account: pilotAccount,
+          chain: this.selectedChain,
+        });
+
+        // Wait for approval
+        await this.publicClient.waitForTransactionReceipt({
+          hash: approveHash,
+        });
+        this.debugLog(`Approval confirmed: ${approveHash}`);
+      } catch (approveError: any) {
+        return {
+          success: false,
+          error: "Approval failed",
+          errorDetails: approveError.message,
+        };
+      }
+
+      // Now stake
+      this.debugLog(`Staking pilot ${pilotAddress} in sector ${sectorId}`);
+
+      const stakeHash = await this.walletClient.writeContract({
+        address: maxExtractContract.address as `0x${string}`,
+        abi: maxExtractContract.abi,
+        functionName: "stake",
+        args: [BigInt(sectorId)],
+        account: pilotAccount,
+        chain: this.selectedChain,
+      });
+
+      // Wait for stake transaction
+      await this.publicClient.waitForTransactionReceipt({ hash: stakeHash });
+
+      this.debugLog(
+        `Pilot ${pilotAddress} successfully staked in sector ${sectorId} (tx: ${stakeHash})`
+      );
+
+      return {
+        success: true,
+        transactionHash: stakeHash,
+      };
+    } catch (error: any) {
+      this.debugLog(`Failed to stake pilot:`, error);
+      return {
+        success: false,
+        error: error.message || "Staking failed",
+        errorDetails: error.details || error.shortMessage,
+      };
+    }
+  }
+
+  /**
+   * Chapter 4: Unstake pilot from a sector
+   */
+  public async unstakePilotFromSector(
+    pilotAddress: string,
+    privateKey: string,
+    sectorId: string
+  ): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    error?: string;
+    errorDetails?: string;
+  }> {
+    try {
+      const maxExtractContract = this.getContract("MaxExtract");
+
+      if (!maxExtractContract) {
+        return {
+          success: false,
+          error: "MaxExtract contract not found",
+        };
+      }
+
+      const pilotAccount = privateKeyToAccount(privateKey as `0x${string}`);
+
+      this.debugLog(`Unstaking pilot ${pilotAddress} from sector ${sectorId}`);
+
+      const unstakeHash = await this.walletClient.writeContract({
+        address: maxExtractContract.address as `0x${string}`,
+        abi: maxExtractContract.abi,
+        functionName: "unstake",
+        args: [BigInt(sectorId)],
+        account: pilotAccount,
+        chain: this.selectedChain,
+      });
+
+      // Wait for unstake transaction
+      await this.publicClient.waitForTransactionReceipt({ hash: unstakeHash });
+
+      this.debugLog(
+        `Pilot ${pilotAddress} successfully unstaked from sector ${sectorId} (tx: ${unstakeHash})`
+      );
+
+      return {
+        success: true,
+        transactionHash: unstakeHash,
+      };
+    } catch (error: any) {
+      this.debugLog(`Failed to unstake pilot:`, error);
+      return {
+        success: false,
+        error: error.message || "Unstaking failed",
+        errorDetails: error.details || error.shortMessage,
       };
     }
   }

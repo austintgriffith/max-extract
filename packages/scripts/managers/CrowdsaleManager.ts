@@ -18,10 +18,10 @@ interface PlayerCrowdsaleState {
 }
 
 /**
- * CrowdsaleManager handles the automated simulation of Chapter 4 fuel token crowdsales
- * 
+ * CrowdsaleManager handles the automated simulation of Chapter 5 fuel token crowdsales
+ *
  * Workflow:
- * 1. Detect players with audited sale contracts (Chapter 4 visible + sale module audited)
+ * 1. Detect players with audited sale contracts (Chapter 5 visible + sale module audited)
  * 2. Randomize pilot order for purchasing
  * 3. Process pilots in batches (5 per outer loop)
  * 4. Each pilot decides randomly whether to buy based on price
@@ -66,19 +66,25 @@ export class CrowdsaleManager {
     if (sector) {
       sector.broadcastEvent(eventData);
     } else {
-      this.debugLog(`Cannot broadcast to sector ${sectorId} - sector not found`);
+      this.debugLog(
+        `Cannot broadcast to sector ${sectorId} - sector not found`
+      );
     }
   }
 
   /**
    * Find sector ID for a player address
    */
-  private async findSectorIdForPlayer(playerAddress: string): Promise<string | null> {
+  private async findSectorIdForPlayer(
+    playerAddress: string
+  ): Promise<string | null> {
     try {
       // Get all active sectors and find the one owned by this player
       const activeSectors = await this.blockchainManager.getActiveSectors();
       for (const sectorId of activeSectors) {
-        const owner = await this.blockchainManager.getSectorOwner(sectorId.toString());
+        const owner = await this.blockchainManager.getSectorOwner(
+          sectorId.toString()
+        );
         if (owner && owner.toLowerCase() === playerAddress.toLowerCase()) {
           return sectorId.toString();
         }
@@ -90,14 +96,15 @@ export class CrowdsaleManager {
   }
 
   /**
-   * Check all players for new crowdsales that meet Chapter 4 requirements
+   * Check all players for new crowdsales that meet Chapter 5 requirements
    */
   public async checkForNewCrowdsales(): Promise<void> {
     try {
       this.debugLog("Checking for new crowdsales...");
 
       // Get all players from MaxExtract contract
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
       if (!maxExtractContract) {
         this.debugLog("MaxExtract contract not found");
         return;
@@ -112,7 +119,10 @@ export class CrowdsaleManager {
           sectorId.toString()
         );
 
-        if (!playerAddress || playerAddress === "0x0000000000000000000000000000000000000000") {
+        if (
+          !playerAddress ||
+          playerAddress === "0x0000000000000000000000000000000000000000"
+        ) {
           this.debugLog(`No player address for sector ${sectorId}`);
           continue;
         }
@@ -120,72 +130,100 @@ export class CrowdsaleManager {
         // Skip if already tracking this player's crowdsale
         if (this.activeCrowdsales.has(playerAddress.toLowerCase())) {
           const state = this.activeCrowdsales.get(playerAddress.toLowerCase())!;
-          this.debugLog(`Crowdsale ${state.isComplete ? 'complete' : 'active'} for player ${playerAddress.slice(0, 10)}...`);
+          this.debugLog(
+            `Crowdsale ${
+              state.isComplete ? "complete" : "active"
+            } for player ${playerAddress.slice(0, 10)}...`
+          );
           continue;
         }
 
-        // Check if Chapter 4 is visible for this player
-        const isChapter4Visible = await this.blockchainManager.isChapter4Visible(
-          playerAddress
-        );
+        // Check if Chapter 5 is visible for this player
+        const isChapter5Visible =
+          await this.blockchainManager.isChapter5Visible(playerAddress);
 
-        if (!isChapter4Visible) {
-          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - Chapter 4 not visible`);
+        if (!isChapter5Visible) {
+          this.debugLog(
+            `Skipping sector ${sectorId
+              .toString()
+              .slice(0, 10)}... - Chapter 5 not visible`
+          );
           continue;
         }
 
         // Get player's registry address
-        const registryAddress = await this.blockchainManager.getRegistryAddressForSector(
-          sectorId.toString()
-        );
+        const registryAddress =
+          await this.blockchainManager.getRegistryAddressForSector(
+            sectorId.toString()
+          );
 
         if (
           !registryAddress ||
           registryAddress === "0x0000000000000000000000000000000000000000"
         ) {
-          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - No registry found`);
+          this.debugLog(
+            `Skipping sector ${sectorId
+              .toString()
+              .slice(0, 10)}... - No registry found`
+          );
           continue;
         }
 
         // Check for "sale" module in registry
-        const fuelContractAddress = await this.blockchainManager.getRegistryModule(
-          registryAddress,
-          "sale"
-        );
+        const fuelContractAddress =
+          await this.blockchainManager.getRegistryModule(
+            registryAddress,
+            "sale"
+          );
 
         if (
           !fuelContractAddress ||
           fuelContractAddress === "0x0000000000000000000000000000000000000000"
         ) {
-          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - No sale module found`);
+          this.debugLog(
+            `Skipping sector ${sectorId
+              .toString()
+              .slice(0, 10)}... - No sale module found`
+          );
           continue;
         }
 
-        // Check if sale contract is audited for Chapter 4
+        // Check if sale contract is audited for Chapter 5
         const auditStatus = await this.blockchainManager.checkAuditStatus(
           fuelContractAddress
         );
 
-        if (auditStatus !== 4) {
-          this.debugLog(`Skipping sector ${sectorId.toString().slice(0, 10)}... - Audit status ${auditStatus} (need 4)`);
+        if (auditStatus !== 5) {
+          this.debugLog(
+            `Skipping sector ${sectorId
+              .toString()
+              .slice(0, 10)}... - Audit status ${auditStatus} (need 5)`
+          );
           continue;
         }
 
         // If we get here, all conditions are met - log detailed info
-        console.log(`\n🔎 [Crowdsale] New eligible crowdsale found for sector ${sectorId.toString().slice(0, 10)}...`);
+        console.log(
+          `\n🔎 [Crowdsale] New eligible crowdsale found for sector ${sectorId
+            .toString()
+            .slice(0, 10)}...`
+        );
         console.log(`   👤 Player: ${playerAddress}`);
         console.log(`   📋 Registry: ${registryAddress}`);
         console.log(`   🎫 Sale contract: ${fuelContractAddress}`);
         console.log(`   🔐 Audit status: ${auditStatus}`);
-        
 
         // Check if the sector has already been upgraded (station baseType > 1)
         console.log(`   🔍 Checking if sector has already been upgraded...`);
-        const isUpgraded = await this.blockchainManager.isSectorUpgraded(sectorId.toString());
+        const isUpgraded = await this.blockchainManager.isSectorUpgraded(
+          sectorId.toString()
+        );
         console.log(`   🏗️  Upgraded: ${isUpgraded}`);
 
         if (isUpgraded) {
-          console.log(`   ⏭️  Skipping - Station already upgraded (crowdsale complete)`);
+          console.log(
+            `   ⏭️  Skipping - Station already upgraded (crowdsale complete)`
+          );
           // Mark as complete so we don't check again
           this.activeCrowdsales.set(playerAddress.toLowerCase(), {
             playerAddress: playerAddress.toLowerCase(),
@@ -225,16 +263,23 @@ export class CrowdsaleManager {
   ): Promise<void> {
     try {
       console.log(
-        `🎫 Special token buying mode for player ${playerAddress.slice(0, 10)}...`
+        `🎫 Special token buying mode for player ${playerAddress.slice(
+          0,
+          10
+        )}...`
       );
       console.log(`   Sale contract: ${fuelContractAddress}`);
       console.log(`   Registry: ${registryAddress}`);
       console.log(`   Sector ID: ${sectorId.slice(0, 10)}...`);
 
       // Double-check if the sector has already been upgraded
-      const isUpgraded = await this.blockchainManager.isSectorUpgraded(sectorId);
+      const isUpgraded = await this.blockchainManager.isSectorUpgraded(
+        sectorId
+      );
       if (isUpgraded) {
-        console.log(`   ⚠️  Sector already upgraded, marking crowdsale as complete`);
+        console.log(
+          `   ⚠️  Sector already upgraded, marking crowdsale as complete`
+        );
         this.activeCrowdsales.set(playerAddress.toLowerCase(), {
           playerAddress: playerAddress.toLowerCase(),
           fuelContractAddress,
@@ -256,7 +301,9 @@ export class CrowdsaleManager {
         fuelContractAddress
       );
       const priceInCredits = Number(pricePerToken) / 1e18;
-      console.log(`   Price per token: ${priceInCredits.toLocaleString()} credits`);
+      console.log(
+        `   Price per token: ${priceInCredits.toLocaleString()} credits`
+      );
 
       // Create crowdsale state (simplified - no pilot queue)
       const crowdsaleState: PlayerCrowdsaleState = {
@@ -274,7 +321,9 @@ export class CrowdsaleManager {
       console.log(
         `✅ Initialized crowdsale for player ${playerAddress.slice(0, 10)}...`
       );
-      console.log(`   Price: ${priceInCredits.toLocaleString()} credits per token`);
+      console.log(
+        `   Price: ${priceInCredits.toLocaleString()} credits per token`
+      );
       console.log(`   Target: 50,000 credits (49,500 to game + 500 reward)`);
     } catch (error: any) {
       console.error(
@@ -284,16 +333,15 @@ export class CrowdsaleManager {
     }
   }
 
-
   /**
    * Process all active crowdsales (called from outer loop)
    */
   public async processCrowdsales(): Promise<void> {
     try {
       // Filter active (non-complete) crowdsales
-      const activeCrowdsaleEntries = Array.from(this.activeCrowdsales.entries()).filter(
-        ([_, state]) => !state.isComplete
-      );
+      const activeCrowdsaleEntries = Array.from(
+        this.activeCrowdsales.entries()
+      ).filter(([_, state]) => !state.isComplete);
 
       if (activeCrowdsaleEntries.length === 0) {
         // Only log this occasionally to avoid spam
@@ -303,14 +351,18 @@ export class CrowdsaleManager {
         return;
       }
 
-      console.log(`\n💰 [Crowdsale] Processing ${activeCrowdsaleEntries.length} active crowdsale(s)...`);
+      console.log(
+        `\n💰 [Crowdsale] Processing ${activeCrowdsaleEntries.length} active crowdsale(s)...`
+      );
 
       // Process each crowdsale (one purchase attempt per crowdsale per outer loop)
       for (const [playerAddress, state] of activeCrowdsaleEntries) {
         await this.processSingleCrowdsale(playerAddress, state);
       }
     } catch (error: any) {
-      console.error(`❌ [Crowdsale] Error processing crowdsales: ${error.message}`);
+      console.error(
+        `❌ [Crowdsale] Error processing crowdsales: ${error.message}`
+      );
       this.debugLog("Processing error:", error);
     }
   }
@@ -323,30 +375,42 @@ export class CrowdsaleManager {
     state: PlayerCrowdsaleState
   ): Promise<void> {
     try {
-      console.log(`\n🎫 [Crowdsale] Processing player ${playerAddress.slice(0, 10)}...`);
+      console.log(
+        `\n🎫 [Crowdsale] Processing player ${playerAddress.slice(0, 10)}...`
+      );
 
       // First, check if the sector has already been upgraded
       // This handles the case where the script restarts after upgrade was called
       const sectorId = await this.findSectorIdForPlayer(playerAddress);
       if (sectorId) {
-        const isUpgraded = await this.blockchainManager.isSectorUpgraded(sectorId);
+        const isUpgraded = await this.blockchainManager.isSectorUpgraded(
+          sectorId
+        );
         if (isUpgraded) {
-          console.log(`   ⚠️  Sector already upgraded! Marking crowdsale as complete.`);
+          console.log(
+            `   ⚠️  Sector already upgraded! Marking crowdsale as complete.`
+          );
           state.isComplete = true;
           return;
         }
       }
 
       // Check current credit balance
-      const contractBalance = await this.blockchainManager.getContractCreditBalance(
-        state.fuelContractAddress
-      );
+      const contractBalance =
+        await this.blockchainManager.getContractCreditBalance(
+          state.fuelContractAddress
+        );
 
       const currentCredits = Number(contractBalance) / 1e18;
-      const targetCredits = Number(SECTOR_CONFIG.CROWDSALE_TARGET_CREDITS) / 1e18;
+      const targetCredits =
+        Number(SECTOR_CONFIG.CROWDSALE_TARGET_CREDITS) / 1e18;
 
-      console.log(`   💰 Current: ${currentCredits.toLocaleString()} / ${targetCredits.toLocaleString()} credits`);
-      console.log(`   📦 Purchases: ${state.pilotPurchases.size} pilots have bought tokens`);
+      console.log(
+        `   💰 Current: ${currentCredits.toLocaleString()} / ${targetCredits.toLocaleString()} credits`
+      );
+      console.log(
+        `   📦 Purchases: ${state.pilotPurchases.size} pilots have bought tokens`
+      );
 
       // Check if contract has enough credits for upgrade
       if (contractBalance >= SECTOR_CONFIG.CROWDSALE_TARGET_CREDITS) {
@@ -360,7 +424,6 @@ export class CrowdsaleManager {
       for (let i = 0; i < 5; i++) {
         await this.tryRandomPilotPurchase(playerAddress, state);
       }
-
     } catch (error: any) {
       console.error(
         `❌ Error processing crowdsale for ${playerAddress}: ${error.message}`
@@ -379,7 +442,7 @@ export class CrowdsaleManager {
     try {
       // Get all pilots
       const allPilots = await this.blockchainManager.getPilots();
-      
+
       if (allPilots.length === 0) {
         this.debugLog("No pilots available");
         return;
@@ -390,14 +453,17 @@ export class CrowdsaleManager {
       const pilotAddress = allPilots[randomIndex];
 
       // Check if pilot is dead
-      const isPilotDead = await this.blockchainManager.isPilotDead(pilotAddress);
+      const isPilotDead = await this.blockchainManager.isPilotDead(
+        pilotAddress
+      );
       if (isPilotDead) {
         console.log(`   ⏭️  Selected pilot is dead, skipping purchase`);
         return;
       }
 
       // Get pilot character info
-      const character = this.characterManager.getCharacterByAddress(pilotAddress);
+      const character =
+        this.characterManager.getCharacterByAddress(pilotAddress);
       if (!character) {
         this.debugLog(`Character not found for pilot ${pilotAddress}`);
         return;
@@ -410,7 +476,9 @@ export class CrowdsaleManager {
       const willingness = 800 + Math.floor(Math.random() * 400);
       const priceInCredits = Number(state.pricePerToken) / 1e18;
 
-      console.log(`   🎲 Willingness: ${willingness}, Price: ${priceInCredits}`);
+      console.log(
+        `   🎲 Willingness: ${willingness}, Price: ${priceInCredits}`
+      );
 
       // Decide if pilot will buy (if willingness > price, they buy)
       if (willingness <= priceInCredits) {
@@ -427,7 +495,7 @@ export class CrowdsaleManager {
       const pilotCredits = await this.blockchainManager.getCreditsBalance(
         pilotAddress
       );
-      
+
       if (pilotCredits < cost) {
         console.log(
           `   ⏭️  Not enough credits (has: ${
@@ -438,7 +506,9 @@ export class CrowdsaleManager {
       }
 
       console.log(
-        `   🛒 Buying ${tokensToBuy} tokens for ${Number(cost) / 1e18} credits...`
+        `   🛒 Buying ${tokensToBuy} tokens for ${
+          Number(cost) / 1e18
+        } credits...`
       );
 
       // Create pilot account for transaction
@@ -459,9 +529,10 @@ export class CrowdsaleManager {
       );
 
       // Get current total balance in contract
-      const contractBalance = await this.blockchainManager.getContractCreditBalance(
-        state.fuelContractAddress
-      );
+      const contractBalance =
+        await this.blockchainManager.getContractCreditBalance(
+          state.fuelContractAddress
+        );
 
       // Find the sector ID to broadcast to
       const sectorId = await this.findSectorIdForPlayer(playerAddress);
@@ -471,7 +542,11 @@ export class CrowdsaleManager {
         const previousPurchases = state.pilotPurchases.get(pilotAddress) || 0;
         state.pilotPurchases.set(pilotAddress, previousPurchases + tokensToBuy);
 
-        console.log(`   ✅ Purchase successful! Pilot now owns ${previousPurchases + tokensToBuy} fuel tokens total`);
+        console.log(
+          `   ✅ Purchase successful! Pilot now owns ${
+            previousPurchases + tokensToBuy
+          } fuel tokens total`
+        );
 
         // Broadcast success event
         if (sectorId) {
@@ -522,7 +597,8 @@ export class CrowdsaleManager {
               error: buyResult.error,
               errorDetails: buyResult.errorDetails,
               errorSignature: errorSignature,
-              reason: buyResult.errorDetails || buyResult.error || "Purchase failed",
+              reason:
+                buyResult.errorDetails || buyResult.error || "Purchase failed",
             },
           });
         }
@@ -539,7 +615,9 @@ export class CrowdsaleManager {
           timestamp: Date.now(),
           data: {
             pilotAddress: pilotAddress,
-            pilotName: character ? `${character.firstname} ${character.lastname}` : "Unknown",
+            pilotName: character
+              ? `${character.firstname} ${character.lastname}`
+              : "Unknown",
             sectorId: sectorId,
             fuelContractAddress: state.fuelContractAddress,
             error: error.message,
@@ -559,7 +637,10 @@ export class CrowdsaleManager {
   ): Promise<void> {
     try {
       // Check if we've already tried enough times
-      if (state.upgradeAttemptCount >= SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS) {
+      if (
+        state.upgradeAttemptCount >=
+        SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS
+      ) {
         console.log(
           `   ⚠️  Max upgrade attempts (${SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS}) reached`
         );
@@ -580,24 +661,30 @@ export class CrowdsaleManager {
       const randomPilotAddress = allPilots[randomIndex];
 
       // Check if pilot is dead
-      const isPilotDead = await this.blockchainManager.isPilotDead(randomPilotAddress);
+      const isPilotDead = await this.blockchainManager.isPilotDead(
+        randomPilotAddress
+      );
       if (isPilotDead) {
         console.log(`   ⏭️  Selected pilot is dead, will try again next loop`);
         state.upgradeAttemptCount++;
-        
-        if (state.upgradeAttemptCount >= SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS) {
+
+        if (
+          state.upgradeAttemptCount >=
+          SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS
+        ) {
           console.log(`   ⚠️  Max attempts reached, marking complete`);
           state.isComplete = true;
         }
         return;
       }
 
-      const character = this.characterManager.getCharacterByAddress(
-        randomPilotAddress
-      );
+      const character =
+        this.characterManager.getCharacterByAddress(randomPilotAddress);
 
       if (!character) {
-        this.debugLog(`Character not found for upgrade caller ${randomPilotAddress}`);
+        this.debugLog(
+          `Character not found for upgrade caller ${randomPilotAddress}`
+        );
         state.upgradeAttemptCount++;
         return;
       }
@@ -605,9 +692,9 @@ export class CrowdsaleManager {
       const pilotName = `${character.firstname} ${character.lastname}`;
 
       console.log(
-        `   ⬆️  Pilot ${pilotName} calling upgrade (attempt ${state.upgradeAttemptCount + 1}/${
-          SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS
-        })...`
+        `   ⬆️  Pilot ${pilotName} calling upgrade (attempt ${
+          state.upgradeAttemptCount + 1
+        }/${SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS})...`
       );
 
       // Create pilot account
@@ -625,9 +712,7 @@ export class CrowdsaleManager {
       const sectorId = await this.findSectorIdForPlayer(playerAddress);
 
       if (upgradeResult.success) {
-        console.log(
-          `   🎉 Upgrade successful! Station upgraded to class 1`
-        );
+        console.log(`   🎉 Upgrade successful! Station upgraded to class 1`);
         console.log(`   💰 Pilot ${pilotName} received 500 credit bounty`);
         console.log(`   🏆 Player earned 10 points`);
         state.isComplete = true;
@@ -681,13 +766,19 @@ export class CrowdsaleManager {
               error: upgradeResult.error,
               errorDetails: upgradeResult.errorDetails,
               errorSignature: errorSignature,
-              reason: upgradeResult.errorDetails || upgradeResult.error || "Upgrade failed",
+              reason:
+                upgradeResult.errorDetails ||
+                upgradeResult.error ||
+                "Upgrade failed",
             },
           });
         }
 
         // Mark as complete if we've hit max attempts
-        if (state.upgradeAttemptCount >= SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS) {
+        if (
+          state.upgradeAttemptCount >=
+          SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS
+        ) {
           console.log(
             `   ⚠️  Max attempts reached, marking crowdsale as complete`
           );
@@ -695,15 +786,18 @@ export class CrowdsaleManager {
         }
       }
     } catch (error: any) {
-      console.error(
-        `   ❌ Upgrade error: ${error.message}`
-      );
+      console.error(`   ❌ Upgrade error: ${error.message}`);
       this.debugLog("Upgrade processing error:", error);
       state.upgradeAttemptCount++;
 
       // Mark as complete if we've hit max attempts
-      if (state.upgradeAttemptCount >= SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS) {
-        console.log(`   ⚠️  Max attempts reached after error, marking complete`);
+      if (
+        state.upgradeAttemptCount >=
+        SECTOR_CONFIG.CROWDSALE_MAX_UPGRADE_ATTEMPTS
+      ) {
+        console.log(
+          `   ⚠️  Max attempts reached after error, marking complete`
+        );
         state.isComplete = true;
       }
     }
@@ -712,7 +806,9 @@ export class CrowdsaleManager {
   /**
    * Get crowdsale state for a player (for debugging/monitoring)
    */
-  public getCrowdsaleState(playerAddress: string): PlayerCrowdsaleState | undefined {
+  public getCrowdsaleState(
+    playerAddress: string
+  ): PlayerCrowdsaleState | undefined {
     return this.activeCrowdsales.get(playerAddress.toLowerCase());
   }
 
@@ -764,7 +860,9 @@ export class CrowdsaleManager {
         return false;
       }
 
-      const pilotAccount = privateKeyToAccount(pilotPrivateKey as `0x${string}`);
+      const pilotAccount = privateKeyToAccount(
+        pilotPrivateKey as `0x${string}`
+      );
 
       // Check if pilot has fuel tokens
       const balance = await this.blockchainManager.getFuelTokenBalance(
@@ -773,7 +871,9 @@ export class CrowdsaleManager {
       );
 
       if (balance === 0n) {
-        this.debugLog(`Pilot ${pilotAccount.address} has no fuel tokens to redeem`);
+        this.debugLog(
+          `Pilot ${pilotAccount.address} has no fuel tokens to redeem`
+        );
         return false;
       }
 
@@ -801,4 +901,3 @@ export class CrowdsaleManager {
     }
   }
 }
-
