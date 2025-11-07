@@ -1204,7 +1204,9 @@ export class Sector {
     );
 
     // Check if ship reached asteroid (within mining range) - balanced for all sizes
-    if (distance < asteroid.size / 4 + 50) {
+    // Mining distance is slightly larger than vector matching distance (50 + 10 buffer = 60)
+    // to prevent edge cases where vector-matched ships are just outside mining range
+    if (distance < asteroid.size / 4 + 60) {
       // If this asteroid is being mined by a vector-matched ship and this ship isn't that ship, retarget
       const miningShipId = asteroidsBeingMined.get(ship.targetAsteroidId);
       if (miningShipId && miningShipId !== ship.id) {

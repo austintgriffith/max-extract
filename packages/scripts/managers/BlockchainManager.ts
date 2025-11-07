@@ -1937,6 +1937,20 @@ export class BlockchainManager {
           "0xd6a72296":
             "InvalidRegistryContract() - Registry contract address not set in credential contract",
 
+          // ===== OpenZeppelin ERC20 Errors =====
+          "0xfb8f41b2":
+            "ERC20InsufficientAllowance(address,uint256,uint256) - Not enough token allowance approved for spender",
+          "0xe450d38c":
+            "ERC20InsufficientBalance(address,uint256,uint256) - Not enough token balance",
+          "0x96c6fd1e":
+            "ERC20InvalidSender(address) - Invalid sender address (e.g., zero address)",
+          "0xec442f05":
+            "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
+          "0xe602df05":
+            "ERC20InvalidApprover(address) - Invalid approver address",
+          "0x94280d62":
+            "ERC20InvalidSpender(address) - Invalid spender address",
+
           // ===== Universe Contract Errors (Universe.sol) =====
           "0x411354e3":
             "EntropyAlreadySet() - Universe entropy has already been set",
@@ -2049,6 +2063,20 @@ export class BlockchainManager {
           "InvalidGameContract() - Game contract address not set in credential contract",
         "0xd6a72296":
           "InvalidRegistryContract() - Registry contract address not set in credential contract",
+
+        // ===== OpenZeppelin ERC20 Errors =====
+        "0xfb8f41b2":
+          "ERC20InsufficientAllowance(address,uint256,uint256) - Not enough token allowance approved for spender",
+        "0xe450d38c":
+          "ERC20InsufficientBalance(address,uint256,uint256) - Not enough token balance",
+        "0x96c6fd1e":
+          "ERC20InvalidSender(address) - Invalid sender address (e.g., zero address)",
+        "0xec442f05":
+          "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
+        "0xe602df05":
+          "ERC20InvalidApprover(address) - Invalid approver address",
+        "0x94280d62":
+          "ERC20InvalidSpender(address) - Invalid spender address",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
@@ -2453,6 +2481,20 @@ export class BlockchainManager {
         "0xc0e2e1ab":
           "InvalidCreditsContract() - Credits contract address not set in crowdsale contract",
 
+        // ===== OpenZeppelin ERC20 Errors =====
+        "0xfb8f41b2":
+          "ERC20InsufficientAllowance(address,uint256,uint256) - Not enough token allowance approved for spender",
+        "0xe450d38c":
+          "ERC20InsufficientBalance(address,uint256,uint256) - Not enough token balance",
+        "0x96c6fd1e":
+          "ERC20InvalidSender(address) - Invalid sender address (e.g., zero address)",
+        "0xec442f05":
+          "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
+        "0xe602df05":
+          "ERC20InvalidApprover(address) - Invalid approver address",
+        "0x94280d62":
+          "ERC20InvalidSpender(address) - Invalid spender address",
+
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
           "EntropyAlreadySet() - Universe entropy has already been set",
@@ -2601,6 +2643,20 @@ export class BlockchainManager {
           "InvalidGameContract() - Game interface not initialized in crowdsale contract (call setGameInterface)",
         "0xc0e2e1ab":
           "InvalidCreditsContract() - Credits contract address not set in crowdsale contract",
+
+        // ===== OpenZeppelin ERC20 Errors =====
+        "0xfb8f41b2":
+          "ERC20InsufficientAllowance(address,uint256,uint256) - Not enough token allowance approved for spender",
+        "0xe450d38c":
+          "ERC20InsufficientBalance(address,uint256,uint256) - Not enough token balance",
+        "0x96c6fd1e":
+          "ERC20InvalidSender(address) - Invalid sender address (e.g., zero address)",
+        "0xec442f05":
+          "ERC20InvalidReceiver(address) - Invalid receiver address (e.g., zero address)",
+        "0xe602df05":
+          "ERC20InvalidApprover(address) - Invalid approver address",
+        "0x94280d62":
+          "ERC20InvalidSpender(address) - Invalid spender address",
 
         // ===== Universe Contract Errors (Universe.sol) =====
         "0x411354e3":
