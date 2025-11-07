@@ -101,7 +101,7 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 50,
+  CHARACTER_COUNT: 30,
   get CHARACTER_ETH() {
     // Load from environment variable ONLY - no default
     if (!process.env.CHARACTER_ETH) {

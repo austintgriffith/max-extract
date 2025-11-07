@@ -118,7 +118,8 @@ export class GameServer {
       this.entropyManager,
       SECTOR_CONFIG.COUNTDOWN_SECONDS,
       debugMode,
-      this.initializeCharacters.bind(this)
+      this.initializeCharacters.bind(this),
+      this.startSimulation.bind(this)
     );
 
     this.simulationManager = new SimulationManager(
@@ -462,29 +463,23 @@ export class GameServer {
         }
       }
 
-      console.log("▶️  Starting simulation...");
-      // Start simulation
-      this.simulationManager.start();
+      // NOTE: Simulation will be started AFTER pilots are added
+      // This is triggered by the GameCycleManager callback after initializeCharacters completes
+      console.log("⏳ Simulation will start after pilots are added to contract...");
 
       console.log(
         `✅ Game server restarted successfully with new contracts!\n`
       );
       console.log(
-        "   Characters will be initialized after entropy is revealed in game cycle"
+        "   Characters and simulation will be initialized after entropy is revealed in game cycle"
       );
     } catch (error: any) {
       console.error(`❌ Failed to restart game server: ${error.message}`);
       this.debugLog("Restart error details:", error);
       console.log("⚠️  Attempting to continue with existing state...");
-
-      // Try to restart simulation even if something failed
-      try {
-        this.simulationManager.start();
-      } catch (startError: any) {
-        console.error(
-          `❌ Critical error: Could not restart simulation: ${startError.message}`
-        );
-      }
+      
+      // NOTE: Don't try to start simulation here - it will be started by GameCycleManager
+      // after pilots are added to the contract
     }
   }
 
@@ -634,9 +629,9 @@ export class GameServer {
       );
     });
 
-    // Start simulation loops (non-blocking, will run even without entropy)
-    console.log("▶️  Starting simulation loops...");
-    this.startSimulation();
+    // NOTE: Simulation loops will be started AFTER pilots are added to contract
+    // This is triggered by the GameCycleManager callback after initializeCharacters completes
+    console.log("⏳ Simulation loops will start after pilots are added to contract...");
 
     console.log("✅ Server initialization complete\n");
 

@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x4e85dc48a70da1298489d5b6fc2492767d98f384",
+      address: "0x33b1b5aa9aa4da83a332f0bc5cac6a903fde5d92",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 295,
+      deployedOnBlock: 97,
     },
     Credits: {
-      address: "0x4d8e02bbfcf205828a8352af4376b165e123d7b0",
+      address: "0x19a1c09fe3399c4daaa2c98b936a8e460fc5eaa4",
       abi: [
         {
           type: "constructor",
@@ -466,6 +466,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "batchMint",
+          inputs: [
+            {
+              name: "recipients",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "amounts",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -681,6 +699,25 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "CreditsBatchMinted",
+          inputs: [
+            {
+              name: "recipientCount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalAmount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "CreditsInitialized",
           inputs: [
             {
@@ -852,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 296,
+      deployedOnBlock: 98,
     },
     Game: {
-      address: "0xeab25969e5285df34a3b245324d0b2b91e31cad4",
+      address: "0x49b8e3b089d4ebf9f37b1da9b839ec013c2cd8c9",
       abi: [
         {
           type: "constructor",
@@ -2124,10 +2161,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 297,
+      deployedOnBlock: 99,
     },
     Auditor: {
-      address: "0x150890d6984e98f408162ee65684779804bff858",
+      address: "0x067c804bb006836469379d4a2a69a81803bd1f45",
       abi: [
         {
           type: "constructor",
@@ -2635,10 +2672,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 297,
+      deployedOnBlock: 99,
     },
     MaxExtract: {
-      address: "0xc525e1bed21174d5615252a16ee2b283b894a318",
+      address: "0x45009dd3abbe29db54fc5d893ceaa98a624882df",
       abi: [
         {
           type: "constructor",
@@ -3083,12 +3120,12 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 297,
+      deployedOnBlock: 99,
     },
   },
   42161: {
     Universe: {
-      address: "0xd031df4d76ae798cc893e6b61373e772bd7d0b40",
+      address: "0xd947a36716bb0f1e47a76d78c2de59cf4322cb09",
       abi: [
         {
           type: "constructor",
@@ -3448,10 +3485,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397544502,
+      deployedOnBlock: 397579114,
     },
     Credits: {
-      address: "0xfe4e4ad2e9a6b4bb3a68487a93b984e6e9a5d6f2",
+      address: "0x10e1c2dc3f0bcd41d8d1ac678e2f5410af7b89d2",
       abi: [
         {
           type: "constructor",
@@ -3547,6 +3584,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "batchMint",
+          inputs: [
+            {
+              name: "recipients",
+              type: "address[]",
+              internalType: "address[]",
+            },
+            {
+              name: "amounts",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -3762,6 +3817,25 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "CreditsBatchMinted",
+          inputs: [
+            {
+              name: "recipientCount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalAmount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "CreditsInitialized",
           inputs: [
             {
@@ -3933,10 +4007,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397544506,
+      deployedOnBlock: 397579121,
     },
     Game: {
-      address: "0x89a112bc5f6888eb935308532e6d6aa651953005",
+      address: "0x875292b15f6d0220c79f63c2430de78ff9e4f04b",
       abi: [
         {
           type: "constructor",
@@ -5205,10 +5279,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397544511,
+      deployedOnBlock: 397579129,
     },
     MaxExtract: {
-      address: "0x7dacc49eb4c0539252d5fcf6653d596bb2dff26f",
+      address: "0xe5db89cd223331095bbd7ff64c656de3d3d09ba8",
       abi: [
         {
           type: "constructor",
@@ -5653,10 +5727,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397544519,
+      deployedOnBlock: 397579147,
     },
     Auditor: {
-      address: "0xbae0b66b145c7a92d8671bdde9fe61964749c3fd",
+      address: "0xddfb77af6baaf89291954bbdbd80bc0cdb4467db",
       abi: [
         {
           type: "constructor",
@@ -6164,7 +6238,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397544515,
+      deployedOnBlock: 397579139,
     },
   },
 } as const;

@@ -22,19 +22,22 @@ export class GameCycleManager {
   private cycleInProgress: boolean = false;
   private cancelRequested: boolean = false;
   private initializeCharacters?: () => Promise<void>;
+  private onCharactersInitialized?: () => void;
 
   constructor(
     blockchainManager: BlockchainManager,
     entropyManager: EntropyManager,
     countdownSeconds: number = 10,
     debugMode: boolean = false,
-    initializeCharacters?: () => Promise<void>
+    initializeCharacters?: () => Promise<void>,
+    onCharactersInitialized?: () => void
   ) {
     this.blockchainManager = blockchainManager;
     this.entropyManager = entropyManager;
     this.countdownSeconds = countdownSeconds;
     this.debugMode = debugMode;
     this.initializeCharacters = initializeCharacters;
+    this.onCharactersInitialized = onCharactersInitialized;
   }
 
   private debugLog(message: string, data?: any): void {
@@ -143,6 +146,12 @@ export class GameCycleManager {
         if (this.initializeCharacters) {
           console.log("👥 Initializing characters with existing universe entropy...");
           await this.initializeCharacters();
+          
+          // Notify that character initialization is complete
+          if (this.onCharactersInitialized) {
+            console.log("✅ All pilots added - starting simulation loops...");
+            this.onCharactersInitialized();
+          }
         }
         
         // Initialize rolling commit-reveal system if not already initialized
@@ -310,6 +319,12 @@ export class GameCycleManager {
         if (this.initializeCharacters) {
           console.log("👥 Initializing characters with universe entropy...");
           await this.initializeCharacters();
+          
+          // Notify that character initialization is complete
+          if (this.onCharactersInitialized) {
+            console.log("✅ All pilots added - starting simulation loops...");
+            this.onCharactersInitialized();
+          }
         }
 
         // Initialize rolling commit-reveal system now that we have entropy
