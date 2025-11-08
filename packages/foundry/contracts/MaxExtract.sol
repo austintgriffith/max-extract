@@ -58,7 +58,7 @@ contract MaxExtract {
     IAuditor public immutable auditor;
     
     // Credits ERC20 token contract for staking
-    IERC20 public creditsContract;
+    IERC20 public immutable creditsContract;
     
     // Track each pilot's staked balance to prevent collusion/exploits
     mapping(address => uint256) public stakedBalance;
@@ -101,11 +101,12 @@ contract MaxExtract {
     event PilotSlashed(address indexed killer, uint256 indexed sectorId, uint256 amount);
 
     // Constructor - Max's final act
-    constructor(address _universe, address _game, address _auditor) {
+    constructor(address _universe, address _game, address _auditor, address _credits) {
         // The Extract Protocol is now live - Max's legacy etched into the blockchain
         universe = IUniverse(_universe);
         game = IGame(_game);
         auditor = IAuditor(_auditor);
+        creditsContract = IERC20(_credits);
     }
 
     /**
@@ -376,17 +377,6 @@ contract MaxExtract {
     }
     
     /**
-     * Set the Credits contract address
-     * Only callable by the Universe GOD
-     * @param _credits Address of the Credits ERC20 contract
-     */
-    function setCreditsContract(address _credits) external {
-        require(msg.sender == universe.GOD(), "Only GOD can set credits contract");
-        require(_credits != address(0), "Invalid credits address");
-        creditsContract = IERC20(_credits);
-    }
-    
-    /**
      * Stake 10k credits to enter a sector with an audited stake module
      * Pilots must call this before entering sectors that require staking
      * @param sectorId The sector ID to stake into
@@ -412,7 +402,6 @@ contract MaxExtract {
         
         // Transfer 10k credits from pilot to MaxExtract
         uint256 stakeAmount = 10_000 * 10**18;
-        require(address(creditsContract) != address(0), "Credits contract not set");
         require(creditsContract.transferFrom(msg.sender, address(this), stakeAmount), "Transfer failed");
         
         // Increment pilot's staked balance

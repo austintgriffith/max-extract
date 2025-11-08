@@ -18,6 +18,7 @@ interface IMaxExtract {
     function sectors(uint256 sectorId) external view returns (address);
     function sectorToOwner(uint256 sectorId) external view returns (address);
     function playerToSector(address player) external view returns (uint256);
+    function getStakedBalance(address pilot) external view returns (uint256);
 }
 
 /**
@@ -283,6 +284,10 @@ contract Game {
         
         players.push(msg.sender);
         isPlayerMapping[msg.sender] = true;
+        
+        // Give player 10 points for debugging (allows testing audits, etc.)
+        scores[msg.sender] = 10;
+        
         emit PlayerBoughtIn(msg.sender, msg.value);
         
         // Refund excess payment
@@ -396,14 +401,24 @@ contract Game {
 
     /**
      * Dead man's switch - called when a pilot is killed
-     * Marks the pilot as dead and attempts to slash the killer via stake contract
-     * If slashing succeeds, no point penalty. If slashing fails, 10 point penalty.
+     * Marks the pilot as dead and penalizes the player with 10 points
      * Only callable by pilots (before they die)
      * Note: ETH should be sent to GOD in a separate transaction after this call
      * @param _killer Address of the pilot who killed this pilot
      * @param _playerToPenalize Address of the player to penalize (sector owner)
      */
-    function deadMansSwitch(address _killer, address _playerToPenalize) external onlyPilot {
+    function deadMansSwitch(address _killer, address _playerToPenalize) external {
+        // Manual pilot check - don't use modifier that excludes dead pilots
+        // We need to allow pilots in the array even if previously marked dead
+        bool isPilotInArray = false;
+        for (uint256 i = 0; i < pilots.length; i++) {
+            if (pilots[i] == msg.sender) {
+                isPilotInArray = true;
+                break;
+            }
+        }
+        if (!isPilotInArray) revert OnlyPilot();
+        
         // Check if pilot is already dead
         if (deadPilots[msg.sender]) revert PilotAlreadyDead();
         
@@ -413,35 +428,43 @@ contract Game {
         // Mark pilot as dead
         deadPilots[msg.sender] = true;
         
-        // Try to slash via stake contract
-        bool slashed = false;
-        if (address(maxExtract) != address(0)) {
-            try this.trySlash(_killer, _playerToPenalize) {
-                slashed = true;
-            } catch {
-                // Slashing failed, will penalize points
-            }
-        }
-        
-        // Penalize points only if slashing failed
-        uint256 penalty = 0;
-        if (!slashed) {
-            uint256 currentScore = scores[_playerToPenalize];
-            penalty = currentScore >= 10 ? 10 : currentScore;
-            scores[_playerToPenalize] = currentScore - penalty;
-        }
+        // Apply 10-point penalty to player
+        uint256 currentScore = scores[_playerToPenalize];
+        uint256 penalty = currentScore >= 10 ? 10 : currentScore;
+        scores[_playerToPenalize] = currentScore - penalty;
         
         emit PilotDied(msg.sender, _killer, _playerToPenalize, penalty, 0);
     }
     
     /**
-     * Internal function to attempt slashing via player's stake contract
-     * Only callable by this contract via try-catch in deadMansSwitch
-     * @param _killer Address of the pilot who killed
-     * @param _playerToPenalize Address of the player whose stake contract to use
+     * Dead man's slash - called when a pilot is killed and player has audited stake module
+     * Marks the pilot as dead and slashes the killer via stake contract
+     * Only callable by pilots (before they die)
+     * Reverts with explicit error messages if slashing fails
+     * Note: ETH should be sent to GOD in a separate transaction after this call
+     * @param _killer Address of the pilot who killed this pilot
+     * @param _playerToPenalize Address of the player (sector owner) - used to find stake contract
      */
-    function trySlash(address _killer, address _playerToPenalize) external {
-        require(msg.sender == address(this), "Internal only");
+    function deadMansSlash(address _killer, address _playerToPenalize) external {
+        // Manual pilot check - don't use modifier that excludes dead pilots
+        // We need to allow pilots in the array even if previously marked dead
+        bool isPilotInArray = false;
+        for (uint256 i = 0; i < pilots.length; i++) {
+            if (pilots[i] == msg.sender) {
+                isPilotInArray = true;
+                break;
+            }
+        }
+        if (!isPilotInArray) revert OnlyPilot();
+        
+        // Check if pilot is already dead
+        if (deadPilots[msg.sender]) revert PilotAlreadyDead();
+        
+        // Check if the player to penalize is actually a player
+        if (!isPlayerMapping[_playerToPenalize]) revert NotAPlayer();
+        
+        // Mark pilot as dead
+        deadPilots[msg.sender] = true;
         
         // Get player's sector
         uint256 sectorId = maxExtract.playerToSector(_playerToPenalize);
@@ -464,11 +487,23 @@ contract Game {
         uint8 auditStatus = abi.decode(data, (uint8));
         require(auditStatus == 4, "Not audited for chapter 4");
         
+        // Get killer's staked balance BEFORE slash
+        uint256 balanceBefore = maxExtract.getStakedBalance(_killer);
+        require(balanceBefore >= 10_000 * 10**18, "Killer has insufficient stake");
+        
         // Call slash on stake contract
         (bool slashSuccess, ) = stakeContract.call(
             abi.encodeWithSignature("slash(address)", _killer)
         );
-        require(slashSuccess, "Slash failed");
+        require(slashSuccess, "Slash call failed");
+        
+        // VERIFY the slash actually burned the stake
+        uint256 balanceAfter = maxExtract.getStakedBalance(_killer);
+        require(balanceAfter == 0, "Slash did not burn stake - malicious stake contract");
+        require(balanceBefore - balanceAfter >= 10_000 * 10**18, "Slash did not burn full stake amount");
+        
+        // Emit PilotDied with 0 penalty (slashing verified successful)
+        emit PilotDied(msg.sender, _killer, _playerToPenalize, 0, 0);
     }
     
     /**

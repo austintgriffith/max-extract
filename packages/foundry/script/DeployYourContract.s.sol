@@ -52,8 +52,8 @@ contract DeployYourContract is ScaffoldETHDeploy {
         // Resume broadcasting for final deployment
         vm.startBroadcast();
         
-        // Deploy MaxExtract with Universe, Game, and Auditor contract addresses
-        MaxExtract maxExtract = new MaxExtract(address(universe), address(game), address(auditor));
+        // Deploy MaxExtract with Universe, Game, Auditor, and Credits contract addresses
+        MaxExtract maxExtract = new MaxExtract(address(universe), address(game), address(auditor), address(credits));
         
         // Log deployed contract addresses for verification
         console.log("Universe deployed at:", address(universe));

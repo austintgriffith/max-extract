@@ -190,6 +190,39 @@ const SectorPage = () => {
     },
   });
 
+  // Fetch stake module address from registry
+  const { data: stakeModuleAddress } = useReadContract({
+    address: registryAddress as `0x${string}`,
+    abi: [
+      {
+        type: "function",
+        name: "modules",
+        inputs: [{ name: "", type: "string" }],
+        outputs: [{ name: "", type: "address" }],
+        stateMutability: "view",
+      },
+    ] as const,
+    functionName: "modules",
+    args: ["stake"],
+    query: {
+      enabled: shouldFetchAbout,
+    },
+  });
+
+  // Fetch audit status for stake module
+  const stakeAddress = stakeModuleAddress as string | undefined;
+  const shouldFetchStakeAudit = Boolean(
+    stakeAddress && stakeAddress !== "0x0000000000000000000000000000000000000000" && selectedObject?.type === "station",
+  );
+  const { data: stakeAuditedChapter } = useScaffoldReadContract({
+    contractName: "Auditor",
+    functionName: "isAudited",
+    args: [stakeAddress as `0x${string}`],
+    query: {
+      enabled: shouldFetchStakeAudit,
+    },
+  });
+
   // Get the base type for this sector's station (1-6)
   const { data: baseType } = useScaffoldReadContract({
     contractName: "Game",
@@ -246,6 +279,11 @@ const SectorPage = () => {
               saleAddress:
                 saleAddress && saleAddress !== "0x0000000000000000000000000000000000000000" ? saleAddress : undefined,
               saleAuditedChapter: saleAuditedChapter ? Number(saleAuditedChapter) : undefined,
+              stakeAddress:
+                stakeAddress && stakeAddress !== "0x0000000000000000000000000000000000000000"
+                  ? stakeAddress
+                  : undefined,
+              stakeAuditedChapter: stakeAuditedChapter ? Number(stakeAuditedChapter) : undefined,
               stationName: validAboutName || sectorName,
               social: aboutSocial || undefined,
               score: playerScore !== undefined ? Number(playerScore) : 0,
@@ -367,6 +405,8 @@ const SectorPage = () => {
     credentialAuditedChapter,
     saleAddress,
     saleAuditedChapter,
+    stakeAddress,
+    stakeAuditedChapter,
     sectorName,
     sectorData,
   ]);

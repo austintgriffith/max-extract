@@ -1,6 +1,7 @@
 // Note: generatePrivateKey and privateKeyToAccount no longer needed since we use real pilots
 import { createHash, randomBytes } from "crypto";
 import { WebSocket } from "ws";
+import { parseEther, formatEther } from "viem";
 import {
   Vector2D,
   Asteroid,
@@ -688,20 +689,8 @@ export class Sector {
       `⛽ Pilot ${ship.pilotName} refueled at ${stationName} (fuel: 100%)`
     );
 
-    // Broadcast refuel event
-    this.broadcastEvent({
-      type: "ship_refuel",
-      timestamp: currentTime,
-      data: {
-        shipId: ship.id,
-        pilotAddress: ship.pilotAddress,
-        pilotName: ship.pilotName,
-        stationName: stationName,
-        newFuel: 100,
-      },
-    });
-
     // Execute blockchain tip (async, don't wait)
+    // Note: The pilot_tip event with reason="refueling" will be broadcast when the tip executes
     if (playerAddress) {
       this.executeRefuelTip(ship, playerAddress, stationName).catch((error) => {
         console.error(
@@ -794,6 +783,11 @@ export class Sector {
     reason: string,
     forceRetarget: boolean = false
   ): Promise<void> {
+    // Skip assignment if ship is already refueling
+    if (ship.state === "refueling") {
+      return;
+    }
+
     // PRIORITY 0: Check if ship needs to refuel (lowest fuel, highest priority)
     // This check happens before all other targeting logic
     if (await this.shouldShipRefuel(ship)) {
@@ -966,7 +960,7 @@ export class Sector {
     });
   }
 
-  private checkArrival(): void {
+  private async checkArrival(): Promise<void> {
     const currentTime = Date.now();
 
     // First, identify which asteroids are being mined by vector-matched ships
@@ -989,7 +983,11 @@ export class Sector {
 
       // Handle ship-to-ship combat first (higher priority)
       if (ship.targetShipId) {
-        this.checkShipCombatArrival(ship, currentTime, shipsBeingAttacked);
+        await this.checkShipCombatArrival(
+          ship,
+          currentTime,
+          shipsBeingAttacked
+        );
         continue;
       }
 
@@ -1001,11 +999,11 @@ export class Sector {
     }
   }
 
-  private checkShipCombatArrival(
+  private async checkShipCombatArrival(
     attackerShip: Ship,
     currentTime: number,
     shipsBeingAttacked: Map<string, string>
-  ): void {
+  ): Promise<void> {
     const targetShip = this.ships.get(attackerShip.targetShipId!);
     if (!targetShip) {
       // Target ship no longer exists, find a new target
@@ -1105,15 +1103,21 @@ export class Sector {
         attackerShip.pilotAddress
       );
 
-      // Execute deadMansSwitch on blockchain (async, don't wait)
-      this.executeDeadMansSwitch(targetShip, attackerShip, currentTime).catch(
-        (error) => {
-          console.error(
-            `Failed to execute deadMansSwitch for pilot ${targetShip.pilotName}:`,
-            error
-          );
-        }
+      // Execute deadMansSwitch on blockchain (BLOCKING to prevent race conditions)
+      console.log(
+        `⏳ Executing death transaction for ${targetShip.pilotName}...`
       );
+      try {
+        await this.executeDeadMansSwitch(targetShip, attackerShip, currentTime);
+        console.log(
+          `✅ Death transaction completed for ${targetShip.pilotName}`
+        );
+      } catch (error) {
+        console.error(
+          `❌ Failed to execute death transaction for pilot ${targetShip.pilotName}:`,
+          error
+        );
+      }
 
       // Remove the destroyed ship
       this.ships.delete(targetShip.id);
@@ -1367,6 +1371,98 @@ export class Sector {
           `Sector ${this.id} requires staking for pilot ${selectedPilot.publicAddress}`
         );
 
+        // Check if pilot has enough credits (10k = 10,000 * 10^18 wei)
+        const requiredCredits = 10_000n * 10n ** 18n;
+        try {
+          const pilotCreditsBalance =
+            await this.blockchainManager.getPilotCreditsBalance(
+              selectedPilot.publicAddress
+            );
+
+          if (pilotCreditsBalance < requiredCredits) {
+            console.log(
+              `⚠️  Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} has insufficient CREDITS to stake`
+            );
+            console.log(
+              `   Required: 10,000 CREDITS | Has: ${(
+                Number(pilotCreditsBalance) / 1e18
+              ).toFixed(2)} CREDITS`
+            );
+
+            // Release the pilot since they can't enter
+            this.pilotManager.releasePilotFromSector(
+              selectedPilot.publicAddress
+            );
+
+            // Broadcast insufficient credits event
+            this.broadcastEvent({
+              type: "pilot_insufficient_credits",
+              timestamp: Date.now(),
+              data: {
+                pilotAddress: selectedPilot.publicAddress,
+                pilotName: `${selectedPilot.firstname} ${selectedPilot.lastname}`,
+                sectorId: this.id,
+                requiredCredits: "10000",
+                currentCredits: (Number(pilotCreditsBalance) / 1e18).toFixed(2),
+              },
+            });
+
+            return; // Don't spawn the ship
+          }
+        } catch (error: any) {
+          console.error(
+            `❌ Error checking credits balance for pilot ${selectedPilot.publicAddress}:`,
+            error.message
+          );
+          // Release the pilot
+          this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
+          return; // Don't spawn the ship
+        }
+
+        // Check if pilot has enough ETH for gas
+        const pilotEthBalance = await this.blockchainManager.getBalance(
+          selectedPilot.publicAddress
+        );
+        const minEthRequired = parseEther(SECTOR_CONFIG.CHARACTER_ETH);
+
+        if (pilotEthBalance < minEthRequired) {
+          console.log(
+            `⛽ Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} needs ETH top-up before staking`
+          );
+          console.log(`   Current: ${formatEther(pilotEthBalance)} ETH`);
+          console.log(`   Minimum: ${SECTOR_CONFIG.CHARACTER_ETH} ETH`);
+
+          await this.blockchainManager.fundAddresses(
+            [selectedPilot.publicAddress],
+            SECTOR_CONFIG.CHARACTER_ETH,
+            1 // single pilot
+          );
+
+          console.log(
+            `✅ Topped up pilot to ${SECTOR_CONFIG.CHARACTER_ETH} ETH`
+          );
+        }
+
+        // Get balances BEFORE staking
+        const creditsBalanceBefore =
+          await this.blockchainManager.getPilotCreditsBalance(
+            selectedPilot.publicAddress
+          );
+        const stakedBalanceBefore =
+          await this.blockchainManager.getPilotStakedBalance(
+            selectedPilot.publicAddress
+          );
+
+        console.log(
+          `💰 Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} balances BEFORE stake:`
+        );
+        console.log(
+          `   CREDITS: ${(Number(creditsBalanceBefore) / 1e18).toFixed(2)}`
+        );
+        console.log(
+          `   Staked: ${(Number(stakedBalanceBefore) / 1e18).toFixed(2)}`
+        );
+
         // Attempt to stake 10k credits
         const stakeResult = await this.blockchainManager.stakePilotInSector(
           selectedPilot.publicAddress,
@@ -1382,6 +1478,32 @@ export class Sector {
           );
           console.log(`   Reason: ${stakeResult.error || "Unknown error"}`);
 
+          // Extract decoded error (user-friendly part) and technical details
+          let decodedError = stakeResult.error || "Staking failed";
+          let technicalDetails = stakeResult.errorDetails || "";
+
+          // If errorDetails contains our decoded format, split it
+          if (
+            stakeResult.errorDetails &&
+            stakeResult.errorDetails.includes("Technical details:")
+          ) {
+            const parts = stakeResult.errorDetails.split(
+              "\n\nTechnical details:\n"
+            );
+            if (parts.length === 2) {
+              decodedError = parts[0];
+              technicalDetails = parts[1];
+            }
+          }
+
+          // Log full error details if available
+          if (stakeResult.errorDetails) {
+            console.log(`\n   Full Error Details:`);
+            console.log(
+              `   ${stakeResult.errorDetails.split("\n").join("\n   ")}\n`
+            );
+          }
+
           // Release the pilot since they can't enter
           this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
 
@@ -1393,13 +1515,23 @@ export class Sector {
               pilotAddress: selectedPilot.publicAddress,
               pilotName: `${selectedPilot.firstname} ${selectedPilot.lastname}`,
               sectorId: this.id,
-              reason: stakeResult.error || "Staking failed",
-              errorDetails: stakeResult.errorDetails,
+              reason: decodedError, // User-friendly decoded error
+              errorDetails: technicalDetails, // Technical details for debugging
             },
           });
 
           return; // Don't spawn the ship
         }
+
+        // Get balances AFTER staking
+        const creditsBalanceAfter =
+          await this.blockchainManager.getPilotCreditsBalance(
+            selectedPilot.publicAddress
+          );
+        const stakedBalanceAfter =
+          await this.blockchainManager.getPilotStakedBalance(
+            selectedPilot.publicAddress
+          );
 
         console.log(
           `✅ Pilot ${selectedPilot.firstname} ${
@@ -1408,6 +1540,21 @@ export class Sector {
             0,
             10
           )}...`
+        );
+        console.log(
+          `💰 Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} balances AFTER stake:`
+        );
+        console.log(
+          `   CREDITS: ${(Number(creditsBalanceAfter) / 1e18).toFixed(2)} (Δ ${(
+            (Number(creditsBalanceAfter) - Number(creditsBalanceBefore)) /
+            1e18
+          ).toFixed(2)})`
+        );
+        console.log(
+          `   Staked: ${(Number(stakedBalanceAfter) / 1e18).toFixed(2)} (Δ ${(
+            (Number(stakedBalanceAfter) - Number(stakedBalanceBefore)) /
+            1e18
+          ).toFixed(2)})`
         );
 
         // Broadcast successful staking
@@ -1884,7 +2031,7 @@ export class Sector {
     this.gameLoopCounter++;
 
     // Check if ships have arrived at their targets (mining, battles)
-    this.checkArrival();
+    await this.checkArrival();
 
     // Update entities (movement, fuel consumption, retargeting)
     await this.updateShips();
@@ -1951,7 +2098,8 @@ export class Sector {
   }
 
   /**
-   * Execute deadMansSwitch transaction when a pilot is killed
+   * Execute pilot death sequence - tries deadMansSlash first (if audited stake module exists),
+   * then falls back to deadMansSwitch (10-point penalty) if slashing fails
    */
   private async executeDeadMansSwitch(
     victimShip: Ship,
@@ -1960,44 +2108,181 @@ export class Sector {
   ): Promise<void> {
     try {
       this.debugLog(
-        `Executing deadMansSwitch for pilot ${victimShip.pilotName}`
+        `Executing pilot death sequence for ${victimShip.pilotName}`
       );
 
-      // Get the sector owner (player to penalize)
       const playerAddress = await this.blockchainManager.getSectorOwner(
         this.id
       );
       if (!playerAddress) {
-        this.debugLog(
-          `Could not find sector owner for ${this.id}, skipping deadMansSwitch`
-        );
+        this.debugLog(`Could not find sector owner, skipping death sequence`);
         return;
       }
 
-      // Execute the deadMansSwitch transaction (marks pilot dead, penalizes player, returns remaining ETH to GOD)
-      const { deadMansSwitchHash, ethTransferHash } =
-        await this.blockchainManager.executeDeadMansSwitch(
+      console.log(`\n🎯 Pilot Death Parameters:`);
+      console.log(
+        `   Victim: ${victimShip.pilotAddress} (${victimShip.pilotName})`
+      );
+      console.log(
+        `   Killer: ${killerShip.pilotAddress} (${killerShip.pilotName})`
+      );
+      console.log(`   Player: ${playerAddress}`);
+      console.log(`   Sector: ${this.id}\n`);
+
+      // Check if victim is already marked as dead on-chain
+      const isVictimDead = await this.blockchainManager.isPilotDead(
+        victimShip.pilotAddress
+      );
+      console.log(`🔍 Victim pilot dead status check:`);
+      console.log(`   Address: ${victimShip.pilotAddress}`);
+      console.log(`   Name: ${victimShip.pilotName}`);
+      console.log(`   Already marked dead on-chain: ${isVictimDead}`);
+
+      if (isVictimDead) {
+        console.log(
+          `⚠️  WARNING: Victim is already marked as dead! This may cause OnlyPilot() revert!`
+        );
+      }
+
+      // Check if player has audited stake module for chapter 4
+      const hasAuditedStake =
+        await this.blockchainManager.hasAuditedStakeModule(playerAddress);
+
+      let transactionHash: string;
+      let ethTransferHash: string | null = null;
+      let slashSuccess = false;
+      let errorMessage = "";
+
+      if (hasAuditedStake) {
+        console.log(
+          `✅ Player has audited stake module - attempting deadMansSlash...`
+        );
+
+        // Log killer's balances BEFORE slash
+        const killerCreditsBeforeSlash =
+          await this.blockchainManager.getPilotCreditsBalance(
+            killerShip.pilotAddress
+          );
+        const killerStakedBeforeSlash =
+          await this.blockchainManager.getPilotStakedBalance(
+            killerShip.pilotAddress
+          );
+        console.log(`💰 Killer ${killerShip.pilotName} balances BEFORE slash:`);
+        console.log(
+          `   CREDITS: ${(Number(killerCreditsBeforeSlash) / 1e18).toFixed(2)}`
+        );
+        console.log(
+          `   Staked: ${(Number(killerStakedBeforeSlash) / 1e18).toFixed(
+            2
+          )} (needs >= 10000)`
+        );
+
+        try {
+          const result = await this.blockchainManager.executeDeadMansSlash(
+            victimShip.privateKey,
+            killerShip.pilotAddress,
+            playerAddress
+          );
+          transactionHash = result.slashHash;
+          ethTransferHash = result.ethTransferHash;
+          slashSuccess = true;
+          console.log(
+            `⚔️  Slash successful! Killer was slashed instead of player penalty.`
+          );
+
+          // Log killer's balances after slash
+          const killerCreditsAfterSlash =
+            await this.blockchainManager.getPilotCreditsBalance(
+              killerShip.pilotAddress
+            );
+          const killerStakedAfterSlash =
+            await this.blockchainManager.getPilotStakedBalance(
+              killerShip.pilotAddress
+            );
+          console.log(
+            `💰 Killer ${killerShip.pilotName} balances AFTER slash:`
+          );
+          console.log(
+            `   CREDITS: ${(Number(killerCreditsAfterSlash) / 1e18).toFixed(2)}`
+          );
+          console.log(
+            `   Staked: ${(Number(killerStakedAfterSlash) / 1e18).toFixed(
+              2
+            )} (should be 0)`
+          );
+
+          // Broadcast successful slash event via websocket
+          this.broadcastEvent({
+            type: "pilot_slashed",
+            timestamp: currentTime,
+            data: {
+              victimPilotAddress: victimShip.pilotAddress,
+              victimPilotName: victimShip.pilotName,
+              killerPilotAddress: killerShip.pilotAddress,
+              killerPilotName: killerShip.pilotName,
+              playerAddress: playerAddress,
+              transactionHash: transactionHash,
+              ethTransferHash: ethTransferHash,
+              sectorId: this.id,
+            },
+          });
+        } catch (error: any) {
+          console.log(`⚠️  DeadMansSlash failed: ${error.message}`);
+          errorMessage = error.message || "Unknown error";
+
+          // Broadcast slash failure event via websocket
+          this.broadcastEvent({
+            type: "slash_failed",
+            timestamp: currentTime,
+            data: {
+              victimPilotAddress: victimShip.pilotAddress,
+              victimPilotName: victimShip.pilotName,
+              killerPilotAddress: killerShip.pilotAddress,
+              killerPilotName: killerShip.pilotName,
+              playerAddress: playerAddress,
+              error: errorMessage,
+              sectorId: this.id,
+            },
+          });
+
+          // Fallback to regular deadMansSwitch
+          console.log(
+            `   Falling back to deadMansSwitch with 10-point penalty...`
+          );
+          const result = await this.blockchainManager.executeDeadMansSwitch(
+            victimShip.privateKey,
+            killerShip.pilotAddress,
+            playerAddress
+          );
+          transactionHash = result.deadMansSwitchHash;
+          ethTransferHash = result.ethTransferHash;
+        }
+      } else {
+        console.log(
+          `ℹ️  No audited stake module - using deadMansSwitch (10-point penalty)`
+        );
+        const result = await this.blockchainManager.executeDeadMansSwitch(
           victimShip.privateKey,
           killerShip.pilotAddress,
           playerAddress
         );
+        transactionHash = result.deadMansSwitchHash;
+        ethTransferHash = result.ethTransferHash;
+      }
 
       const ethMessage = ethTransferHash
         ? ` ETH returned to GOD (tx: ${ethTransferHash.slice(0, 10)}...)`
         : "";
+      const slashMessage = slashSuccess
+        ? " (killer slashed)"
+        : " (player -10 points)";
       console.log(
-        `💀 DeadMansSwitch executed! Pilot ${victimShip.pilotName} killed by ${
+        `💀 Pilot ${victimShip.pilotName} killed by ${
           killerShip.pilotName
-        }. Player ${playerAddress.slice(
-          0,
-          8
-        )}... penalized -10 points. (tx: ${deadMansSwitchHash.slice(
-          0,
-          10
-        )}...)${ethMessage}`
+        }${slashMessage} (tx: ${transactionHash.slice(0, 10)}...)${ethMessage}`
       );
 
-      // Broadcast deadMansSwitch event
+      // Broadcast pilot death event
       this.broadcastEvent({
         type: "pilot_death",
         timestamp: currentTime,
@@ -2007,17 +2292,18 @@ export class Sector {
           killerPilotAddress: killerShip.pilotAddress,
           killerPilotName: killerShip.pilotName,
           playerPenalized: playerAddress,
-          scorePenalty: 10,
-          transactionHash: deadMansSwitchHash,
+          scorePenalty: slashSuccess ? 0 : 10,
+          slashSuccess: slashSuccess,
+          transactionHash: transactionHash,
           ethTransferHash: ethTransferHash,
           sectorId: this.id,
           blockchainConfirmed: true,
         },
       });
     } catch (error: any) {
-      this.debugLog(`Failed to execute deadMansSwitch: ${error.message}`);
+      this.debugLog(`Failed to execute death sequence: ${error.message}`);
 
-      // Broadcast failed deadMansSwitch event
+      // Broadcast failed event
       this.broadcastEvent({
         type: "pilot_death",
         timestamp: currentTime,
@@ -2269,51 +2555,138 @@ export class Sector {
       this.debugLog(`Released pilot ${ship.pilotName} from sector ${this.id}`);
 
       // Chapter 4: Unstake if sector requires staking
+      // IMPORTANT: 10-second delay prevents race condition with slash transactions
       try {
         const canStake = await this.blockchainManager.canStake(this.id);
 
         if (canStake) {
-          this.debugLog(
-            `Unstaking pilot ${ship.pilotName} from sector ${this.id}`
-          );
-
-          const unstakeResult =
-            await this.blockchainManager.unstakePilotFromSector(
-              ship.pilotAddress,
-              ship.privateKey,
-              this.id
+          // Check if pilot actually has staked balance before attempting unstake
+          // This handles the edge case where staking became active while pilot was already in sector
+          const stakedBalance =
+            await this.blockchainManager.getPilotStakedBalance(
+              ship.pilotAddress
             );
 
-          if (unstakeResult.success) {
-            console.log(
-              `✅ Pilot ${
-                ship.pilotName
-              } successfully unstaked 10k credits from sector ${this.id.slice(
-                0,
-                10
-              )}...`
+          if (stakedBalance === 0n) {
+            this.debugLog(
+              `Pilot ${ship.pilotName} has no staked balance - skipping unstake (likely entered before staking was active)`
             );
-
-            // Broadcast unstaking event
-            this.broadcastEvent({
-              type: "pilot_unstaked",
-              timestamp: Date.now(),
-              data: {
-                pilotAddress: ship.pilotAddress,
-                pilotName: ship.pilotName,
-                sectorId: this.id,
-                returnedAmount: "10000",
-              },
-            });
+            // Skip unstaking silently - pilot entered before staking requirement
           } else {
-            console.error(
-              `⚠️ Pilot ${ship.pilotName} failed to unstake: ${unstakeResult.error}`
+            console.log(
+              `⏳ Pilot ${ship.pilotName} will unstake in 10 seconds (prevents race with slash)...`
             );
-            // Don't block exit - credits might be lost, but pilot should still leave
+
+            // Delay unstaking by 10 seconds to prevent race condition with slash transactions
+            // This ensures any deadMansSlash transactions have time to mine before unstaking
+            setTimeout(async () => {
+              try {
+                this.debugLog(
+                  `Unstaking pilot ${ship.pilotName} from sector ${this.id} (after 10s delay)`
+                );
+
+                // Get balances BEFORE unstaking
+                const creditsBeforeUnstake =
+                  await this.blockchainManager.getPilotCreditsBalance(
+                    ship.pilotAddress
+                  );
+                const stakedBeforeUnstake =
+                  await this.blockchainManager.getPilotStakedBalance(
+                    ship.pilotAddress
+                  );
+                console.log(
+                  `💰 Pilot ${ship.pilotName} balances BEFORE unstake:`
+                );
+                console.log(
+                  `   CREDITS: ${(Number(creditsBeforeUnstake) / 1e18).toFixed(
+                    2
+                  )}`
+                );
+                console.log(
+                  `   Staked: ${(Number(stakedBeforeUnstake) / 1e18).toFixed(
+                    2
+                  )}`
+                );
+
+                const unstakeResult =
+                  await this.blockchainManager.unstakePilotFromSector(
+                    ship.pilotAddress,
+                    ship.privateKey,
+                    this.id
+                  );
+
+                if (unstakeResult.success) {
+                  // Get balances AFTER unstaking
+                  const creditsAfterUnstake =
+                    await this.blockchainManager.getPilotCreditsBalance(
+                      ship.pilotAddress
+                    );
+                  const stakedAfterUnstake =
+                    await this.blockchainManager.getPilotStakedBalance(
+                      ship.pilotAddress
+                    );
+
+                  console.log(
+                    `✅ Pilot ${
+                      ship.pilotName
+                    } successfully unstaked 10k credits from sector ${this.id.slice(
+                      0,
+                      10
+                    )}...`
+                  );
+                  console.log(
+                    `💰 Pilot ${ship.pilotName} balances AFTER unstake:`
+                  );
+                  console.log(
+                    `   CREDITS: ${(Number(creditsAfterUnstake) / 1e18).toFixed(
+                      2
+                    )} (Δ ${(
+                      (Number(creditsAfterUnstake) -
+                        Number(creditsBeforeUnstake)) /
+                      1e18
+                    ).toFixed(2)})`
+                  );
+                  console.log(
+                    `   Staked: ${(Number(stakedAfterUnstake) / 1e18).toFixed(
+                      2
+                    )} (Δ ${(
+                      (Number(stakedAfterUnstake) -
+                        Number(stakedBeforeUnstake)) /
+                      1e18
+                    ).toFixed(2)})`
+                  );
+
+                  // Broadcast unstaking event
+                  this.broadcastEvent({
+                    type: "pilot_unstaked",
+                    timestamp: Date.now(),
+                    data: {
+                      pilotAddress: ship.pilotAddress,
+                      pilotName: ship.pilotName,
+                      sectorId: this.id,
+                      returnedAmount: "10000",
+                    },
+                  });
+                } else {
+                  console.error(
+                    `⚠️ Pilot ${ship.pilotName} failed to unstake: ${unstakeResult.error}`
+                  );
+                  // Don't block exit - credits might be lost, but pilot should still leave
+                }
+              } catch (unstakeError: any) {
+                console.error(
+                  `⚠️ Error during delayed unstake for pilot ${ship.pilotName}:`,
+                  unstakeError
+                );
+              }
+            }, 10000); // 10 second delay
           }
         }
       } catch (error: any) {
-        console.error(`⚠️ Error unstaking pilot ${ship.pilotName}:`, error);
+        console.error(
+          `⚠️ Error checking unstake for pilot ${ship.pilotName}:`,
+          error
+        );
         // Don't block exit - let pilot leave even if unstaking fails
       }
 

@@ -21,8 +21,8 @@ This chapter requires a staking system where pilots stake 10k credits when enter
    ✅ MUST: Only callable by Game contract (msg.sender check)
    ✅ MUST: Take exactly one parameter: address killer
    ✅ MUST: Verify killer is staked (staked[killer] == true)
+   ✅ MUST: Set staked[killer] = false (prevent double-slashing)
    ✅ MUST: Call MaxExtract.slash(killer, sectorId)
-   ✅ MUST: NOT modify staked mapping (MaxExtract handles balance tracking)
 
 === REQUIRED STATE VARIABLES ===
 
@@ -66,6 +66,7 @@ function activate() external {
 ✅ deactivate() sets staked[tx.origin] = false
 ✅ slash() checks msg.sender == gameContract
 ✅ slash() verifies staked[killer] == true
+✅ slash() sets staked[killer] = false
 ✅ slash() calls MaxExtract.slash(killer, sectorId)
 ✅ All required state variables present and correctly initialized
 ✅ No reentrancy vulnerabilities
@@ -79,6 +80,7 @@ function activate() external {
 ❌ activate/deactivate using msg.sender instead of tx.origin for tracking
 ❌ slash not checking msg.sender == gameContract
 ❌ slash not verifying killer is staked
+❌ slash not setting staked[killer] = false
 ❌ slash not calling MaxExtract.slash()
 ❌ Missing required state variables
 ❌ Mutable state variables that should be immutable (maxExtractContract, gameContract, sectorId)
@@ -90,7 +92,8 @@ function activate() external {
 - The stake contract does NOT hold any credits
 - MaxExtract holds all staked credits (10k per pilot)
 - The stake contract only tracks who is currently in the sector
-- When slash() is called, MaxExtract burns the killer's entire staked balance
+- When slash() is called, it sets staked[killer] = false and MaxExtract burns the killer's entire staked balance
+- Setting staked[killer] = false prevents double-slashing (they have no stake left to slash)
 - Players should NOT be able to modify staked status directly
 - The sectorId must match the sector this stake contract is registered to
 
@@ -123,6 +126,7 @@ contract StakeContract {
         require(msg.sender == gameContract, "Only Game");
         require(staked[killer], "Killer not staked");
         
+        staked[killer] = false;  // Prevent double-slashing
         IMaxExtract(maxExtractContract).slash(killer, sectorId);
     }
 }

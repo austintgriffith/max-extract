@@ -1162,6 +1162,16 @@ export class BlockchainManager {
         transport: http(this.config.rpcUrl),
       });
 
+      // Log victim's transaction nonce before sending
+      const victimNonce = await this.publicClient.getTransactionCount({
+        address: victimAccount.address,
+      });
+      console.log(`📡 Victim transaction details (deadMansSwitch):`);
+      console.log(`   Address: ${victimAccount.address}`);
+      console.log(`   Nonce: ${victimNonce}`);
+      console.log(`   Killer: ${killerAddress}`);
+      console.log(`   Player: ${playerAddress}`);
+
       // Step 1: Execute the deadMansSwitch transaction (no ETH involved)
       const deadMansSwitchHash = await victimWalletClient.writeContract({
         address: gameContract.address as `0x${string}`,
@@ -1229,6 +1239,203 @@ export class BlockchainManager {
     } catch (error: any) {
       this.debugLog(`Failed to execute deadMansSwitch:`, error);
       throw new Error(`DeadMansSwitch failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Execute deadMansSlash transaction when a pilot is killed and player has audited stake
+   * This slashes the killer instead of penalizing the player
+   * Reverts with explicit error messages if slashing fails
+   * Then sends all remaining ETH to GOD in a separate transaction
+   */
+  public async executeDeadMansSlash(
+    victimPrivateKey: string,
+    killerAddress: string,
+    playerAddress: string
+  ): Promise<{ slashHash: string; ethTransferHash: string | null }> {
+    this.debugLog(
+      `Executing deadMansSlash for victim pilot with killer ${killerAddress} and player ${playerAddress}`
+    );
+
+    try {
+      const gameContract = this.getContract("Game");
+      if (!gameContract) {
+        throw new Error("Game contract not found. Run: yarn deploy");
+      }
+
+      // Create wallet client for the victim pilot
+      const { privateKeyToAccount } = await import("viem/accounts");
+      const { createWalletClient, http } = await import("viem");
+
+      const victimAccount = privateKeyToAccount(
+        victimPrivateKey as `0x${string}`
+      );
+      const victimWalletClient = createWalletClient({
+        account: victimAccount,
+        chain: this.selectedChain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      // Log victim's transaction nonce before sending
+      const victimNonce = await this.publicClient.getTransactionCount({
+        address: victimAccount.address,
+      });
+      console.log(`📡 Victim transaction details (deadMansSlash):`);
+      console.log(`   Address: ${victimAccount.address}`);
+      console.log(`   Nonce: ${victimNonce}`);
+      console.log(`   Killer: ${killerAddress}`);
+      console.log(`   Player: ${playerAddress}`);
+      console.log(`   Game Contract: ${gameContract.address}`);
+      console.log(
+        `   Calling: deadMansSlash(${killerAddress}, ${playerAddress})`
+      );
+
+      // Execute the deadMansSlash transaction (will revert with reason if it fails)
+      let slashHash: string;
+      try {
+        console.log(`⏳ Sending deadMansSlash transaction...`);
+        slashHash = await victimWalletClient.writeContract({
+          address: gameContract.address as `0x${string}`,
+          abi: gameContract.abi,
+          functionName: "deadMansSlash",
+          args: [killerAddress, playerAddress],
+          gas: BigInt(150000), // Explicit gas limit for predictable costs
+          chain: this.selectedChain,
+        });
+        console.log(`📤 Transaction sent: ${slashHash}`);
+      } catch (writeError: any) {
+        // This catches simulation/estimation errors BEFORE sending transaction
+        console.log(`\n🚨 SLASH TRANSACTION SIMULATION FAILED! 🚨`);
+        console.log(
+          `   Error: ${writeError.shortMessage || writeError.message}`
+        );
+
+        // Try to extract revert reason
+        if (writeError.cause?.reason) {
+          console.log(`   Revert Reason: ${writeError.cause.reason}`);
+        }
+        if (writeError.details) {
+          console.log(`   Details: ${writeError.details}`);
+        }
+
+        throw new Error(
+          `DeadMansSlash simulation failed: ${
+            writeError.shortMessage || writeError.message
+          }`
+        );
+      }
+
+      this.debugLog(`DeadMansSlash transaction sent: ${slashHash}`);
+
+      // Wait for transaction to be mined and CHECK STATUS
+      const receipt = await this.waitForTransactionReceipt(slashHash);
+
+      // Check if transaction succeeded or reverted
+      if (receipt.status === "reverted") {
+        console.log(`\n🚨 SLASH TRANSACTION REVERTED! 🚨`);
+        console.log(`   Transaction: ${slashHash}`);
+        console.log(`   Block: ${receipt.blockNumber}`);
+        console.log(`   Gas Used: ${receipt.gasUsed}`);
+
+        // Try to get the revert reason by calling the transaction at the block it was mined
+        console.log(`\n🔍 DECODING REVERT REASON...`);
+        try {
+          const tx = await this.publicClient.getTransaction({
+            hash: slashHash as `0x${string}`,
+          });
+
+          await this.publicClient.call({
+            to: tx.to!,
+            data: tx.input,
+            from: tx.from,
+            blockNumber: receipt.blockNumber,
+          });
+          console.log(`   ⚠️  Replay succeeded (unexpected)`);
+        } catch (callError: any) {
+          console.log(`\n📋 FULL REVERT DETAILS:`);
+          console.log(
+            `   Error: ${callError.shortMessage || callError.message}`
+          );
+
+          // Extract require message if available
+          const fullError = callError.message || callError.toString();
+          const requireMatch = fullError.match(
+            /reverted with the following reason:\s*(.+?)(?:\n|$)/
+          );
+          if (requireMatch) {
+            console.log(`\n🎯 EXACT REQUIRE MESSAGE: "${requireMatch[1]}"`);
+          }
+
+          // Also try contract error decoding
+          if (callError.cause?.data) {
+            console.log(`   Error Data: ${callError.cause.data}`);
+          }
+
+          // Log full error for debugging
+          console.log(`\n🐛 FULL ERROR OBJECT:`);
+          console.log(JSON.stringify(callError, null, 2));
+        }
+
+        throw new Error(
+          `DeadMansSlash transaction reverted - likely verification failed`
+        );
+      }
+
+      console.log(`\n✅ SLASH TRANSACTION SUCCEEDED`);
+      console.log(`   Transaction: ${slashHash}`);
+      console.log(`   Block: ${receipt.blockNumber}`);
+      console.log(`   Gas Used: ${receipt.gasUsed}`);
+      console.log(`   Status: ${receipt.status}`);
+
+      this.debugLog(`DeadMansSlash transaction mined successfully`);
+
+      // Send remaining ETH to GOD (same logic as deadMansSwitch)
+      let ethTransferHash: string | null = null;
+      try {
+        const remainingBalance = await this.publicClient.getBalance({
+          address: victimAccount.address,
+        });
+
+        const gasPrice = await this.publicClient.getGasPrice();
+        const gasLimit = BigInt(21000);
+        const gasCost = gasLimit * gasPrice;
+
+        if (remainingBalance > gasCost) {
+          const amountToSend = remainingBalance - gasCost;
+
+          this.debugLog(
+            `Sending ${formatEther(amountToSend)} ETH to GOD (${formatEther(
+              remainingBalance
+            )} - ${formatEther(gasCost)} gas)`
+          );
+
+          const godAddress = this.godAccount.address;
+          ethTransferHash = await victimWalletClient.sendTransaction({
+            to: godAddress,
+            value: amountToSend,
+            gas: gasLimit,
+            chain: this.selectedChain,
+          });
+
+          this.debugLog(`ETH transfer to GOD sent: ${ethTransferHash}`);
+          await this.waitForTransactionReceipt(ethTransferHash);
+          this.debugLog(`ETH transfer to GOD mined`);
+        } else {
+          this.debugLog(
+            `Pilot balance (${formatEther(
+              remainingBalance
+            )}) too low to send ETH after gas costs`
+          );
+        }
+      } catch (ethError: any) {
+        this.debugLog(`Failed to send ETH to GOD: ${ethError.message}`);
+        // Don't throw - deadMansSlash succeeded, ETH transfer is secondary
+      }
+
+      return { slashHash, ethTransferHash };
+    } catch (error: any) {
+      this.debugLog(`Failed to execute deadMansSlash:`, error);
+      throw new Error(`DeadMansSlash failed: ${error.message}`);
     }
   }
 
@@ -1345,6 +1552,79 @@ export class BlockchainManager {
     } catch (error: any) {
       this.debugLog(`Failed to get sector owner for ${sectorId}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Check if a player has an audited stake module for chapter 4
+   */
+  public async hasAuditedStakeModule(playerAddress: string): Promise<boolean> {
+    try {
+      const maxExtractContract = this.getContract("MaxExtract");
+      const auditorContract = this.getContract("Auditor");
+
+      if (!maxExtractContract || !auditorContract) {
+        return false;
+      }
+
+      // Get player's sector
+      const sectorId = await this.readContract(
+        maxExtractContract.address,
+        maxExtractContract.abi,
+        "playerToSector",
+        [playerAddress]
+      );
+
+      if (!sectorId || sectorId === 0n) return false;
+
+      // Get registry
+      const registryAddress = await this.readContract(
+        maxExtractContract.address,
+        maxExtractContract.abi,
+        "sectors",
+        [sectorId]
+      );
+
+      if (!registryAddress) return false;
+
+      // Get stake module (need to read from registry)
+      // Create a minimal ABI for getModule function
+      const getModuleAbi = [
+        {
+          type: "function",
+          name: "getModule",
+          inputs: [{ name: "moduleName", type: "string" }],
+          outputs: [{ name: "", type: "address" }],
+          stateMutability: "view",
+        },
+      ];
+
+      const stakeModule = await this.readContract(
+        registryAddress as string,
+        getModuleAbi,
+        "getModule",
+        ["stake"]
+      );
+
+      if (
+        !stakeModule ||
+        stakeModule === "0x0000000000000000000000000000000000000000"
+      ) {
+        return false;
+      }
+
+      // Check if audited for chapter 4
+      const auditStatus = await this.readContract(
+        auditorContract.address,
+        auditorContract.abi,
+        "isAudited",
+        [stakeModule]
+      );
+
+      return auditStatus === 4;
+    } catch (error: any) {
+      this.debugLog(`Failed to check for audited stake module:`, error);
+      return false;
     }
   }
 
@@ -3155,6 +3435,63 @@ export class BlockchainManager {
   }
 
   /**
+   * Decode stake error to provide user-friendly messages
+   * @param error The error from the stake transaction
+   * @returns Human-readable error explanation
+   */
+  private decodeStakeError(error: any): string {
+    const errorString = error.toString() || error.message || "";
+
+    // Check for common stake errors and provide helpful messages
+    if (
+      errorString.includes("Not a pilot") ||
+      errorString.includes("isPilot")
+    ) {
+      return "Pilot is not registered in the Game contract. Contact an admin.";
+    }
+
+    if (
+      errorString.includes("Sector not found") ||
+      errorString.includes("registry")
+    ) {
+      return "This sector doesn't exist or hasn't been broadcast yet.";
+    }
+
+    if (
+      errorString.includes("No stake module") ||
+      errorString.includes("Failed to get stake module")
+    ) {
+      return "This sector doesn't have a stake module registered. Player needs to register one.";
+    }
+
+    if (
+      errorString.includes("Not audited for chapter 4") ||
+      errorString.includes("isAudited")
+    ) {
+      return "The stake module is not audited for Chapter 4. Player needs to request an audit first.";
+    }
+
+    if (
+      errorString.includes("Transfer failed") ||
+      errorString.includes("insufficient allowance") ||
+      errorString.includes("ERC20")
+    ) {
+      return "Credits transfer failed. Pilot might not have enough CREDITS or approval failed.";
+    }
+
+    if (errorString.includes("Activate failed")) {
+      return "Stake contract's activate() function failed. The contract may have a bug.";
+    }
+
+    if (errorString.includes("Insufficient staked balance")) {
+      return "Pilot doesn't have enough staked balance to unstake.";
+    }
+
+    // Generic fallback
+    return "Staking transaction reverted. The stake contract may have issues.";
+  }
+
+  /**
    * Chapter 4: Stake pilot into a sector
    */
   public async stakePilotInSector(
@@ -3235,11 +3572,94 @@ export class BlockchainManager {
       };
     } catch (error: any) {
       this.debugLog(`Failed to stake pilot:`, error);
+
+      // Capture the full error message from viem which includes detailed revert info
+      const fullErrorMessage =
+        error.toString() || error.message || "Staking failed";
+
+      // Decode the error to provide user-friendly explanation
+      const decodedError = this.decodeStakeError(error);
+
       return {
         success: false,
-        error: error.message || "Staking failed",
-        errorDetails: error.details || error.shortMessage,
+        error: error.shortMessage || error.message || "Staking failed",
+        errorDetails: `${decodedError}\n\nTechnical details:\n${fullErrorMessage}`,
       };
+    }
+  }
+
+  /**
+   * Get a pilot's CREDITS balance
+   * @param pilotAddress The pilot's address
+   * @returns The pilot's credits balance in wei (18 decimals)
+   */
+  public async getPilotCreditsBalance(pilotAddress: string): Promise<bigint> {
+    const creditsContract = this.getContract("Credits");
+
+    if (!creditsContract) {
+      throw new Error("Credits contract not found");
+    }
+
+    try {
+      const balance = await this.publicClient.readContract({
+        address: creditsContract.address as `0x${string}`,
+        abi: creditsContract.abi,
+        functionName: "balanceOf",
+        args: [pilotAddress],
+      });
+
+      return balance as bigint;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get credits balance for ${pilotAddress}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get a pilot's staked balance in MaxExtract
+   * @param pilotAddress The pilot's address
+   * @returns The pilot's staked balance in wei (18 decimals)
+   */
+  public async getPilotStakedBalance(pilotAddress: string): Promise<bigint> {
+    const maxExtractContract = this.getContract("MaxExtract");
+
+    if (!maxExtractContract) {
+      throw new Error("MaxExtract contract not found");
+    }
+
+    try {
+      const balance = await this.publicClient.readContract({
+        address: maxExtractContract.address as `0x${string}`,
+        abi: maxExtractContract.abi,
+        functionName: "stakedBalance",
+        args: [pilotAddress],
+      });
+
+      return balance as bigint;
+    } catch (error: any) {
+      this.debugLog(`Failed to get staked balance for ${pilotAddress}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get an address's ETH balance
+   * @param address The address to check
+   * @returns The ETH balance in wei
+   */
+  public async getBalance(address: string): Promise<bigint> {
+    try {
+      const balance = await this.publicClient.getBalance({
+        address: address as `0x${string}`,
+      });
+
+      return balance;
+    } catch (error: any) {
+      this.debugLog(`Failed to get balance for ${address}:`, error);
+      throw error;
     }
   }
 

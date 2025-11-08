@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xe8ecf644d9a3432dab3a0725308f265990eedca9",
+      address: "0x889cc60f3d1bc55c189271c59848e6289785f34f",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 801,
+      deployedOnBlock: 4548,
     },
     Credits: {
-      address: "0x3a1d75769758705cab1385377d4d88b8193a5f37",
+      address: "0xe986765bd00ece21565e6e438ace940b8c332d82",
       abi: [
         {
           type: "constructor",
@@ -889,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 802,
+      deployedOnBlock: 4549,
     },
     Game: {
-      address: "0xb1527802e7800034d6887b0a99a5ad2683184b95",
+      address: "0x276357700891ae176d4ad836fde51dc44f2494f1",
       abi: [
         {
           type: "constructor",
@@ -1026,6 +1026,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "deadMansSlash",
+          inputs: [
+            {
+              name: "_killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_playerToPenalize",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1681,24 +1699,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "trySlash",
-          inputs: [
-            {
-              name: "_killer",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_playerToPenalize",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "universe",
           inputs: [],
           outputs: [
@@ -2179,10 +2179,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 803,
+      deployedOnBlock: 4550,
     },
     Auditor: {
-      address: "0x4c073a92b1c8fb55313102ab412fb7f1704bcbdd",
+      address: "0x4b17f186f793fcb28bf243a7e67f0012b8d6efae",
       abi: [
         {
           type: "constructor",
@@ -2690,10 +2690,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 803,
+      deployedOnBlock: 4551,
     },
     MaxExtract: {
-      address: "0x90bb87c6258ad0d309d2f3a263d3bc7b0b9f522d",
+      address: "0x7de270e6ed1517a4bdd194ea3af72bdae6d6e49c",
       abi: [
         {
           type: "constructor",
@@ -2710,6 +2710,11 @@ const deployedContracts = {
             },
             {
               name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_credits",
               type: "address",
               internalType: "address",
             },
@@ -3107,19 +3112,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setCreditsContract",
-          inputs: [
-            {
-              name: "_credits",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "slash",
           inputs: [
             {
@@ -3340,7 +3332,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 803,
+      deployedOnBlock: 4551,
     },
   },
   42161: {
@@ -4367,6 +4359,24 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "deadMansSlash",
+          inputs: [
+            {
+              name: "_killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_playerToPenalize",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "deadMansSwitch",
           inputs: [
             {
@@ -5019,24 +5029,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "trySlash",
-          inputs: [
-            {
-              name: "_killer",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_playerToPenalize",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "universe",
           inputs: [],
           outputs: [
@@ -5540,6 +5532,11 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+            {
+              name: "_credits",
+              type: "address",
+              internalType: "address",
+            },
           ],
           stateMutability: "nonpayable",
         },
@@ -5931,19 +5928,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "setCreditsContract",
-          inputs: [
-            {
-              name: "_credits",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",

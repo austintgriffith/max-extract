@@ -107,8 +107,8 @@ export const Chapter4 = () => {
                   <strong>function slash(address killer) external</strong>
                 </div>
                 <div className="text-base-content/70 ml-4">
-                  Called by Game when a pilot kills. Must check msg.sender == Game, verify killer is staked, then call
-                  MaxExtract.slash(killer, sectorId).
+                  Called by Game when a pilot kills. Must check msg.sender == Game, verify killer is staked, set
+                  staked[killer] = false, then call MaxExtract.slash(killer, sectorId).
                 </div>
               </div>
             </div>
@@ -165,6 +165,8 @@ function deactivate() external {
     require(msg.sender == gameContract, "Only Game");
     require(staked[killer], "Killer not staked");
     
+    staked[killer] = false;  // Prevent double-slashing
+    
     // Call MaxExtract to burn the killer's stake
     IMaxExtract(maxExtractContract).slash(killer, sectorId);
 }`}</code>
@@ -175,6 +177,15 @@ function deactivate() external {
             The slash call to MaxExtract ({maxExtractAddress && <Address address={maxExtractAddress} />}) will burn the
             killer&apos;s entire 10k staked balance. They don&apos;t get it back. Ever.
           </p>
+
+          <div className="bg-info/10 border border-info rounded-lg p-4 mb-4">
+            <p className="text-sm text-base-content">
+              <strong className="text-info">Important:</strong> Setting{" "}
+              <code className="bg-base-100 px-1 rounded">staked[killer] = false</code> prevents double-slashing. Once
+              their stake is burned, they can&apos;t be slashed again (they have nothing left to slash). To continue
+              playing in your sector, they&apos;d need to exit and re-enter, staking another 10k.
+            </p>
+          </div>
 
           <div className="bg-warning/10 border-2 border-warning rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
@@ -288,6 +299,7 @@ contract StakeContract {
         require(msg.sender == gameContract, "Only Game");
         require(staked[killer], "Killer not staked");
         
+        staked[killer] = false;  // Prevent double-slashing
         IMaxExtract(maxExtractContract).slash(killer, sectorId);
     }
 }`}</code>

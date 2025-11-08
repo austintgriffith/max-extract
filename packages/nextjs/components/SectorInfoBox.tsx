@@ -262,7 +262,7 @@ export const SectorInfoBox = ({
           </div>
 
           {/* Registered Modules - Indented under Registry */}
-          {(station.aboutAddress || station.credentialAddress || station.saleAddress) && (
+          {(station.aboutAddress || station.credentialAddress || station.saleAddress || station.stakeAddress) && (
             <div className="ml-4 space-y-2 border-l-2 border-cyan-800 pl-3">
               {station.aboutAddress && (
                 <div>
@@ -357,6 +357,40 @@ export const SectorInfoBox = ({
                     <Address address={station.saleAddress} />
                     <Link
                       href={`https://abi.ninja/${station.saleAddress}/${targetNetwork.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      <Image
+                        src="/abininja.svg"
+                        alt="View on ABI Ninja"
+                        width={24}
+                        height={24}
+                        className="opacity-80"
+                      />
+                    </Link>
+                  </div>
+                </div>
+              )}
+              {station.stakeAddress && (
+                <div>
+                  <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
+                    Stake Module
+                    {station.stakeAuditedChapter === 4 ? (
+                      <span className="text-green-400">✓</span>
+                    ) : (
+                      <span className="text-yellow-400">⚠️</span>
+                    )}
+                    {station.stakeAuditedChapter && (
+                      <span className="text-gray-500 text-[9px] font-normal">
+                        {station.stakeAuditedChapter === 4 ? "Ch.4" : `Ch.${station.stakeAuditedChapter}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Address address={station.stakeAddress} />
+                    <Link
+                      href={`https://abi.ninja/${station.stakeAddress}/${targetNetwork.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:opacity-70 transition-opacity"

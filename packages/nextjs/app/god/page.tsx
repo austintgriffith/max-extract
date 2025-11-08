@@ -456,7 +456,7 @@ export default function GodPage() {
               onClick={handleUnlockChapter4}
               disabled={visibleChapters && visibleChapters.includes(4)}
             >
-              🏗️ Unlock Chapter 4: Coming Soon
+              ⚔️ Unlock Chapter 4: Staking/Slashing
             </button>
             <button
               className={`btn btn-lg ${visibleChapters && visibleChapters.includes(5) ? "btn-disabled" : "btn-success"}`}
