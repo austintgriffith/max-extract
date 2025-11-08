@@ -1,8 +1,8 @@
 import { Sector } from "../Sector";
 import { SECTOR_CONFIG } from "../types";
-import { BlockchainManager } from "./BlockchainManager";
+import { BlockchainManager } from "./blockchain";
 import { EntropyManager } from "./EntropyManager";
-import { CharacterManager, PilotManager } from "./CharacterManager";
+import { CharacterManager, PilotManager } from "./character";
 import { CrowdsaleManager } from "./CrowdsaleManager";
 import { BaseUpgradeManager } from "./BaseUpgradeManager";
 

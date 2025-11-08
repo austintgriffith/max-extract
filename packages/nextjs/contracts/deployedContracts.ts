@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x889cc60f3d1bc55c189271c59848e6289785f34f",
+      address: "0xe8f76a822b57b973c7a89006092364fff8f69040",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4548,
+      deployedOnBlock: 1360,
     },
     Credits: {
-      address: "0xe986765bd00ece21565e6e438ace940b8c332d82",
+      address: "0x4e85dc48a70da1298489d5b6fc2492767d98f384",
       abi: [
         {
           type: "constructor",
@@ -889,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4549,
+      deployedOnBlock: 1361,
     },
     Game: {
-      address: "0x276357700891ae176d4ad836fde51dc44f2494f1",
+      address: "0x4d8e02bbfcf205828a8352af4376b165e123d7b0",
       abi: [
         {
           type: "constructor",
@@ -1381,6 +1381,25 @@ const deployedContracts = {
           inputs: [
             {
               name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPilotMapping",
+          inputs: [
+            {
+              name: "",
               type: "address",
               internalType: "address",
             },
@@ -2179,10 +2198,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4550,
+      deployedOnBlock: 1362,
     },
     Auditor: {
-      address: "0x4b17f186f793fcb28bf243a7e67f0012b8d6efae",
+      address: "0xeab25969e5285df34a3b245324d0b2b91e31cad4",
       abi: [
         {
           type: "constructor",
@@ -2690,10 +2709,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4551,
+      deployedOnBlock: 1362,
     },
     MaxExtract: {
-      address: "0x7de270e6ed1517a4bdd194ea3af72bdae6d6e49c",
+      address: "0x150890d6984e98f408162ee65684779804bff858",
       abi: [
         {
           type: "constructor",
@@ -3332,7 +3351,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4551,
+      deployedOnBlock: 1363,
     },
   },
   42161: {
@@ -4711,6 +4730,25 @@ const deployedContracts = {
           inputs: [
             {
               name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPilotMapping",
+          inputs: [
+            {
+              name: "",
               type: "address",
               internalType: "address",
             },

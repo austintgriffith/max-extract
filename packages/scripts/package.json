@@ -10,7 +10,7 @@
     "debug:dev": "DEBUG=true tsx --watch index.ts",
     "backend": "tsx backend.ts",
     "backend:dev": "tsx --watch backend.ts",
-    "auditor": "tsx Auditor.ts",
+    "auditor": "tsx auditor/AuditorManager.ts",
     "sweep": "tsx sweep.ts",
     "build": "tsc"
   },

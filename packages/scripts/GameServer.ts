@@ -9,14 +9,14 @@ import { SECTOR_CONFIG } from "./types";
 import {
   BlockchainManager,
   BlockchainConfig,
-} from "./managers/BlockchainManager";
+} from "./managers/blockchain";
 import { EntropyManager } from "./managers/EntropyManager";
 import { WebSocketManager } from "./managers/WebSocketManager";
 import { RouteManager } from "./managers/RouteManager";
-import { CharacterManager } from "./managers/CharacterManager";
+import { CharacterManager } from "./managers/character";
 import { SimulationManager } from "./managers/SimulationManager";
 import { GameCycleManager } from "./managers/GameCycleManager";
-import { CrowdsaleManager } from "./managers/CrowdsaleManager";
+import { CrowdsaleManager } from "./managers/crowdsale";
 import { BaseUpgradeManager } from "./managers/BaseUpgradeManager";
 
 export class GameServer {
