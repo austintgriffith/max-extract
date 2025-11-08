@@ -1,8 +1,8 @@
-import { BlockchainManager } from "./blockchain";
-import { CharacterManager } from "./character";
-import { SECTOR_CONFIG } from "../types";
+import { BlockchainManager } from "../blockchain";
+import { CharacterManager } from "../character";
+import { SECTOR_CONFIG } from "../../types";
 import { privateKeyToAccount } from "viem/accounts";
-import { Sector } from "../Sector";
+import { Sector } from "../../Sector";
 
 /**
  * State tracking for a player's crowdsale

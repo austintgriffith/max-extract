@@ -42,13 +42,23 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                                           ? "badge-error"
                                           : event.type === "pilot_death"
                                             ? "badge-error"
-                                            : event.type === "pilot_tip"
-                                              ? "badge-success"
-                                              : event.type === "credential_minted"
+                                            : event.type === "pilot_slashed"
+                                              ? "badge-secondary"
+                                              : event.type === "pilot_tip"
                                                 ? "badge-success"
-                                                : event.type === "credential_mint_failed"
-                                                  ? "badge-warning"
-                                                  : "badge-ghost"
+                                                : event.type === "credential_minted"
+                                                  ? "badge-success"
+                                                  : event.type === "credential_mint_failed"
+                                                    ? "badge-warning"
+                                                    : event.type === "stake_failed"
+                                                      ? "badge-error"
+                                                      : event.type === "pilot_staked"
+                                                        ? "badge-success"
+                                                        : event.type === "pilot_unstaked"
+                                                          ? "badge-info"
+                                                          : event.type === "pilot_insufficient_credits"
+                                                            ? "badge-warning"
+                                                            : "badge-ghost"
                         }`}
                       >
                         {event.type.replace("_", " ")}
@@ -96,6 +106,23 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                               ⚠️ Blockchain transaction failed: {event.data.error}
                             </div>
                           )}
+                        </div>
+                      )}
+                      {event.type === "pilot_slashed" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1">
+                            <span>
+                              ⚔️ {event.data.victimPilotName} killed by {event.data.killerPilotName}
+                            </span>
+                            <div className="px-2 py-1 rounded text-white font-bold bg-gradient-to-r from-purple-500 to-purple-700">
+                              killer slashed!
+                            </div>
+                            {event.data.transactionHash && (
+                              <span className="text-xs opacity-70">
+                                (tx: {event.data.transactionHash.slice(0, 8)}...)
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
                       {event.type === "pilot_tip" && (
@@ -281,6 +308,98 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                             {event.data.errorSignature && (
                               <div className="mt-1 opacity-60 font-mono">Error Code: {event.data.errorSignature}</div>
                             )}
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "stake_failed" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-error">
+                            <span>❌ {event.data.pilotName} failed to stake in sector</span>
+                          </div>
+                          <div className="text-xs bg-error/10 rounded px-2 py-1 border border-error/30">
+                            <div className="font-semibold text-error mb-1">Staking failed:</div>
+
+                            {/* Show user-friendly decoded error prominently */}
+                            <div className="mt-1 p-2 bg-error/10 border border-error/30 rounded">
+                              <div className="font-semibold text-error">
+                                {event.data.reason || "Staking transaction failed"}
+                              </div>
+                            </div>
+
+                            {/* Show technical details in a collapsed/less prominent section */}
+                            {event.data.errorDetails && (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-xs opacity-70 hover:opacity-100">
+                                  Technical details (click to expand)
+                                </summary>
+                                <div className="mt-2 p-2 bg-base-200/50 rounded border border-base-300">
+                                  <div className="font-mono text-xs whitespace-pre-wrap break-words opacity-80">
+                                    {event.data.errorDetails}
+                                  </div>
+                                </div>
+                              </details>
+                            )}
+
+                            {/* Show pilot address for debugging */}
+                            {event.data.pilotAddress && (
+                              <div className="mt-2 opacity-70">
+                                Pilot: {event.data.pilotAddress.slice(0, 10)}...{event.data.pilotAddress.slice(-8)}
+                              </div>
+                            )}
+
+                            {/* Show sector ID */}
+                            {event.data.sectorId && (
+                              <div className="mt-1 opacity-70">
+                                Sector: {event.data.sectorId.slice(0, 10)}...{event.data.sectorId.slice(-8)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "pilot_staked" && (
+                        <div className="flex items-center gap-1">
+                          <span>✅ {event.data.pilotName} staked 10,000 CREDITS</span>
+                          {event.data.transactionHash && (
+                            <span className="text-xs opacity-70">
+                              (tx: {event.data.transactionHash.slice(0, 8)}...)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {event.type === "pilot_unstaked" && (
+                        <div className="flex items-center gap-1">
+                          <span>
+                            🔓 {event.data.pilotName} unstaked and received{" "}
+                            {event.data.returnedAmount
+                              ? `${Number(event.data.returnedAmount).toLocaleString()} CREDITS`
+                              : "CREDITS"}{" "}
+                            back
+                          </span>
+                          {event.data.transactionHash && (
+                            <span className="text-xs opacity-70">
+                              (tx: {event.data.transactionHash.slice(0, 8)}...)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {event.type === "pilot_insufficient_credits" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-warning">
+                            <span>⚠️ {event.data.pilotName} could not enter - insufficient CREDITS</span>
+                          </div>
+                          <div className="text-xs bg-warning/10 rounded px-2 py-1 border border-warning/30">
+                            <div className="flex justify-between">
+                              <span>Required:</span>
+                              <span className="font-mono">{event.data.requiredCredits} CREDITS</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Pilot has:</span>
+                              <span className="font-mono">{event.data.currentCredits} CREDITS</span>
+                            </div>
+                            <div className="mt-2 text-xs opacity-70">
+                              💎 Chapter 4 staking requirement: This sector requires pilots to stake 10,000 CREDITS to
+                              enter.
+                            </div>
                           </div>
                         </div>
                       )}

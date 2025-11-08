@@ -1,4 +1,4 @@
-import { BlockchainManager } from "./BlockchainManager";
+import { BlockchainManager } from "./blockchain";
 
 /**
  * BaseUpgradeManager handles automatic base upgrades for bases 1-3

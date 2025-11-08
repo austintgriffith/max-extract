@@ -83,10 +83,15 @@ export interface SectorEvent {
     | "ship_combat" // New event for ship-to-ship combat
     | "ship_destroyed" // New event for when a ship is destroyed by another ship
     | "pilot_death" // New event for when a pilot is killed
+    | "pilot_slashed" // New event for when a pilot is slashed (killed with stake slash instead of penalty)
     | "pilot_tip" // New event for when a pilot tips a player
     | "credential_minted" // New event for when a pilot mints a sector credential
     | "credential_mint_failed" // New event for when credential minting fails (contract issues)
-    | "ship_refuel"; // New event for when a ship refuels at a station
+    | "ship_refuel" // New event for when a ship refuels at a station
+    | "pilot_staked" // Chapter 4: New event for when a pilot stakes credits
+    | "pilot_unstaked" // Chapter 4: New event for when a pilot unstakes credits
+    | "pilot_insufficient_credits" // Chapter 4: New event for when a pilot can't stake due to insufficient credits
+    | "stake_failed"; // Chapter 4: New event for when staking fails
   timestamp: number;
   data: any;
 }
@@ -125,11 +130,11 @@ export const SECTOR_CONFIG = {
   SHIP_SPEED: 80,
   // Dual-loop system configuration
   INNER_LOOP_INTERVAL: 2000, // Fast loop for ship movement, mining, battles
-  OUTER_LOOP_INTERVAL: 15000, // Slow loop for heavy operations (including rolling commit-reveal)
+  OUTER_LOOP_INTERVAL: 6000, // Slow loop for heavy operations (including rolling commit-reveal)
   // Independent spawn probabilities (0-1 range, checked each outer loop)
   // Both can spawn in the same cycle if both rolls succeed
-  ASTEROID_SPAWN_CHANCE: 0.75, // % chance per outer loop
-  SHIP_SPAWN_CHANCE: 0.6, // % chance per outer loop (slightly more ships than asteroids)
+  ASTEROID_SPAWN_CHANCE: 1, // % chance per outer loop
+  SHIP_SPAWN_CHANCE: 1, // % chance per outer loop (slightly more ships than asteroids)
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station
@@ -164,7 +169,7 @@ export const SECTOR_CONFIG = {
   COUNTDOWN_SECONDS: 10, // Countdown before game starts (buy-in period)
   ENTROPY_REVEAL_DELAY_SECONDS: 5, // Wait time before revealing entropy (Universe contract minimum)
   AUTO_GAME_CYCLE: true, // Enable/disable automated game cycles
-  // Chapter 4: Crowdsale configuration
+  // Chapter 5: Crowdsale configuration
   CROWDSALE_PILOTS_PER_LOOP: 3, // Process 3 pilots per outer loop (faster crowdsale)
   CROWDSALE_TARGET_CREDITS: 50_000n * 10n ** 18n, // 50k total (49.5k to game + 500 reward)
   CROWDSALE_MAX_UPGRADE_ATTEMPTS: 3, // Stop after 3 pilots try upgrade

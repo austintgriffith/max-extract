@@ -137,6 +137,7 @@ export interface SectorEvent {
     | "ship_combat"
     | "ship_destroyed"
     | "pilot_death" // New event for when a pilot is killed
+    | "pilot_slashed" // New event for when a pilot is slashed (killed with stake slash instead of penalty)
     | "pilot_tip" // New event for when a pilot tips a player
     | "credential_minted" // New event for when a pilot mints a sector credential
     | "credential_mint_failed" // New event for when credential minting fails (contract issues)
@@ -144,7 +145,12 @@ export interface SectorEvent {
     | "fuel_token_purchase_failed" // New event for failed fuel token purchase
     | "station_upgraded" // New event for successful station upgrade
     | "station_upgrade_failed" // New event for failed station upgrade
-    | "ship_refuel"; // New event for when a ship refuels at a station
+    | "ship_refuel" // New event for when a ship refuels at a station
+    | "pilot_staked" // Chapter 4: New event for when a pilot stakes credits
+    | "pilot_unstaked" // Chapter 4: New event for when a pilot unstakes credits
+    | "pilot_insufficient_credits" // Chapter 4: New event for when a pilot can't stake due to insufficient credits
+    | "stake_failed" // Chapter 4: New event for when staking fails
+    | "slash_failed"; // Chapter 4: New event for when slashing fails
   timestamp: number;
   data: any; // Type varies by event type: TipEventData, CredentialMintFailedEventData, FuelTokenPurchaseEventData, etc.
 }
@@ -248,6 +254,8 @@ export interface StationDetails {
   credentialAuditedChapter?: number;
   saleAddress?: string;
   saleAuditedChapter?: number;
+  stakeAddress?: string;
+  stakeAuditedChapter?: number;
   stationName?: string;
   social?: string;
   score: number;

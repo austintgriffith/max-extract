@@ -1,4 +1,4 @@
-import { BlockchainManager } from "./BlockchainManager";
+import { BlockchainManager } from "./blockchain";
 import { EntropyManager } from "./EntropyManager";
 import { SECTOR_CONFIG } from "../types";
 

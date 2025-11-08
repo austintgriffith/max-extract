@@ -1,8 +1,8 @@
 import { Sector } from "../Sector";
 import { SECTOR_CONFIG } from "../types";
-import { BlockchainManager } from "./BlockchainManager";
+import { BlockchainManager } from "./blockchain";
 import { EntropyManager } from "./EntropyManager";
-import { CharacterManager, PilotManager } from "./CharacterManager";
+import { CharacterManager, PilotManager } from "./character";
 import { CrowdsaleManager } from "./CrowdsaleManager";
 import { BaseUpgradeManager } from "./BaseUpgradeManager";
 
@@ -189,7 +189,7 @@ export class SimulationManager {
       // Update all sectors with spawning and heavy operations
       await this.updateSectorsOuterLoop();
 
-      // Check for new crowdsales and process active ones (Chapter 4)
+      // Check for new crowdsales and process active ones (Chapter 5)
       if (this.crowdsaleManager) {
         this.debugLog("Checking for new crowdsales...");
         await this.crowdsaleManager.checkForNewCrowdsales();
@@ -225,10 +225,10 @@ export class SimulationManager {
     try {
       const status = await this.entropyManager.checkUniverseEntropyStatus();
       const universeAddress = status.universeContract?.address || "unknown";
-      
+
       if (!status.isSet) {
         const entropy = await this.entropyManager.getUniverseEntropy();
-        
+
         console.log(
           `⚠️  Universe entropy still not set - game functions limited`
         );

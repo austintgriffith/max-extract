@@ -1,4 +1,4 @@
-import { BlockchainManager } from "./BlockchainManager";
+import { BlockchainManager } from "./blockchain";
 import { RevealManager } from "../utils/RevealManager";
 import { createSectorDice } from "../utils/DeterministicDice";
 import { UniverseEntropyPersistence } from "../utils/UniverseEntropyPersistence";

@@ -224,6 +224,22 @@ contract Auditor {
     }
     
     /**
+     * Get all audit requests for a specific address
+     * @param _address The address to query
+     * @return Array of all audit requests made by this address
+     */
+    function getAllAuditsForAddress(address _address) external view returns (AuditRequest[] memory) {
+        uint256[] memory requestIds = auditsByAddress[_address];
+        AuditRequest[] memory audits = new AuditRequest[](requestIds.length);
+        
+        for (uint256 i = 0; i < requestIds.length; i++) {
+            audits[i] = auditRequests[requestIds[i]];
+        }
+        
+        return audits;
+    }
+    
+    /**
      * Set the game contract address
      * Only callable by God
      * @param _game The game contract address

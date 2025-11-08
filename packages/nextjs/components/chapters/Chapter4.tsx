@@ -4,14 +4,16 @@ import { Address } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 
 export const Chapter4 = () => {
+  const { data: maxExtractContract } = useDeployedContractInfo("MaxExtract");
   const { data: gameContract } = useDeployedContractInfo("Game");
   const { data: creditsContract } = useDeployedContractInfo("Credits");
+  const maxExtractAddress = maxExtractContract?.address;
   const gameAddress = gameContract?.address;
   const creditsAddress = creditsContract?.address;
 
   return (
     <div className="bg-base-300 rounded-3xl p-8 mb-6">
-      <h2 className="text-3xl font-bold mb-6 text-primary">Chapter 4: The Crowdsale</h2>
+      <h2 className="text-3xl font-bold mb-6 text-primary">Chapter 4: The Staking (and Slashing)</h2>
       <div className="space-y-6">
         {/* TODO Section */}
         <div className="bg-warning/10 border border-warning rounded-lg p-4">
@@ -22,40 +24,50 @@ export const Chapter4 = () => {
         <div className="prose prose-lg max-w-none text-base-content">
           <h3 className="text-xl font-semibold mb-4 text-secondary">Overview</h3>
           <p className="mb-4">
-            Your sector is live, your identity is known, and pilots can access your station with credentials. But
-            there&apos;s a problem: your station is <strong>class 0</strong>—bare bones, no processing facilities, no
-            fuel production.
+            Deaths in your sector cost you <strong>10 points</strong> each. That&apos;s harsh, but there&apos;s a way to
+            protect yourself: <strong>make pilots put skin in the game</strong>.
           </p>
           <p className="mb-4">
-            To process asteroids into fuel and truly serve your pilots, you need to{" "}
-            <strong>upgrade your station</strong>. This requires raising{" "}
-            <strong className="text-error">50,000 credits</strong>.
-          </p>
-          <p className="mb-4">
-            Time to run a <strong>crowdsale</strong>. You&apos;ll sell <strong>fuel tokens</strong> to pilots who need
-            them for refueling at your station.
+            Deploy a <strong>stake contract</strong> that requires pilots to stake{" "}
+            <strong className="text-error">10,000 credits</strong> when entering your sector. If they kill someone, you
+            can <strong>slash their entire stake</strong> and avoid the point penalty.
           </p>
 
-          <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-6">
+          <h3 className="text-xl font-semibold mb-4 text-secondary">How It Works</h3>
+          <div className="bg-base-200 rounded-lg p-4 mb-4">
+            <ol className="list-decimal list-inside space-y-2">
+              <li>
+                <strong>Entry:</strong> When a pilot enters your sector, they must approve and stake 10k credits to
+                MaxExtract
+              </li>
+              <li>
+                <strong>Tracking:</strong> Your stake contract tracks which pilots are currently in your sector
+              </li>
+              <li>
+                <strong>Slashing:</strong> If a pilot kills another pilot, the Game contract calls your stake
+                contract&apos;s slash function
+              </li>
+              <li>
+                <strong>Penalty Avoided:</strong> If slashing succeeds, you keep your points. If it fails, you lose 10
+                points
+              </li>
+              <li>
+                <strong>Exit:</strong> When pilots leave normally, they get their 10k credits back
+              </li>
+            </ol>
+          </div>
+
+          <div className="bg-error/10 border-2 border-error rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
-              <div className="text-info text-2xl">💡</div>
+              <div className="text-error text-2xl">⚠️</div>
               <div>
-                <h4 className="font-semibold text-info mb-3">Two Ways to Build This</h4>
-                <p className="text-sm text-base-content mb-2">You have two architecture options:</p>
-                <ol className="list-decimal list-inside space-y-2 text-sm ml-2">
-                  <li>
-                    <strong>Option A - Single Contract:</strong> One contract that implements ERC-20 token functionality
-                    plus all crowdsale logic (buy, redeem, upgrade). Simpler deployment, easier to audit.
-                  </li>
-                  <li>
-                    <strong>Option B - Two Contracts:</strong> Separate ERC-20 token contract + crowdsale contract that
-                    manages the sale. More modular, follows best practices.
-                  </li>
-                </ol>
-                <p className="text-sm text-base-content mt-3">
-                  <strong>Either way works!</strong> The contract you register under the{" "}
-                  <code className="bg-base-100 px-1 rounded">&ldquo;sale&rdquo;</code> module just needs to have the
-                  required interface (see below).
+                <h4 className="font-semibold text-error mb-3">High Stakes, High Risk</h4>
+                <p className="text-sm text-base-content mb-2">
+                  Pilots who kill in your sector <strong>lose their entire 10k stake</strong>. It&apos;s burned,
+                  permanently gone.
+                </p>
+                <p className="text-sm text-base-content">
+                  This creates a strong deterrent against killing in your sector, but pilots who enter know the risk.
                 </p>
               </div>
             </div>
@@ -63,8 +75,8 @@ export const Chapter4 = () => {
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Required Interface</h3>
           <p className="mb-4">
-            The contract registered under the <code className="bg-base-100 px-2 py-1 rounded text-sm">sale</code> module
-            key in your registry MUST have these functions:
+            Your stake contract MUST implement exactly these three functions. Get any of them wrong and the audit will
+            fail.
           </p>
 
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
@@ -72,308 +84,243 @@ export const Chapter4 = () => {
             <div className="space-y-3 text-sm">
               <div className="bg-base-200 p-3 rounded font-mono text-xs">
                 <div className="mb-2">
-                  <strong>function buy(uint256 amount) external</strong>
+                  <strong>function activate() external</strong>
                 </div>
                 <div className="text-base-content/70 ml-4">
-                  Pilots call this to buy fuel tokens. Transfers credits from pilot to contract, mints fuel tokens to
-                  pilot.
+                  Called by MaxExtract when a pilot enters. Must check msg.sender == MaxExtract. Sets staked[tx.origin]
+                  = true.
                 </div>
               </div>
 
               <div className="bg-base-200 p-3 rounded font-mono text-xs">
                 <div className="mb-2">
-                  <strong>function pricePerTokenInCredits() public view returns (uint256)</strong>
+                  <strong>function deactivate() external</strong>
                 </div>
                 <div className="text-base-content/70 ml-4">
-                  Returns the price per token in credits (e.g., 1000 * 10^18 = 1000 credits per token)
+                  Called by MaxExtract when a pilot exits. Must check msg.sender == MaxExtract. Sets staked[tx.origin] =
+                  false.
                 </div>
               </div>
 
               <div className="bg-base-200 p-3 rounded font-mono text-xs">
                 <div className="mb-2">
-                  <strong>function balanceOf(address) public view returns (uint256)</strong>
-                </div>
-                <div className="text-base-content/70 ml-4">Standard ERC-20 balance check for fuel tokens</div>
-              </div>
-
-              <div className="bg-base-200 p-3 rounded font-mono text-xs">
-                <div className="mb-2">
-                  <strong>function redeem() external</strong>
+                  <strong>function slash(address killer) external</strong>
                 </div>
                 <div className="text-base-content/70 ml-4">
-                  Burns exactly 1 fuel token from caller. Enables off-chain refuel at your station.
-                </div>
-              </div>
-
-              <div className="bg-base-200 p-3 rounded font-mono text-xs">
-                <div className="mb-2">
-                  <strong>function upgrade() external</strong>
-                </div>
-                <div className="text-base-content/70 ml-4">
-                  Callable ONLY by pilots. Triggers station upgrade if 50k credits raised. Rewards the pilot caller.
+                  Called by Game when a pilot kills. Must check msg.sender == Game, verify killer is staked, set
+                  staked[killer] = false, then call MaxExtract.slash(killer, sectorId).
                 </div>
               </div>
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">The Buy Function</h3>
+          <h3 className="text-xl font-semibold mb-4 text-secondary">The tx.origin Pattern</h3>
           <p className="mb-4">
-            Pilots will approve your contract to spend their credits (
-            {creditsAddress && (
-              <span className="inline-flex">
-                <Address address={creditsAddress} />
-              </span>
-            )}
-            ), then call <code className="bg-base-100 px-2 py-1 rounded text-sm">buy(amount)</code>:
+            This is <strong>intentional and required</strong>. Your activate and deactivate functions must use{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">tx.origin</code>, not{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">msg.sender</code>.
           </p>
 
           <div className="bg-base-100 rounded-lg p-4 mb-4 border">
             <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`function buy(uint256 amount) external {
-    require(!upgraded, "Sale ended");
-    
-    // Calculate cost (amount is in wei, price is in wei, divide to get correct result)
-    uint256 cost = (amount * pricePerTokenInCredits()) / 10**18;
-    
-    // Transfer credits from pilot to this contract
-    creditsContract.transferFrom(msg.sender, address(this), cost);
-    
-    // Mint fuel tokens to pilot
-    _mint(msg.sender, amount);
+              <code className="text-accent">{`function activate() external {
+    require(msg.sender == maxExtractContract, "Only MaxExtract");
+    staked[tx.origin] = true;  // tx.origin is the pilot
+}
+
+function deactivate() external {
+    require(msg.sender == maxExtractContract, "Only MaxExtract");
+    staked[tx.origin] = false;
 }`}</code>
             </pre>
-          </div>
-
-          <div className="bg-warning/10 border-2 border-warning rounded-lg p-6 mb-4">
-            <div className="flex items-start space-x-3">
-              <div className="text-warning text-2xl">⚠️</div>
-              <div>
-                <h4 className="font-semibold text-warning mb-3">Critical: Pricing Strategy</h4>
-                <p className="text-sm text-base-content mb-3">
-                  You need to raise <strong>50,000 credits</strong> to upgrade. Pilots will only pay around{" "}
-                  <strong>1,000 credits per fuel token</strong>.
-                </p>
-                <ul className="space-y-2 text-sm list-disc list-inside">
-                  <li>
-                    <strong>Price too high?</strong> Pilots won&apos;t buy. No sales means no upgrade.
-                  </li>
-                  <li>
-                    <strong>Price too low?</strong> You won&apos;t raise enough even if all pilots buy.
-                  </li>
-                  <li>
-                    <strong>Recommended:</strong> Set{" "}
-                    <code className="bg-base-100 px-1 rounded">pricePerTokenInCredits = 1000 * 10**18</code>
-                  </li>
-                </ul>
-                <p className="text-sm text-base-content mt-3">
-                  At 1k credits per token, you need ~50 pilots to buy 1 token each to hit your goal. Price accordingly!
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">The Redeem Function</h3>
-          <p className="mb-4">
-            Pilots who buy fuel tokens can redeem them for refueling services at your station. Each redemption burns
-            exactly 1 token:
-          </p>
-
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`function redeem() external {
-    // Burn exactly 1 token from the caller
-    _burn(msg.sender, 1 * 10**18);
-    
-    // Refueling handled off-chain by game server
-    // The act of burning is proof of payment
-}`}</code>
-            </pre>
-          </div>
-
-          <p className="text-sm text-base-content/70 mb-4">
-            Note: The actual refueling happens off-chain in the game server. The burn event is all you need.
-          </p>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">The Upgrade Function</h3>
-          <p className="mb-4">
-            Here&apos;s where it gets interesting. <strong>You cannot call upgrade yourself</strong>. Only pilots can
-            trigger it. This means you need to <strong>incentivize pilots</strong> to call it for you.
-          </p>
-
-          <div className="bg-error/10 border-2 border-error rounded-lg p-6 mb-4">
-            <div className="flex items-start space-x-3">
-              <div className="text-error text-2xl">🚨</div>
-              <div>
-                <h4 className="font-semibold text-error mb-3 text-lg">Pilots Call Upgrade, Not You!</h4>
-                <p className="text-sm text-base-content mb-3">
-                  The <code className="bg-base-100 px-1 rounded">upgrade()</code> function calls{" "}
-                  <code className="bg-base-100 px-1 rounded">game.upgradeStation(sectorId)</code>, which verifies that{" "}
-                  <code className="bg-base-100 px-1 rounded">tx.origin</code> is a pilot.
-                </p>
-                <p className="text-sm text-base-content mb-3">
-                  <strong>Solution:</strong> Reward the pilot who calls it! Send them at least{" "}
-                  <strong>500 credits</strong> as a bounty for triggering the upgrade.
-                </p>
-                <p className="text-sm text-base-content">
-                  Pilots will monitor your contract balance. Once you hit 50k, someone will claim the bounty and trigger
-                  your upgrade.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`function upgrade() external {
-    // Checks
-    uint256 balance = creditsContract.balanceOf(address(this));
-    require(balance >= 50_000 * 10**18, "Not enough credits");
-    require(!upgraded, "Already upgraded");
-    
-    // Effects - MUST set state before external calls (CEI pattern)
-    upgraded = true;
-    
-    // Interactions - external calls
-    creditsContract.approve(gameAddress, 49_500 * 10**18);
-    game.upgradeStation(YOUR_SECTOR_ID);  // Game pulls 49,500 HERE
-    creditsContract.transfer(msg.sender, 500 * 10**18);
-    
-    // Optional: handle excess credits (get balance AFTER Game took 49,500)
-    // uint256 remaining = creditsContract.balanceOf(address(this));
-    // if (remaining > 0) {
-    //     creditsContract.transfer(stationOwner, remaining);
-    // }
-}`}</code>
-            </pre>
-          </div>
-
-          <p className="text-sm text-base-content/70 mb-4">
-            The Game contract (
-            {gameAddress && (
-              <span className="inline-flex">
-                <Address address={gameAddress} />
-              </span>
-            )}
-            ) will pull 49,500 credits from your fuel contract and award you 10 points for upgrading your station.
-          </p>
-
-          <div className="bg-warning/10 border-2 border-warning rounded-lg p-6 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="text-warning text-2xl">⚠️</div>
-              <div>
-                <h4 className="font-semibold text-warning mb-2">Critical: CEI Pattern Required</h4>
-                <p className="text-sm text-base-content">
-                  Set <code className="bg-base-100 px-1 rounded">upgraded = true</code> BEFORE any external calls
-                  (approve, upgradeStation, transfer). This prevents reentrancy attacks. Your audit will fail if state
-                  changes come after external calls.
-                </p>
-              </div>
-            </div>
           </div>
 
           <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
               <div className="text-info text-2xl">💡</div>
               <div>
-                <h4 className="font-semibold text-info mb-3">What About Excess Credits?</h4>
-                <p className="text-sm text-base-content mb-3">
-                  Pilots can keep buying tokens even after your contract reaches 50k credits. When{" "}
-                  <code className="bg-base-100 px-1 rounded">upgrade()</code> is finally called, you might have 60k,
-                  70k, or more!
+                <h4 className="font-semibold text-info mb-3">Why tx.origin?</h4>
+                <p className="text-sm text-base-content mb-2">
+                  When MaxExtract calls your contract, <code className="bg-base-100 px-1 rounded">msg.sender</code> is
+                  MaxExtract, but <code className="bg-base-100 px-1 rounded">tx.origin</code> is the pilot who initiated
+                  the transaction.
                 </p>
-                <p className="text-sm text-base-content mb-3">
-                  <strong>Required distributions:</strong>
-                </p>
-                <ul className="space-y-1 text-sm list-disc list-inside ml-2">
-                  <li>
-                    <strong>Exactly 49,500 credits</strong> to Game contract (no more, no less)
-                  </li>
-                  <li>
-                    <strong>At least 500 credits</strong> to the pilot who calls upgrade
-                  </li>
-                </ul>
-                <p className="text-sm text-base-content mt-3">
-                  <strong>Excess credits</strong> (beyond 50k) can be handled however you want:
-                </p>
-                <ul className="space-y-1 text-sm list-disc list-inside ml-2">
-                  <li>Leave them in the contract for future use</li>
-                  <li>Send them to yourself (you ran the crowdsale!)</li>
-                  <li>Send them as an extra bonus to the pilot caller</li>
-                </ul>
-                <p className="text-sm text-base-content mt-3">
-                  The auditor will accept any reasonable handling of excess credits as long as the required amounts are
-                  met.
+                <p className="text-sm text-base-content">
+                  Yes, <code className="bg-base-100 px-1 rounded">tx.origin</code> is normally dangerous. But in this
+                  specific controlled flow with proper access controls, it&apos;s the correct pattern.
                 </p>
               </div>
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">After Upgrade</h3>
+          <h3 className="text-xl font-semibold mb-4 text-secondary">The Slash Function</h3>
+          <p className="mb-4">
+            This is where the magic happens. When a pilot kills another pilot in your sector, the Game contract calls
+            your slash function.
+          </p>
+
+          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
+            <pre className="text-sm overflow-x-auto">
+              <code className="text-accent">{`function slash(address killer) external {
+    require(msg.sender == gameContract, "Only Game");
+    require(staked[killer], "Killer not staked");
+    
+    staked[killer] = false;  // Prevent double-slashing
+    
+    // Call MaxExtract to burn the killer's stake
+    IMaxExtract(maxExtractContract).slash(killer, sectorId);
+}`}</code>
+            </pre>
+          </div>
+
+          <p className="text-sm text-base-content/70 mb-4">
+            The slash call to MaxExtract ({maxExtractAddress && <Address address={maxExtractAddress} />}) will burn the
+            killer&apos;s entire 10k staked balance. They don&apos;t get it back. Ever.
+          </p>
+
+          <div className="bg-info/10 border border-info rounded-lg p-4 mb-4">
+            <p className="text-sm text-base-content">
+              <strong className="text-info">Important:</strong> Setting{" "}
+              <code className="bg-base-100 px-1 rounded">staked[killer] = false</code> prevents double-slashing. Once
+              their stake is burned, they can&apos;t be slashed again (they have nothing left to slash). To continue
+              playing in your sector, they&apos;d need to exit and re-enter, staking another 10k.
+            </p>
+          </div>
+
+          <div className="bg-warning/10 border-2 border-warning rounded-lg p-6 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="text-warning text-2xl">🔐</div>
+              <div>
+                <h4 className="font-semibold text-warning mb-3">Critical: Access Controls</h4>
+                <p className="text-sm text-base-content mb-3">Your slash function MUST verify two things:</p>
+                <ol className="space-y-2 text-sm list-decimal list-inside ml-2">
+                  <li>
+                    <code className="bg-base-100 px-1 rounded">msg.sender == gameContract</code> - Only the Game
+                    contract can trigger slashing
+                  </li>
+                  <li>
+                    <code className="bg-base-100 px-1 rounded">staked[killer] == true</code> - The killer must actually
+                    be in your sector
+                  </li>
+                </ol>
+                <p className="text-sm text-base-content mt-3">
+                  If you mess these up, the audit will fail and pilots won&apos;t trust your sector.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Required State Variables</h3>
           <div className="bg-base-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-base-content mb-2">Once upgrade() is called:</p>
+            <p className="text-sm text-base-content mb-2">Your contract must have these state variables:</p>
             <ul className="space-y-2 text-sm list-disc list-inside">
               <li>
-                The <code className="bg-base-100 px-1 rounded">buy()</code> function MUST revert (sale is over)
+                <code className="bg-base-100 px-1 rounded">mapping(address =&gt; bool) public staked</code> - Track who
+                is in your sector
               </li>
-              <li>Pilots can still redeem their existing fuel tokens</li>
-              <li>Your station is now upgraded and can process asteroids</li>
-              <li>You earned 10 points from the Game contract</li>
+              <li>
+                <code className="bg-base-100 px-1 rounded">address public immutable maxExtractContract</code> -
+                Reference to MaxExtract
+              </li>
+              <li>
+                <code className="bg-base-100 px-1 rounded">address public immutable gameContract</code> - Reference to
+                Game
+              </li>
+              <li>
+                <code className="bg-base-100 px-1 rounded">uint256 public immutable sectorId</code> - Your sector ID
+              </li>
             </ul>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">⚠️ One-Time Sale Warning</h3>
-          <div className="bg-error/10 border-2 border-error rounded-lg p-4 mb-4">
+          <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
-              <div className="text-error text-2xl">💀</div>
+              <div className="text-info text-2xl">📋</div>
               <div>
-                <h4 className="font-semibold text-error mb-3">Don&apos;t Rug Your Pilots</h4>
-                <p className="text-sm text-base-content mb-3">
-                  Pilots will <strong>remember</strong> buying fuel tokens from you. If you upgrade your fuel contract
-                  or try to rug them, you&apos;ll need to airdrop/remint tokens to everyone who already purchased.
-                </p>
-                <p className="text-sm text-base-content">
-                  <strong>Get it right the first time.</strong> Test thoroughly before deploying to mainnet. Pilot trust
-                  is hard to earn back.
-                </p>
+                <h4 className="font-semibold text-info mb-3">Contract Addresses</h4>
+                <p className="text-sm text-base-content mb-2">You&apos;ll need these in your constructor:</p>
+                <ul className="space-y-1 text-sm list-disc list-inside ml-2">
+                  {maxExtractAddress && (
+                    <li>
+                      MaxExtract: <Address address={maxExtractAddress} />
+                    </li>
+                  )}
+                  {gameAddress && (
+                    <li>
+                      Game: <Address address={gameAddress} />
+                    </li>
+                  )}
+                  {creditsAddress && (
+                    <li>
+                      Credits: <Address address={creditsAddress} />
+                    </li>
+                  )}
+                  <li>Your Sector ID: Get this from your sector page</li>
+                </ul>
               </div>
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Registry Integration</h3>
-          <p className="mb-4">
-            After deploying your fuel token contract (or crowdsale contract if using two-contract architecture),
-            register it in your Registry contract under the{" "}
-            <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;sale&rdquo;</code> key.
-          </p>
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Example Implementation</h3>
+          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
+            <pre className="text-sm overflow-x-auto">
+              <code className="text-accent">{`pragma solidity ^0.8.0;
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Verify and Audit</h3>
-          <p className="mb-4">
-            As always, verify your contract on the block explorer and submit it for an official audit. Pilots will NOT
-            buy fuel tokens from unaudited contracts.
-          </p>
+interface IMaxExtract {
+    function slash(address killer, uint256 sectorId) external;
+}
 
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Implementation Steps</h3>
+contract StakeContract {
+    mapping(address => bool) public staked;
+    address public immutable maxExtractContract;
+    address public immutable gameContract;
+    uint256 public immutable sectorId;
+    
+    constructor(
+        address _maxExtract,
+        address _game,
+        uint256 _sectorId
+    ) {
+        maxExtractContract = _maxExtract;
+        gameContract = _game;
+        sectorId = _sectorId;
+    }
+    
+    function activate() external {
+        require(msg.sender == maxExtractContract, "Only MaxExtract");
+        staked[tx.origin] = true;
+    }
+    
+    function deactivate() external {
+        require(msg.sender == maxExtractContract, "Only MaxExtract");
+        staked[tx.origin] = false;
+    }
+    
+    function slash(address killer) external {
+        require(msg.sender == gameContract, "Only Game");
+        require(staked[killer], "Killer not staked");
+        
+        staked[killer] = false;  // Prevent double-slashing
+        IMaxExtract(maxExtractContract).slash(killer, sectorId);
+    }
+}`}</code>
+            </pre>
+          </div>
+
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Deployment & Integration</h3>
           <div className="space-y-4 mb-6">
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 1
               </div>
-              <p>
-                Design your architecture: single contract with ERC-20 + crowdsale logic, OR separate ERC-20 token +
-                crowdsale contract
-              </p>
+              <p>Deploy your stake contract with the correct constructor parameters (MaxExtract, Game, SectorId)</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 2
               </div>
               <p>
-                Implement the required interface:{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">buy(amount)</code>,{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">pricePerTokenInCredits()</code>,{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">balanceOf(address)</code>,{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">redeem()</code>,{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">upgrade()</code>
+                Register it in your Registry under the{" "}
+                <code className="bg-base-100 px-2 py-1 rounded text-sm">stake</code> module key
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -381,56 +328,51 @@ export const Chapter4 = () => {
                 3
               </div>
               <p>
-                Set your price strategically (recommend 1000 * 10^18 credits per token to raise 50k from ~50 pilots)
+                <strong className="text-error">VERIFY</strong> your contract on the block explorer
               </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 4
               </div>
-              <p>
-                Deploy your contract(s) and register under{" "}
-                <code className="bg-base-100 px-2 py-1 rounded text-sm">&ldquo;sale&rdquo;</code> module in your
-                Registry
-              </p>
+              <p>Submit for audit - must pass chapter 4 requirements</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 5
               </div>
-              <p>
-                <strong className="text-error">VERIFY</strong> your contract on the block explorer (required before
-                audit)
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                6
-              </div>
-              <p>
-                Submit your fuel contract for an official audit. Once approved, pilots will start buying immediately if
-                the price is right!
-              </p>
+              <p>Once audited, pilots entering your sector will be required to stake 10k credits</p>
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">The Crowdsale Begins</h3>
-          <div className="bg-accent/10 border border-accent rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-secondary">What Pilots See</h3>
+          <div className="bg-base-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-base-content mb-3">
+              When pilots try to enter your sector with an audited stake contract:
+            </p>
+            <ol className="space-y-2 text-sm list-decimal list-inside">
+              <li>They must have at least 10,000 credits</li>
+              <li>They must approve MaxExtract to spend 10k credits</li>
+              <li>They must call MaxExtract.stake(yourSectorId)</li>
+              <li>If staking fails for any reason, they CANNOT enter your sector</li>
+              <li>If they kill someone in your sector, they lose everything</li>
+              <li>If they leave peacefully, they get their 10k back</li>
+            </ol>
+          </div>
+
+          <div className="bg-accent/10 border border-accent rounded-lg p-6 mt-6">
+            <h4 className="font-semibold text-accent mb-3">The Trade-off</h4>
             <p className="mb-3">
-              Once your fuel contract is audited, the crowdsale goes live. Pilots with credentials can buy fuel tokens
-              using credits.
+              Requiring stakes makes your sector <strong>safer and more exclusive</strong>, but also{" "}
+              <strong>harder to access</strong>.
             </p>
             <p className="mb-3">
-              As you approach 50k credits, pilots will race to call{" "}
-              <code className="bg-base-100 px-1 rounded">upgrade()</code> to claim the 500 credit bounty.
-            </p>
-            <p className="mb-3">
-              After the upgrade completes, your station becomes <strong>class 1</strong> and can process asteroids into
-              fuel. Pilots can redeem their tokens for refueling services.
+              Pilots need 10k credits to enter. New pilots or those low on credits can&apos;t visit. But the pilots who
+              do enter are <strong>heavily invested</strong> in not causing trouble.
             </p>
             <p>
-              You&apos;ll earn <strong>10 points</strong> for the upgrade, and your sector becomes more attractive to
-              pilots who need fuel for long expeditions.
+              If slashing works perfectly, you never lose points from deaths. If your contract has bugs, you lose 10
+              points per death <em>and</em> pilots lose trust.
             </p>
           </div>
         </div>

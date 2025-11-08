@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xe8ecf644d9a3432dab3a0725308f265990eedca9",
+      address: "0x5d1ce2a19aa885765abcef89b7590e213422a8b9",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 801,
+      deployedOnBlock: 3371,
     },
     Credits: {
-      address: "0x3a1d75769758705cab1385377d4d88b8193a5f37",
+      address: "0xd3497ab25da369b3ee5a239890348ea542b0f479",
       abi: [
         {
           type: "constructor",
@@ -889,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 802,
+      deployedOnBlock: 3372,
     },
     Game: {
-      address: "0xb1527802e7800034d6887b0a99a5ad2683184b95",
+      address: "0x49ea5126fd67f877b62ddc0144dbeb42591df7bb",
       abi: [
         {
           type: "constructor",
@@ -1026,6 +1026,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "deadMansSlash",
+          inputs: [
+            {
+              name: "_killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_playerToPenalize",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1363,6 +1381,25 @@ const deployedContracts = {
           inputs: [
             {
               name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPilotMapping",
+          inputs: [
+            {
+              name: "",
               type: "address",
               internalType: "address",
             },
@@ -2161,10 +2198,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 803,
+      deployedOnBlock: 3372,
     },
     Auditor: {
-      address: "0x4c073a92b1c8fb55313102ab412fb7f1704bcbdd",
+      address: "0x2fb5e98f1efe95ae50f9becafce660701ad8d9be",
       abi: [
         {
           type: "constructor",
@@ -2277,6 +2314,62 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract Game",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllAuditsForAddress",
+          inputs: [
+            {
+              name: "_address",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple[]",
+              internalType: "struct Auditor.AuditRequest[]",
+              components: [
+                {
+                  name: "contractAddress",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "requester",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "chapterNumber",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "blockExplorerUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "status",
+                  type: "uint8",
+                  internalType: "enum Auditor.AuditStatus",
+                },
+                {
+                  name: "failureReason",
+                  type: "string",
+                  internalType: "string",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -2672,10 +2765,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 803,
+      deployedOnBlock: 3372,
     },
     MaxExtract: {
-      address: "0x90bb87c6258ad0d309d2f3a263d3bc7b0b9f522d",
+      address: "0x5e388db7c3aef7dea9585fbe3c077f0c98857d0d",
       abi: [
         {
           type: "constructor",
@@ -2692,6 +2785,11 @@ const deployedContracts = {
             },
             {
               name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_credits",
               type: "address",
               internalType: "address",
             },
@@ -2781,6 +2879,38 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "canStake",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "creditsContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IERC20",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -2943,6 +3073,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getStakedBalance",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "hasPlayerBroadcast",
           inputs: [
             {
@@ -3038,6 +3187,56 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "slash",
+          inputs: [
+            {
+              name: "killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "stake",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "stakedBalance",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "universe",
           inputs: [],
           outputs: [
@@ -3051,6 +3250,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "unstake",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "updateRegistry",
           inputs: [],
           outputs: [
@@ -3061,6 +3273,81 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "PilotSlashed",
+          inputs: [
+            {
+              name: "killer",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PilotStaked",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PilotUnstaked",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
         },
         {
           type: "event",
@@ -3120,12 +3407,12 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 803,
+      deployedOnBlock: 3372,
     },
   },
   42161: {
     Universe: {
-      address: "0x0cbe7d348041f025371d64dfe876a9f85a71a559",
+      address: "0xd947a36716bb0f1e47a76d78c2de59cf4322cb09",
       abi: [
         {
           type: "constructor",
@@ -3485,10 +3772,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397821591,
+      deployedOnBlock: 397579114,
     },
     Credits: {
-      address: "0x695a3d4583c0ca8a9927a40193d67e76a3eeec06",
+      address: "0x10e1c2dc3f0bcd41d8d1ac678e2f5410af7b89d2",
       abi: [
         {
           type: "constructor",
@@ -4007,10 +4294,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397821595,
+      deployedOnBlock: 397579121,
     },
     Game: {
-      address: "0x8eb3e19abd65eef772f3c3b9a88c0e7911486565",
+      address: "0x875292b15f6d0220c79f63c2430de78ff9e4f04b",
       abi: [
         {
           type: "constructor",
@@ -4144,6 +4431,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "deadMansSlash",
+          inputs: [
+            {
+              name: "_killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_playerToPenalize",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -4481,6 +4786,25 @@ const deployedContracts = {
           inputs: [
             {
               name: "_pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isPilotMapping",
+          inputs: [
+            {
+              name: "",
               type: "address",
               internalType: "address",
             },
@@ -5279,10 +5603,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397821600,
+      deployedOnBlock: 397579129,
     },
     MaxExtract: {
-      address: "0x6afd627715ceee76e88be02d62018c0a7628ced5",
+      address: "0xe5db89cd223331095bbd7ff64c656de3d3d09ba8",
       abi: [
         {
           type: "constructor",
@@ -5299,6 +5623,11 @@ const deployedContracts = {
             },
             {
               name: "_auditor",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_credits",
               type: "address",
               internalType: "address",
             },
@@ -5388,6 +5717,38 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "canStake",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "creditsContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract IERC20",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -5550,6 +5911,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getStakedBalance",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "hasPlayerBroadcast",
           inputs: [
             {
@@ -5645,6 +6025,56 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "slash",
+          inputs: [
+            {
+              name: "killer",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "stake",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "stakedBalance",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "universe",
           inputs: [],
           outputs: [
@@ -5658,6 +6088,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "unstake",
+          inputs: [
+            {
+              name: "sectorId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "updateRegistry",
           inputs: [],
           outputs: [
@@ -5668,6 +6111,81 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "PilotSlashed",
+          inputs: [
+            {
+              name: "killer",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PilotStaked",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PilotUnstaked",
+          inputs: [
+            {
+              name: "pilot",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sectorId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
         },
         {
           type: "event",
@@ -5727,10 +6245,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397821608,
+      deployedOnBlock: 397579147,
     },
     Auditor: {
-      address: "0x248e1031b202b86aa15a53a407f37f6782d3bc62",
+      address: "0xddfb77af6baaf89291954bbdbd80bc0cdb4467db",
       abi: [
         {
           type: "constructor",
@@ -5843,6 +6361,62 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract Game",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllAuditsForAddress",
+          inputs: [
+            {
+              name: "_address",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple[]",
+              internalType: "struct Auditor.AuditRequest[]",
+              components: [
+                {
+                  name: "contractAddress",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "requester",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "chapterNumber",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "blockExplorerUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "status",
+                  type: "uint8",
+                  internalType: "enum Auditor.AuditStatus",
+                },
+                {
+                  name: "failureReason",
+                  type: "string",
+                  internalType: "string",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -6238,7 +6812,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 397821604,
+      deployedOnBlock: 397579139,
     },
   },
 } as const;

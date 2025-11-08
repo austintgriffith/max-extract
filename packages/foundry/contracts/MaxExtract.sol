@@ -3,16 +3,19 @@ pragma solidity >=0.8.0 <0.9.0;
 
 // Useful for debugging. Remove when deploying to a live network.
 import "forge-std/console.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Interface for the Universe contract to access entropy
 interface IUniverse {
     function getEntropy() external view returns (bytes32);
     function isEntropySet() external view returns (bool);
+    function GOD() external view returns (address);
 }
 
 // Interface for the Game contract to check player status and chapters
 interface IGame {
     function isPlayer(address player) external view returns (bool);
+    function isPilot(address pilot) external view returns (bool);
     function getVisibleChapters() external view returns (uint8[] memory);
     function state() external view returns (uint8); // 0 = Open, 1 = Active
     function getPlayers() external view returns (address[] memory);
@@ -54,6 +57,12 @@ contract MaxExtract {
     // Auditor contract for checking if about contracts are audited
     IAuditor public immutable auditor;
     
+    // Credits ERC20 token contract for staking
+    IERC20 public immutable creditsContract;
+    
+    // Track each pilot's staked balance to prevent collusion/exploits
+    mapping(address => uint256) public stakedBalance;
+    
     // Nonce for unique sector ID generation
     uint256 private nonce;
     
@@ -86,13 +95,18 @@ contract MaxExtract {
         address newRegistry,
         address indexed player
     );
+    
+    event PilotStaked(address indexed pilot, uint256 indexed sectorId, uint256 amount);
+    event PilotUnstaked(address indexed pilot, uint256 indexed sectorId, uint256 amount);
+    event PilotSlashed(address indexed killer, uint256 indexed sectorId, uint256 amount);
 
     // Constructor - Max's final act
-    constructor(address _universe, address _game, address _auditor) {
+    constructor(address _universe, address _game, address _auditor, address _credits) {
         // The Extract Protocol is now live - Max's legacy etched into the blockchain
         universe = IUniverse(_universe);
         game = IGame(_game);
         auditor = IAuditor(_auditor);
+        creditsContract = IERC20(_credits);
     }
 
     /**
@@ -360,6 +374,139 @@ contract MaxExtract {
         }
         
         return (name, social);
+    }
+    
+    /**
+     * Stake 10k credits to enter a sector with an audited stake module
+     * Pilots must call this before entering sectors that require staking
+     * @param sectorId The sector ID to stake into
+     */
+    function stake(uint256 sectorId) external {
+        // Verify caller is a pilot (through Game contract check)
+        require(game.isPilot(msg.sender), "Not a pilot");
+        
+        // Get registry for sector
+        address registry = sectors[sectorId];
+        require(registry != address(0), "Sector not found");
+        
+        // Get stake module from registry
+        (bool success, bytes memory data) = registry.staticcall(
+            abi.encodeWithSignature("modules(string)", "stake")
+        );
+        require(success && data.length >= 32, "Failed to get stake module");
+        address stakeContract = abi.decode(data, (address));
+        require(stakeContract != address(0), "No stake module");
+        
+        // Verify stake contract is audited for chapter 4
+        require(auditor.isAudited(stakeContract) == 4, "Not audited for chapter 4");
+        
+        // Transfer 10k credits from pilot to MaxExtract
+        uint256 stakeAmount = 10_000 * 10**18;
+        require(creditsContract.transferFrom(msg.sender, address(this), stakeAmount), "Transfer failed");
+        
+        // Increment pilot's staked balance
+        stakedBalance[msg.sender] += stakeAmount;
+        
+        // Call activate on stake contract (tx.origin pattern)
+        (bool activateSuccess, ) = stakeContract.call(abi.encodeWithSignature("activate()"));
+        require(activateSuccess, "Activate failed");
+        
+        emit PilotStaked(msg.sender, sectorId, stakeAmount);
+    }
+    
+    /**
+     * Unstake and get 10k credits back when leaving a sector
+     * @param sectorId The sector ID to unstake from
+     */
+    function unstake(uint256 sectorId) external {
+        // Check pilot has staked balance
+        uint256 unstakeAmount = 10_000 * 10**18;
+        require(stakedBalance[msg.sender] >= unstakeAmount, "Insufficient staked balance");
+        
+        // Get registry for sector
+        address registry = sectors[sectorId];
+        require(registry != address(0), "Sector not found");
+        
+        // Get stake module from registry
+        (bool success, bytes memory data) = registry.staticcall(
+            abi.encodeWithSignature("modules(string)", "stake")
+        );
+        require(success && data.length >= 32, "Failed to get stake module");
+        address stakeContract = abi.decode(data, (address));
+        require(stakeContract != address(0), "No stake module");
+        require(auditor.isAudited(stakeContract) == 4, "Not audited for chapter 4");
+        
+        // Decrement pilot's staked balance BEFORE transfer
+        stakedBalance[msg.sender] -= unstakeAmount;
+        
+        // Transfer credits back to pilot
+        require(creditsContract.transfer(msg.sender, unstakeAmount), "Transfer failed");
+        
+        // Call deactivate on stake contract
+        (bool deactivateSuccess, ) = stakeContract.call(abi.encodeWithSignature("deactivate()"));
+        require(deactivateSuccess, "Deactivate failed");
+        
+        emit PilotUnstaked(msg.sender, sectorId, unstakeAmount);
+    }
+    
+    /**
+     * Slash a killer's entire staked balance
+     * Only callable by audited stake contracts when a pilot kills another pilot
+     * @param killer The pilot address whose stake should be slashed
+     * @param sectorId The sector ID where the killing occurred
+     */
+    function slash(address killer, uint256 sectorId) external {
+        // Get registry for sector
+        address registry = sectors[sectorId];
+        require(registry != address(0), "Invalid sector");
+        
+        // Verify msg.sender is the audited stake module for this sector
+        (bool success, bytes memory data) = registry.staticcall(
+            abi.encodeWithSignature("modules(string)", "stake")
+        );
+        require(success && data.length >= 32, "Failed to get stake module");
+        address stakeContract = abi.decode(data, (address));
+        require(stakeContract == msg.sender, "Not stake contract");
+        require(auditor.isAudited(stakeContract) == 4, "Not audited for chapter 4");
+        
+        // Get killer's staked balance
+        uint256 slashAmount = stakedBalance[killer];
+        require(slashAmount > 0, "No staked balance to slash");
+        
+        // Set killer's balance to 0 (slashing everything they staked)
+        stakedBalance[killer] = 0;
+        
+        // Credits remain in MaxExtract contract (burned/kept)
+        emit PilotSlashed(killer, sectorId, slashAmount);
+    }
+    
+    /**
+     * Check if a sector has staking enabled (audited stake module)
+     * @param sectorId The sector ID to check
+     * @return True if the sector has an audited stake module
+     */
+    function canStake(uint256 sectorId) external view returns (bool) {
+        address registry = sectors[sectorId];
+        if (registry == address(0)) return false;
+        
+        (bool success, bytes memory data) = registry.staticcall(
+            abi.encodeWithSignature("modules(string)", "stake")
+        );
+        if (!success || data.length < 32) return false;
+        
+        address stakeContract = abi.decode(data, (address));
+        if (stakeContract == address(0)) return false;
+        
+        return auditor.isAudited(stakeContract) == 4;
+    }
+    
+    /**
+     * Get a pilot's current staked balance
+     * @param pilot The pilot address to check
+     * @return The amount of credits currently staked by this pilot
+     */
+    function getStakedBalance(address pilot) external view returns (uint256) {
+        return stakedBalance[pilot];
     }
     
 }

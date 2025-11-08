@@ -7,7 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 // Load environment variables from packages/scripts/.env
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 // Etherscan API configuration
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
@@ -21,6 +21,11 @@ const CONTRACTS_API_URL =
   process.env.LOAD_CONTRACTS_FROM || "http://localhost:3000/api/contracts.json";
 
 const POLL_INTERVAL = 2000;
+
+// Debug auto-audit configuration
+// Set to a chapter number to auto-accept all audits for that chapter (bypasses all checks)
+// Set to 0 to disable auto-audit
+const DEBUG_AUTO_AUDIT_CHAPTER = 0;
 
 // Track processed audit requests
 let lastProcessedIndex = -1;
@@ -176,6 +181,14 @@ class AuditorService {
     if (this.skipBytecodeVerification) {
       console.log("⚠️  BYTECODE VERIFICATION DISABLED");
       console.log("   Only source code will be verified by AI\n");
+    }
+
+    if (DEBUG_AUTO_AUDIT_CHAPTER > 0) {
+      console.log("🚨 DEBUG AUTO-AUDIT ENABLED");
+      console.log(
+        `   Chapter ${DEBUG_AUTO_AUDIT_CHAPTER} audits will be AUTO-ACCEPTED`
+      );
+      console.log("   ⚠️  WARNING: All audit checks will be bypassed!\n");
     }
 
     // Setup blockchain clients - use environment configuration
@@ -526,7 +539,7 @@ class AuditorService {
     try {
       const definitionPath = path.join(
         __dirname,
-        "definitions",
+        "../definitions",
         `chapter${chapterNumber}Definition.txt`
       );
 
@@ -827,6 +840,28 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         console.log(`   ⏭️  Skipping (already processed)`);
         this.debugLog(
           `Request #${requestId} already processed, status: ${request.status}`
+        );
+        return false; // No API call made
+      }
+
+      // Check for debug auto-audit
+      if (
+        DEBUG_AUTO_AUDIT_CHAPTER > 0 &&
+        request.chapterNumber === DEBUG_AUTO_AUDIT_CHAPTER
+      ) {
+        console.log(
+          `\n   🚨 DEBUG AUTO-AUDIT: Chapter ${request.chapterNumber} - BYPASSING ALL CHECKS`
+        );
+        console.log(`   ⚠️  AUTO-ACCEPTING without verification!`);
+        console.log(`   Contract: ${request.contractAddress}`);
+        console.log(`   Requester: ${request.requester}`);
+        console.log(
+          `\n   💡 To disable: Set DEBUG_AUTO_AUDIT_CHAPTER = 0 in Auditor.ts\n`
+        );
+
+        await this.markAsAudited(requestId);
+        console.log(
+          `   ✅ Auto-audit complete for Chapter ${request.chapterNumber}`
         );
         return false; // No API call made
       }
@@ -1219,37 +1254,65 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
       // ALWAYS show detailed bytecode comparison for debugging
       console.log(`\n   📊 DETAILED BYTECODE DUMP:`);
       console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      
+
       console.log(`\n   🔵 LOCAL BYTECODE (Full):`);
       console.log(`   First 500 chars: ${localBytecode.substring(0, 500)}`);
-      console.log(`   Last 500 chars:  ${localBytecode.substring(Math.max(0, localBytecode.length - 500))}`);
+      console.log(
+        `   Last 500 chars:  ${localBytecode.substring(
+          Math.max(0, localBytecode.length - 500)
+        )}`
+      );
       console.log(`   Total length: ${localBytecode.length}`);
-      
+
       console.log(`\n   🟢 REMOTE BYTECODE (Full):`);
       console.log(`   First 500 chars: ${remoteBytecode.substring(0, 500)}`);
-      console.log(`   Last 500 chars:  ${remoteBytecode.substring(Math.max(0, remoteBytecode.length - 500))}`);
+      console.log(
+        `   Last 500 chars:  ${remoteBytecode.substring(
+          Math.max(0, remoteBytecode.length - 500)
+        )}`
+      );
       console.log(`   Total length: ${remoteBytecode.length}`);
 
       // Strip metadata and show those too
       const localStripped = this.stripMetadata(localBytecode);
       const remoteStripped = this.stripMetadata(remoteBytecode);
-      
+
       console.log(`\n   🔵 LOCAL BYTECODE (Stripped):`);
       console.log(`   First 500 chars: ${localStripped.substring(0, 500)}`);
-      console.log(`   Last 500 chars:  ${localStripped.substring(Math.max(0, localStripped.length - 500))}`);
+      console.log(
+        `   Last 500 chars:  ${localStripped.substring(
+          Math.max(0, localStripped.length - 500)
+        )}`
+      );
       console.log(`   Total length: ${localStripped.length}`);
-      console.log(`   Removed: ${localBytecode.length - localStripped.length} chars`);
-      
+      console.log(
+        `   Removed: ${localBytecode.length - localStripped.length} chars`
+      );
+
       console.log(`\n   🟢 REMOTE BYTECODE (Stripped):`);
       console.log(`   First 500 chars: ${remoteStripped.substring(0, 500)}`);
-      console.log(`   Last 500 chars:  ${remoteStripped.substring(Math.max(0, remoteStripped.length - 500))}`);
+      console.log(
+        `   Last 500 chars:  ${remoteStripped.substring(
+          Math.max(0, remoteStripped.length - 500)
+        )}`
+      );
       console.log(`   Total length: ${remoteStripped.length}`);
-      console.log(`   Removed: ${remoteBytecode.length - remoteStripped.length} chars`);
-      
+      console.log(
+        `   Removed: ${remoteBytecode.length - remoteStripped.length} chars`
+      );
+
       console.log(`\n   🔍 COMPARISON RESULTS:`);
-      console.log(`   Exact match: ${comparison.exactMatch ? "✅ YES" : "❌ NO"}`);
-      console.log(`   Code match (stripped): ${comparison.codeMatch ? "✅ YES" : "❌ NO"}`);
-      console.log(`   Stripped match: ${localStripped === remoteStripped ? "✅ YES" : "❌ NO"}`);
+      console.log(
+        `   Exact match: ${comparison.exactMatch ? "✅ YES" : "❌ NO"}`
+      );
+      console.log(
+        `   Code match (stripped): ${comparison.codeMatch ? "✅ YES" : "❌ NO"}`
+      );
+      console.log(
+        `   Stripped match: ${
+          localStripped === remoteStripped ? "✅ YES" : "❌ NO"
+        }`
+      );
 
       if (!comparison.exactMatch) {
         // Find first difference
@@ -1330,7 +1393,9 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         }
 
         if (firstDiffStripped >= 0) {
-          console.log(`\n   📍 First difference in STRIPPED bytecode at position: ${firstDiffStripped}`);
+          console.log(
+            `\n   📍 First difference in STRIPPED bytecode at position: ${firstDiffStripped}`
+          );
           console.log(
             `   Local:  ...${localStripped.substring(
               Math.max(0, firstDiffStripped - 20),
@@ -1468,7 +1533,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
     // Match CBOR metadata at the END of bytecode:
     // The metadata section is always at the end and follows this pattern:
     // - Starts with 'a[0-9a-f]' (CBOR map with 0-15 entries)
-    // - Contains '64736f6c63' (hex for "solc") 
+    // - Contains '64736f6c63' (hex for "solc")
     // - Followed by version and length bytes
     // - Ends with '00[0-9a-f]{2}' (CBOR length encoding)
     //
@@ -1482,8 +1547,9 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
 
     // Look for metadata pattern only in the tail
     // Use non-greedy match (.*?) and be more specific about the end pattern
-    const metadataPattern = /a[0-9a-f](?:.*?)64736f6c63[a-f0-9]{6,}00[0-9a-f]{2}$/i;
-    
+    const metadataPattern =
+      /a[0-9a-f](?:.*?)64736f6c63[a-f0-9]{6,}00[0-9a-f]{2}$/i;
+
     const strippedTail = tail.replace(metadataPattern, "");
     const stripped = head + strippedTail;
 
@@ -1633,13 +1699,13 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
     maxRetries: number = 3
   ): Promise<any | null> {
     const url = `${ETHERSCAN_API_BASE}?chainid=42161&module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
-    
+
     // Always log the API call details (not just in debug mode)
     const maskedUrl = url.replace(
       ETHERSCAN_API_KEY,
       ETHERSCAN_API_KEY ? "***API_KEY***" : "***NO_KEY***"
     );
-    
+
     // Retry loop for handling temporary network issues
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -1647,24 +1713,33 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           console.log(`\n   🌐 Fetching source code from Etherscan V2 API...`);
           console.log(`   Chain ID: 42161 (Arbitrum One)`);
           console.log(`   Address: ${contractAddress}`);
-          console.log(`   API Key: ${ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"}`);
+          console.log(
+            `   API Key: ${ETHERSCAN_API_KEY ? "✓ Set" : "✗ Not Set"}`
+          );
           this.debugLog(`Full API URL: ${maskedUrl}`);
         } else {
-          console.log(`\n   🔄 Retry attempt ${attempt}/${maxRetries} for Etherscan API...`);
+          console.log(
+            `\n   🔄 Retry attempt ${attempt}/${maxRetries} for Etherscan API...`
+          );
         }
 
         const response = await fetch(url);
 
         // Log HTTP response details
-        console.log(`   HTTP Status: ${response.status} ${response.statusText}`);
+        console.log(
+          `   HTTP Status: ${response.status} ${response.statusText}`
+        );
         this.debugLog(`Response headers:`, {
           contentType: response.headers.get("content-type"),
           contentLength: response.headers.get("content-length"),
         });
 
         // Check for temporary server errors (502, 503, 504)
-        const isTemporaryError = response.status === 502 || response.status === 503 || response.status === 504;
-        
+        const isTemporaryError =
+          response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504;
+
         // Check if response is actually JSON
         const contentType = response.headers.get("content-type");
 
@@ -1673,9 +1748,11 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
 
           // Check if it's a temporary server error
           if (isTemporaryError) {
-            console.error(`\n   ⚠️  Temporary server error (${response.status}): ${response.statusText}`);
+            console.error(
+              `\n   ⚠️  Temporary server error (${response.status}): ${response.statusText}`
+            );
             console.error(`   Response: ${text.substring(0, 200)}`);
-            
+
             // If we have more retries, wait and try again
             if (attempt < maxRetries) {
               const waitTime = 7000; // 7 seconds
@@ -1683,10 +1760,14 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
               await new Promise((resolve) => setTimeout(resolve, waitTime));
               continue; // Try again
             }
-            
+
             // No more retries - fail permanently
-            console.error(`\n   ❌ ERROR: Etherscan API still unavailable after ${maxRetries} attempts`);
-            console.error(`   This appears to be a temporary server issue on Etherscan's side.`);
+            console.error(
+              `\n   ❌ ERROR: Etherscan API still unavailable after ${maxRetries} attempts`
+            );
+            console.error(
+              `   This appears to be a temporary server issue on Etherscan's side.`
+            );
             console.error(`\n   💡 To verify manually, visit:`);
             console.error(
               `      https://arbiscan.io/address/${contractAddress}#code\n`
@@ -1737,11 +1818,13 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
             compilerVersion: data.result[0].CompilerVersion,
             hasSourceCode: !!data.result[0].SourceCode,
           });
-          
+
           if (attempt > 1) {
-            console.log(`   ✅ Successfully retrieved data after ${attempt} attempt(s)`);
+            console.log(
+              `   ✅ Successfully retrieved data after ${attempt} attempt(s)`
+            );
           }
-          
+
           return data.result[0];
         }
 
@@ -1749,7 +1832,9 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
         console.error(`\n   ❌ No verification data found`);
         console.error(`   API returned status: ${data.status}`);
         console.error(`   API message: ${data.message}`);
-        console.error(`\n   💡 This usually means the contract is not verified.`);
+        console.error(
+          `\n   💡 This usually means the contract is not verified.`
+        );
         console.error(`   Please verify the contract at:`);
         console.error(
           `      https://arbiscan.io/address/${contractAddress}#code\n`
@@ -1757,7 +1842,6 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
 
         this.debugLog("No verification data from Etherscan", data);
         return null; // No point retrying if contract is not verified
-        
       } catch (error: any) {
         // Network/fetch errors - retry if we have attempts left
         console.error(
@@ -1769,7 +1853,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           console.error(`   Cause: ${error.cause}`);
         }
         this.debugLog("Etherscan fetch error", error);
-        
+
         // If we have more retries, wait and try again
         if (attempt < maxRetries) {
           const waitTime = 7000; // 7 seconds
@@ -1777,13 +1861,15 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, 
           await new Promise((resolve) => setTimeout(resolve, waitTime));
           continue; // Try again
         }
-        
+
         // No more retries
-        console.error(`\n   ❌ Failed to fetch from Etherscan after ${maxRetries} attempts`);
+        console.error(
+          `\n   ❌ Failed to fetch from Etherscan after ${maxRetries} attempts`
+        );
         return null;
       }
     }
-    
+
     // Should never reach here, but just in case
     return null;
   }

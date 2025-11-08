@@ -2,7 +2,6 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "./Universe.sol";
-import "./RegistryHelper.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // WETH interface for safe ETH transfers
@@ -18,6 +17,7 @@ interface IMaxExtract {
     function sectors(uint256 sectorId) external view returns (address);
     function sectorToOwner(uint256 sectorId) external view returns (address);
     function playerToSector(address player) external view returns (uint256);
+    function getStakedBalance(address pilot) external view returns (uint256);
 }
 
 /**
@@ -26,8 +26,6 @@ interface IMaxExtract {
  * @author Max Extract Protocol
  */
 contract Game {
-    using RegistryHelper for address;
-    
     // Game configuration - hardcoded values
     uint256 public constant BUY_IN_PRICE = 0.000001 ether;
     uint256 public immutable gameEndTime = block.timestamp + 40 minutes;
@@ -66,6 +64,9 @@ contract Game {
     
     // Player tracking
     mapping(address => bool) public isPlayerMapping;
+    
+    // Pilot tracking (use isPilot() function to exclude dead pilots)
+    mapping(address => bool) public isPilotMapping;
     
     // Player scores mapping
     mapping(address => uint256) public scores;
@@ -136,6 +137,27 @@ contract Game {
         _;
     }
     
+    /**
+     * Get a module address from a registry contract
+     * @param registryAddress The registry contract address
+     * @param moduleName The name of the module to look up
+     * @return moduleAddress The address of the module, or address(0) if not found
+     */
+    function _getModule(
+        address registryAddress,
+        string memory moduleName
+    ) private view returns (address moduleAddress) {
+        (bool success, bytes memory data) = registryAddress.staticcall(
+            abi.encodeWithSignature("modules(string)", moduleName)
+        );
+        
+        if (!success || data.length < 32) {
+            return address(0);
+        }
+        
+        moduleAddress = abi.decode(data, (address));
+    }
+    
     constructor(address _universe) {
         universe = Universe(_universe);
         state = GameState.Open;
@@ -172,6 +194,7 @@ contract Game {
         if (isPilot(_pilot)) revert PilotAlreadyAdded();
         
         pilots.push(_pilot);
+        isPilotMapping[_pilot] = true; // Add to mapping for O(1) lookups
         emit PilotAdded(_pilot);
     }
     
@@ -187,9 +210,9 @@ contract Game {
         
         // First pass: count new pilots and add them
         for (uint256 i = 0; i < _pilots.length; i++) {
-            // Check if pilot is already added
-            if (!isPilot(_pilots[i]) && !deadPilots[_pilots[i]]) {
+            if (!isPilot(_pilots[i])) {
                 pilots.push(_pilots[i]);
+                isPilotMapping[_pilots[i]] = true;
                 newPilotsCount++;
             }
         }
@@ -201,31 +224,30 @@ contract Game {
             
             // Second pass: fund the new pilots
             for (uint256 i = 0; i < _pilots.length; i++) {
-                if (!deadPilots[_pilots[i]]) {
-                    // Check if this pilot was just added (not already in the array before this call)
-                    bool wasJustAdded = false;
-                    uint256 pilotCount = 0;
-                    for (uint256 j = 0; j < pilots.length; j++) {
-                        if (pilots[j] == _pilots[i]) {
-                            pilotCount++;
-                            if (pilotCount == 1) {
-                                wasJustAdded = true;
-                                break;
-                            }
+                // Check if this pilot was just added (appears exactly once in pilots array)
+                bool wasJustAdded = false;
+                uint256 pilotCount = 0;
+                for (uint256 j = 0; j < pilots.length; j++) {
+                    if (pilots[j] == _pilots[i]) {
+                        pilotCount++;
+                        if (pilotCount == 1) {
+                            wasJustAdded = true;
+                        } else {
+                            wasJustAdded = false;
+                            break;
                         }
+                    }
+                }
+                
+                if (wasJustAdded && ethPerPilot > 0) {
+                    uint256 amountToSend = ethPerPilot;
+                    if (remainder > 0) {
+                        amountToSend += remainder;
+                        remainder = 0;
                     }
                     
-                    if (wasJustAdded && ethPerPilot > 0) {
-                        uint256 amountToSend = ethPerPilot;
-                        // Give remainder to the first pilot
-                        if (remainder > 0) {
-                            amountToSend += remainder;
-                            remainder = 0;
-                        }
-                        
-                        (bool success, ) = payable(_pilots[i]).call{value: amountToSend}("");
-                        require(success, "ETH transfer failed");
-                    }
+                    (bool success, ) = payable(_pilots[i]).call{value: amountToSend}("");
+                    require(success, "ETH transfer failed");
                 }
             }
         }
@@ -283,6 +305,10 @@ contract Game {
         
         players.push(msg.sender);
         isPlayerMapping[msg.sender] = true;
+        
+        // Give player 10 points for debugging (allows testing audits, etc.)
+        scores[msg.sender] = 10;
+        
         emit PlayerBoughtIn(msg.sender, msg.value);
         
         // Refund excess payment
@@ -325,21 +351,16 @@ contract Game {
     }
     
     /**
-     * Check if a specific address is a pilot (and not dead)
+     * Check if a specific address is a pilot (excludes dead pilots)
      * @param _pilot Address to check
      * @return True if the address is a pilot and not dead
      */
     function isPilot(address _pilot) public view returns (bool) {
         if (deadPilots[_pilot]) {
-            return false; // Dead pilots are no longer considered active pilots
+            return false;
         }
         
-        for (uint256 i = 0; i < pilots.length; i++) {
-            if (pilots[i] == _pilot) {
-                return true;
-            }
-        }
-        return false;
+        return isPilotMapping[_pilot];
     }
     
     /**
@@ -396,13 +417,15 @@ contract Game {
 
     /**
      * Dead man's switch - called when a pilot is killed
-     * Marks the pilot as dead and penalizes the player who owned the sector
-     * Only callable by pilots (before they die)
-     * Note: ETH should be sent to GOD in a separate transaction after this call
+     * Marks the pilot as dead and penalizes the player with 10 points
+     * Only callable by pilots
      * @param _killer Address of the pilot who killed this pilot
      * @param _playerToPenalize Address of the player to penalize (sector owner)
      */
-    function deadMansSwitch(address _killer, address _playerToPenalize) external onlyPilot {
+    function deadMansSwitch(address _killer, address _playerToPenalize) external {
+        // Use isPilotMapping directly to allow edge case calls
+        if (!isPilotMapping[msg.sender]) revert OnlyPilot();
+        
         // Check if pilot is already dead
         if (deadPilots[msg.sender]) revert PilotAlreadyDead();
         
@@ -412,12 +435,72 @@ contract Game {
         // Mark pilot as dead
         deadPilots[msg.sender] = true;
         
-        // Penalize the player's score (subtract 10, minimum 0)
+        // Apply 10-point penalty to player
         uint256 currentScore = scores[_playerToPenalize];
         uint256 penalty = currentScore >= 10 ? 10 : currentScore;
         scores[_playerToPenalize] = currentScore - penalty;
         
         emit PilotDied(msg.sender, _killer, _playerToPenalize, penalty, 0);
+    }
+    
+    /**
+     * Dead man's slash - called when a pilot is killed and player has audited stake module
+     * Marks the pilot as dead and slashes the killer via stake contract
+     * Only callable by pilots
+     * @param _killer Address of the pilot who killed this pilot
+     * @param _playerToPenalize Address of the player (sector owner) - used to find stake contract
+     */
+    function deadMansSlash(address _killer, address _playerToPenalize) external {
+        // Use isPilotMapping directly to allow edge case calls
+        if (!isPilotMapping[msg.sender]) revert OnlyPilot();
+        
+        // Check if pilot is already dead
+        if (deadPilots[msg.sender]) revert PilotAlreadyDead();
+        
+        // Check if the player to penalize is actually a player
+        if (!isPlayerMapping[_playerToPenalize]) revert NotAPlayer();
+        
+        // Mark pilot as dead
+        deadPilots[msg.sender] = true;
+        
+        // Get player's sector
+        uint256 sectorId = maxExtract.playerToSector(_playerToPenalize);
+        require(sectorId != 0, "Player has no sector");
+        
+        // Get registry
+        address registry = maxExtract.sectors(sectorId);
+        require(registry != address(0), "No registry");
+        
+        // Get stake module
+        address stakeContract = _getModule(registry, "stake");
+        require(stakeContract != address(0), "No stake module");
+        
+        // Verify audited for chapter 4
+        require(auditorContract != address(0), "Auditor not set");
+        (bool success, bytes memory data) = auditorContract.staticcall(
+            abi.encodeWithSignature("isAudited(address)", stakeContract)
+        );
+        require(success && data.length >= 32, "Audit check failed");
+        uint8 auditStatus = abi.decode(data, (uint8));
+        require(auditStatus == 4, "Not audited for chapter 4");
+        
+        // Get killer's staked balance BEFORE slash
+        uint256 balanceBefore = maxExtract.getStakedBalance(_killer);
+        require(balanceBefore >= 10_000 * 10**18, "Killer has insufficient stake");
+        
+        // Call slash on stake contract
+        (bool slashSuccess, ) = stakeContract.call(
+            abi.encodeWithSignature("slash(address)", _killer)
+        );
+        require(slashSuccess, "Slash call failed");
+        
+        // VERIFY the slash actually burned the stake
+        uint256 balanceAfter = maxExtract.getStakedBalance(_killer);
+        require(balanceAfter == 0, "Slash did not burn stake - malicious stake contract");
+        require(balanceBefore - balanceAfter >= 10_000 * 10**18, "Slash did not burn full stake amount");
+        
+        // Emit PilotDied with 0 penalty (slashing verified successful)
+        emit PilotDied(msg.sender, _killer, _playerToPenalize, 0, 0);
     }
     
     /**
@@ -624,8 +707,8 @@ contract Game {
         address registryAddress = maxExtract.sectors(_sectorId);
         if (registryAddress == address(0)) return false;
         
-        // Get the credential contract from the registry using library
-        address credentialContract = registryAddress.getModule("credential");
+        // Get the credential contract from the registry
+        address credentialContract = _getModule(registryAddress, "credential");
         if (credentialContract == address(0)) return false;
         
         // Check the pilot's balance in the credential contract (ERC721 balanceOf)
@@ -657,8 +740,8 @@ contract Game {
         address registryAddress = maxExtract.sectors(_sectorId);
         if (registryAddress == address(0)) revert NotARegistry();
         
-        // Get the registered credential contract from the registry using library
-        address registeredCredential = registryAddress.getModule("credential");
+        // Get the registered credential contract from the registry
+        address registeredCredential = _getModule(registryAddress, "credential");
         if (registeredCredential == address(0)) revert CredentialNotRegistered();
         
         // Verify that msg.sender (the credential contract) matches the registered credential
@@ -697,8 +780,8 @@ contract Game {
         address registryAddress = maxExtract.sectors(_sectorId);
         if (registryAddress == address(0)) revert NotARegistry();
         
-        // Get the registered sale contract from the registry using library
-        address fuelContract = registryAddress.getModule("sale");
+        // Get the registered sale contract from the registry
+        address fuelContract = _getModule(registryAddress, "sale");
         if (fuelContract == address(0)) revert NotAFuelContract();
         
         // Verify that msg.sender (the sale contract) matches the registered sale contract
