@@ -5,7 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import { Bars3Icon, BookOpenIcon, ChartBarIcon, DocumentTextIcon, MapIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  BookOpenIcon,
+  ChartBarIcon,
+  CheckBadgeIcon,
+  DocumentTextIcon,
+  MapIcon,
+} from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { usePlayerSector } from "~~/hooks/usePlayerSector";
@@ -26,6 +33,11 @@ export const menuLinks: HeaderMenuLink[] = [
     label: "Contracts",
     href: "/contracts",
     icon: <DocumentTextIcon className="h-4 w-4" />,
+  },
+  {
+    label: "Audits",
+    href: "/audits",
+    icon: <CheckBadgeIcon className="h-4 w-4" />,
   },
   {
     label: "White Paper",

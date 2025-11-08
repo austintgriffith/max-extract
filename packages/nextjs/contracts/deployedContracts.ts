@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0x8f3024d12c3d702930f2ff98aa8e2261f0be490a",
+      address: "0x5d1ce2a19aa885765abcef89b7590e213422a8b9",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2295,
+      deployedOnBlock: 3371,
     },
     Credits: {
-      address: "0x67f65b834aaac92c15c2eba9ff7e81f2d33a1cfd",
+      address: "0xd3497ab25da369b3ee5a239890348ea542b0f479",
       abi: [
         {
           type: "constructor",
@@ -889,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2296,
+      deployedOnBlock: 3372,
     },
     Game: {
-      address: "0xa7b987f505366630109de019862c183e690a040b",
+      address: "0x49ea5126fd67f877b62ddc0144dbeb42591df7bb",
       abi: [
         {
           type: "constructor",
@@ -2198,10 +2198,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2297,
+      deployedOnBlock: 3372,
     },
     Auditor: {
-      address: "0x3ebd66861c1d8f298c20ed56506b063206103227",
+      address: "0x2fb5e98f1efe95ae50f9becafce660701ad8d9be",
       abi: [
         {
           type: "constructor",
@@ -2314,6 +2314,62 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract Game",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllAuditsForAddress",
+          inputs: [
+            {
+              name: "_address",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple[]",
+              internalType: "struct Auditor.AuditRequest[]",
+              components: [
+                {
+                  name: "contractAddress",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "requester",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "chapterNumber",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "blockExplorerUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "status",
+                  type: "uint8",
+                  internalType: "enum Auditor.AuditStatus",
+                },
+                {
+                  name: "failureReason",
+                  type: "string",
+                  internalType: "string",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -2709,10 +2765,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2297,
+      deployedOnBlock: 3372,
     },
     MaxExtract: {
-      address: "0xbf3cd410aa5a3e9da22fd9109add5d3655fcb1c5",
+      address: "0x5e388db7c3aef7dea9585fbe3c077f0c98857d0d",
       abi: [
         {
           type: "constructor",
@@ -3351,7 +3407,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2297,
+      deployedOnBlock: 3372,
     },
   },
   42161: {
@@ -6305,6 +6361,62 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract Game",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAllAuditsForAddress",
+          inputs: [
+            {
+              name: "_address",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple[]",
+              internalType: "struct Auditor.AuditRequest[]",
+              components: [
+                {
+                  name: "contractAddress",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "requester",
+                  type: "address",
+                  internalType: "address",
+                },
+                {
+                  name: "chapterNumber",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "blockExplorerUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "status",
+                  type: "uint8",
+                  internalType: "enum Auditor.AuditStatus",
+                },
+                {
+                  name: "failureReason",
+                  type: "string",
+                  internalType: "string",
+                },
+              ],
             },
           ],
           stateMutability: "view",
