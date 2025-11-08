@@ -7,127 +7,64 @@ This chapter requires a staking system where pilots stake 10k credits when enter
 1. activate() - Called when a pilot enters the sector
    ✅ MUST: Be external/public
    ✅ MUST: Only callable by MaxExtract contract (msg.sender check)
-   ✅ MUST: Set staked[tx.origin] = true
-   ✅ MUST: NOT take any parameters
+   ✅ MUST: Set staked[tx.origin] = true (NOT msg.sender - tx.origin is the pilot)
+   ✅ MUST: Take NO parameters
 
 2. deactivate() - Called when a pilot exits the sector
    ✅ MUST: Be external/public
    ✅ MUST: Only callable by MaxExtract contract (msg.sender check)
-   ✅ MUST: Set staked[tx.origin] = false
-   ✅ MUST: NOT take any parameters
+   ✅ MUST: Set staked[tx.origin] = false (NOT msg.sender)
+   ✅ MUST: Take NO parameters
 
 3. slash(address killer) - Called by Game contract when a pilot is killed
    ✅ MUST: Be external/public
    ✅ MUST: Only callable by Game contract (msg.sender check)
    ✅ MUST: Take exactly one parameter: address killer
    ✅ MUST: Verify killer is staked (staked[killer] == true)
-   ✅ MUST: Set staked[killer] = false (prevent double-slashing)
-   ✅ MUST: Call MaxExtract.slash(killer, sectorId)
+   ✅ MUST: Set staked[killer] = false BEFORE calling MaxExtract.slash() (prevent double-slashing and reentrancy)
+   ✅ MUST: Call MaxExtract.slash(killer, sectorId) with correct sectorId
 
 === REQUIRED STATE VARIABLES ===
 
-1. staked mapping
-   ✅ MUST: mapping(address => bool) public staked
-   ✅ MUST: Track which pilots are currently staked in this sector
-
-2. maxExtractContract
-   ✅ MUST: Store the MaxExtract contract address
-   ✅ MUST: Be set in constructor or immutable
-
-3. gameContract
-   ✅ MUST: Store the Game contract address
-   ✅ MUST: Be set in constructor or immutable
-
-4. sectorId
-   ✅ MUST: Store the sector ID this stake contract belongs to
-   ✅ MUST: Be set in constructor or immutable
+✅ mapping(address => bool) public staked - Track who is currently staked
+✅ maxExtractContract address - Store MaxExtract contract address
+✅ gameContract address - Store Game contract address
+✅ sectorId access - Must be accessible when calling MaxExtract.slash(). Can be read from your Registry contract's sectorId() function
 
 === TX.ORIGIN PATTERN ===
 
-The activate() and deactivate() functions MUST use tx.origin, not msg.sender, to track the pilot:
-- msg.sender will be MaxExtract contract
-- tx.origin will be the actual pilot address
-- This pattern is intentional and required for the system to work
+activate() and deactivate() MUST use tx.origin, not msg.sender:
+- msg.sender = MaxExtract contract (verified for authorization)
+- tx.origin = actual pilot address (used to track staking status)
 
-Example CORRECT pattern:
-```solidity
-function activate() external {
-    require(msg.sender == maxExtractContract, "Only MaxExtract");
-    staked[tx.origin] = true;  // tx.origin is the pilot
-}
-```
+Example: staked[tx.origin] = true; // CORRECT
+Example: staked[msg.sender] = true; // WRONG
 
 === PASS CONDITIONS ===
 
 ✅ All 3 required functions present with correct signatures
-✅ activate() checks msg.sender == maxExtractContract
-✅ activate() sets staked[tx.origin] = true
-✅ deactivate() checks msg.sender == maxExtractContract
-✅ deactivate() sets staked[tx.origin] = false
-✅ slash() checks msg.sender == gameContract
-✅ slash() verifies staked[killer] == true
-✅ slash() sets staked[killer] = false
-✅ slash() calls MaxExtract.slash(killer, sectorId)
-✅ All required state variables present and correctly initialized
-✅ No reentrancy vulnerabilities
-✅ No unauthorized access to functions
+✅ activate/deactivate check msg.sender == maxExtractContract AND use tx.origin for tracking
+✅ slash checks msg.sender == gameContract, verifies staked[killer], sets false, calls MaxExtract.slash()
+✅ All required state variables present
+✅ No reentrancy vulnerabilities or access control bypasses
 
 === FAIL CONDITIONS ===
 
 ❌ Missing any required function
 ❌ Wrong function signatures (wrong names, wrong parameters)
-❌ activate/deactivate not checking msg.sender
-❌ activate/deactivate using msg.sender instead of tx.origin for tracking
+❌ activate/deactivate not checking msg.sender == maxExtractContract
+❌ activate/deactivate using msg.sender instead of tx.origin for staking status
 ❌ slash not checking msg.sender == gameContract
 ❌ slash not verifying killer is staked
-❌ slash not setting staked[killer] = false
-❌ slash not calling MaxExtract.slash()
+❌ slash not setting staked[killer] = false BEFORE external call
+❌ slash not calling MaxExtract.slash(killer, sectorId)
 ❌ Missing required state variables
-❌ Mutable state variables that should be immutable (maxExtractContract, gameContract, sectorId)
-❌ Reentrancy vulnerabilities
-❌ Ability to bypass access controls
+❌ Providing incorrect sectorId to MaxExtract.slash()
+❌ Reentrancy vulnerability (setting staked[killer] = false AFTER external call)
 
 === NOTES ===
 
-- The stake contract does NOT hold any credits
-- MaxExtract holds all staked credits (10k per pilot)
-- The stake contract only tracks who is currently in the sector
-- When slash() is called, it sets staked[killer] = false and MaxExtract burns the killer's entire staked balance
-- Setting staked[killer] = false prevents double-slashing (they have no stake left to slash)
-- Players should NOT be able to modify staked status directly
-- The sectorId must match the sector this stake contract is registered to
-
-=== EXAMPLE IMPLEMENTATION ===
-
-```solidity
-contract StakeContract {
-    mapping(address => bool) public staked;
-    address public immutable maxExtractContract;
-    address public immutable gameContract;
-    uint256 public immutable sectorId;
-    
-    constructor(address _maxExtract, address _game, uint256 _sectorId) {
-        maxExtractContract = _maxExtract;
-        gameContract = _game;
-        sectorId = _sectorId;
-    }
-    
-    function activate() external {
-        require(msg.sender == maxExtractContract, "Only MaxExtract");
-        staked[tx.origin] = true;
-    }
-    
-    function deactivate() external {
-        require(msg.sender == maxExtractContract, "Only MaxExtract");
-        staked[tx.origin] = false;
-    }
-    
-    function slash(address killer) external {
-        require(msg.sender == gameContract, "Only Game");
-        require(staked[killer], "Killer not staked");
-        
-        staked[killer] = false;  // Prevent double-slashing
-        IMaxExtract(maxExtractContract).slash(killer, sectorId);
-    }
-}
-```
+- Stake contract does NOT hold credits - MaxExtract holds all staked credits (10k per pilot)
+- slash() MUST set staked[killer] = false BEFORE calling MaxExtract.slash() to prevent reentrancy and double-slashing
+- sectorId can be obtained by reading from your Registry contract (e.g., registry.sectorId())
+- The slash function must call MaxExtract.slash(killer, sectorId) with the correct function signature

@@ -63,7 +63,7 @@ const AuditsPage = () => {
     try {
       await writeAuditorAsync({
         functionName: "requestAudit",
-        args: [contractAddress as `0x${string}`, selectedChapter as number, ""],
+        args: [contractAddress as `0x${string}`, Number(selectedChapter), ""],
       });
 
       notification.success("Audit request submitted!");
@@ -158,11 +158,13 @@ const AuditsPage = () => {
                 onChange={e => setSelectedChapter(Number(e.target.value))}
               >
                 <option value={0}>Select a chapter...</option>
-                {visibleChapters?.map(chapter => (
-                  <option key={chapter} value={chapter}>
-                    Chapter {chapter}
-                  </option>
-                ))}
+                {visibleChapters
+                  ?.filter(chapter => chapter !== 1)
+                  .map(chapter => (
+                    <option key={chapter} value={chapter}>
+                      Chapter {chapter}
+                    </option>
+                  ))}
               </select>
             </div>
 

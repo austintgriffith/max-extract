@@ -6,10 +6,8 @@ import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 export const Chapter4 = () => {
   const { data: maxExtractContract } = useDeployedContractInfo("MaxExtract");
   const { data: gameContract } = useDeployedContractInfo("Game");
-  const { data: creditsContract } = useDeployedContractInfo("Credits");
   const maxExtractAddress = maxExtractContract?.address;
   const gameAddress = gameContract?.address;
-  const creditsAddress = creditsContract?.address;
 
   return (
     <div className="bg-base-300 rounded-3xl p-8 mb-6">
@@ -135,175 +133,32 @@ function deactivate() external {
             </pre>
           </div>
 
-          <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="text-info text-2xl">💡</div>
-              <div>
-                <h4 className="font-semibold text-info mb-3">Why tx.origin?</h4>
-                <p className="text-sm text-base-content mb-2">
-                  When MaxExtract calls your contract, <code className="bg-base-100 px-1 rounded">msg.sender</code> is
-                  MaxExtract, but <code className="bg-base-100 px-1 rounded">tx.origin</code> is the pilot who initiated
-                  the transaction.
-                </p>
-                <p className="text-sm text-base-content">
-                  Yes, <code className="bg-base-100 px-1 rounded">tx.origin</code> is normally dangerous. But in this
-                  specific controlled flow with proper access controls, it&apos;s the correct pattern.
-                </p>
-              </div>
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Contract Interfaces</h3>
+          <p className="mb-4">Your stake contract will need to interface with the MaxExtract and Game contracts:</p>
+          <div className="bg-base-200 rounded-lg p-4 mb-6 space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold">MaxExtract:</span>
+              {maxExtractAddress && <Address address={maxExtractAddress} />}
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold">Game:</span>
+              {gameAddress && <Address address={gameAddress} />}
             </div>
           </div>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">The Slash Function</h3>
           <p className="mb-4">
-            This is where the magic happens. When a pilot kills another pilot in your sector, the Game contract calls
-            your slash function.
+            Your <code className="bg-base-100 px-2 py-1 rounded text-sm">slash</code> function must call{" "}
+            <code className="bg-base-100 px-2 py-1 rounded text-sm">slash(address killer, uint256 sectorId)</code> on
+            the MaxExtract contract. You can get your sector ID by reading it from your Registry contract.
           </p>
 
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`function slash(address killer) external {
-    require(msg.sender == gameContract, "Only Game");
-    require(staked[killer], "Killer not staked");
-    
-    staked[killer] = false;  // Prevent double-slashing
-    
-    // Call MaxExtract to burn the killer's stake
-    IMaxExtract(maxExtractContract).slash(killer, sectorId);
-}`}</code>
-            </pre>
-          </div>
-
-          <p className="text-sm text-base-content/70 mb-4">
-            The slash call to MaxExtract ({maxExtractAddress && <Address address={maxExtractAddress} />}) will burn the
-            killer&apos;s entire 10k staked balance. They don&apos;t get it back. Ever.
-          </p>
-
-          <div className="bg-info/10 border border-info rounded-lg p-4 mb-4">
-            <p className="text-sm text-base-content">
-              <strong className="text-info">Important:</strong> Setting{" "}
-              <code className="bg-base-100 px-1 rounded">staked[killer] = false</code> prevents double-slashing. Once
-              their stake is burned, they can&apos;t be slashed again (they have nothing left to slash). To continue
-              playing in your sector, they&apos;d need to exit and re-enter, staking another 10k.
+          <div className="bg-warning/10 border border-warning rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-warning mb-2">⚠️ Security: Operation Ordering</h4>
+            <p className="text-sm">
+              In your <code className="bg-base-100 px-1 rounded">slash</code> function, you MUST set{" "}
+              <code className="bg-base-100 px-1 rounded">staked[killer] = false</code> <strong>before</strong> calling
+              the external <code className="bg-base-100 px-1 rounded">MaxExtract.slash()</code> function. This prevents
+              reentrancy attacks and double-slashing.
             </p>
-          </div>
-
-          <div className="bg-warning/10 border-2 border-warning rounded-lg p-6 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="text-warning text-2xl">🔐</div>
-              <div>
-                <h4 className="font-semibold text-warning mb-3">Critical: Access Controls</h4>
-                <p className="text-sm text-base-content mb-3">Your slash function MUST verify two things:</p>
-                <ol className="space-y-2 text-sm list-decimal list-inside ml-2">
-                  <li>
-                    <code className="bg-base-100 px-1 rounded">msg.sender == gameContract</code> - Only the Game
-                    contract can trigger slashing
-                  </li>
-                  <li>
-                    <code className="bg-base-100 px-1 rounded">staked[killer] == true</code> - The killer must actually
-                    be in your sector
-                  </li>
-                </ol>
-                <p className="text-sm text-base-content mt-3">
-                  If you mess these up, the audit will fail and pilots won&apos;t trust your sector.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Required State Variables</h3>
-          <div className="bg-base-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-base-content mb-2">Your contract must have these state variables:</p>
-            <ul className="space-y-2 text-sm list-disc list-inside">
-              <li>
-                <code className="bg-base-100 px-1 rounded">mapping(address =&gt; bool) public staked</code> - Track who
-                is in your sector
-              </li>
-              <li>
-                <code className="bg-base-100 px-1 rounded">address public immutable maxExtractContract</code> -
-                Reference to MaxExtract
-              </li>
-              <li>
-                <code className="bg-base-100 px-1 rounded">address public immutable gameContract</code> - Reference to
-                Game
-              </li>
-              <li>
-                <code className="bg-base-100 px-1 rounded">uint256 public immutable sectorId</code> - Your sector ID
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="text-info text-2xl">📋</div>
-              <div>
-                <h4 className="font-semibold text-info mb-3">Contract Addresses</h4>
-                <p className="text-sm text-base-content mb-2">You&apos;ll need these in your constructor:</p>
-                <ul className="space-y-1 text-sm list-disc list-inside ml-2">
-                  {maxExtractAddress && (
-                    <li>
-                      MaxExtract: <Address address={maxExtractAddress} />
-                    </li>
-                  )}
-                  {gameAddress && (
-                    <li>
-                      Game: <Address address={gameAddress} />
-                    </li>
-                  )}
-                  {creditsAddress && (
-                    <li>
-                      Credits: <Address address={creditsAddress} />
-                    </li>
-                  )}
-                  <li>Your Sector ID: Get this from your sector page</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Example Implementation</h3>
-          <div className="bg-base-100 rounded-lg p-4 mb-4 border">
-            <pre className="text-sm overflow-x-auto">
-              <code className="text-accent">{`pragma solidity ^0.8.0;
-
-interface IMaxExtract {
-    function slash(address killer, uint256 sectorId) external;
-}
-
-contract StakeContract {
-    mapping(address => bool) public staked;
-    address public immutable maxExtractContract;
-    address public immutable gameContract;
-    uint256 public immutable sectorId;
-    
-    constructor(
-        address _maxExtract,
-        address _game,
-        uint256 _sectorId
-    ) {
-        maxExtractContract = _maxExtract;
-        gameContract = _game;
-        sectorId = _sectorId;
-    }
-    
-    function activate() external {
-        require(msg.sender == maxExtractContract, "Only MaxExtract");
-        staked[tx.origin] = true;
-    }
-    
-    function deactivate() external {
-        require(msg.sender == maxExtractContract, "Only MaxExtract");
-        staked[tx.origin] = false;
-    }
-    
-    function slash(address killer) external {
-        require(msg.sender == gameContract, "Only Game");
-        require(staked[killer], "Killer not staked");
-        
-        staked[killer] = false;  // Prevent double-slashing
-        IMaxExtract(maxExtractContract).slash(killer, sectorId);
-    }
-}`}</code>
-            </pre>
           </div>
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Deployment & Integration</h3>
@@ -312,7 +167,7 @@ contract StakeContract {
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 1
               </div>
-              <p>Deploy your stake contract with the correct constructor parameters (MaxExtract, Game, SectorId)</p>
+              <p>Deploy your stake contract</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
