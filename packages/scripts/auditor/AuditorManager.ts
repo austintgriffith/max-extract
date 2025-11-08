@@ -25,7 +25,7 @@ const POLL_INTERVAL = 2000;
 // Debug auto-audit configuration
 // Set to a chapter number to auto-accept all audits for that chapter (bypasses all checks)
 // Set to 0 to disable auto-audit
-const DEBUG_AUTO_AUDIT_CHAPTER = 4;
+const DEBUG_AUTO_AUDIT_CHAPTER = 0;
 
 // Track processed audit requests
 let lastProcessedIndex = -1;

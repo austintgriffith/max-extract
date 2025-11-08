@@ -147,7 +147,7 @@ export class DeathMechanicsService {
         // Don't throw - deadMansSwitch succeeded, ETH transfer is secondary
       }
 
-      return { deadMansSwitchHash, ethTransferHash };
+      return { deadMansSwitchHash, slashHash: "", ethTransferHash };
     } catch (error: any) {
       this.debugLog(`Failed to execute deadMansSwitch:`, error);
       throw new Error(`DeadMansSwitch failed: ${error.message}`);
@@ -349,7 +349,7 @@ export class DeathMechanicsService {
         // Don't throw - deadMansSlash succeeded, ETH transfer is secondary
       }
 
-      return { slashHash, ethTransferHash };
+      return { deadMansSwitchHash: "", slashHash, ethTransferHash };
     } catch (error: any) {
       this.debugLog(`Failed to execute deadMansSlash:`, error);
       throw new Error(`DeadMansSlash failed: ${error.message}`);
