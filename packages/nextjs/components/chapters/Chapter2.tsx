@@ -257,9 +257,13 @@ export const Chapter2 = () => {
             <p className="mb-3">
               Once your About contract is audited, your sector name and social link will display on the dashboard.
             </p>
-            <p>
+            <p className="mb-3">
               Pilots can now see who operates the sector and how to contact you. This increases trust and should result
               in better tips when they successfully escape with big scores.
+            </p>
+            <p className="text-sm opacity-80">
+              <strong>Note:</strong> Your airspace remains <strong>Class 0</strong> at this stage. Only Ship Models E
+              and F can still get openings to enter. The next chapter will unlock better airspace classification.
             </p>
           </div>
         </div>

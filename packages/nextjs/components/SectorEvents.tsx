@@ -1,6 +1,7 @@
 "use client";
 
 import { SectorEvent } from "~~/types/sector";
+import { getShipModel } from "~~/utils/shipConstants";
 
 interface SectorEventsProps {
   events: SectorEvent[];
@@ -58,7 +59,9 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                                                           ? "badge-info"
                                                           : event.type === "pilot_insufficient_credits"
                                                             ? "badge-warning"
-                                                            : "badge-ghost"
+                                                            : event.type === "airspace_restricted"
+                                                              ? "badge-error"
+                                                              : "badge-ghost"
                         }`}
                       >
                         {event.type.replace("_", " ")}
@@ -69,7 +72,7 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                     </div>
                     <div className="mt-1 text-xs text-base-content/70">
                       {event.type === "ship_spawn" &&
-                        `${event.data.pilotName || `Ship ${event.data.address.slice(0, 8)}...`} spawned${event.data.shipType ? ` (ship #${event.data.shipType})` : ""}`}
+                        `${event.data.pilotName || `Ship ${event.data.address.slice(0, 8)}...`} got an opening to enter this airspace${event.data.shipType ? ` with a Model ${getShipModel(event.data.shipType)} (Type ${event.data.shipType}) ship` : ""}`}
                       {event.type === "asteroid_spawn" && `Asteroid spawned (size: ${Math.round(event.data.size)})`}
                       {event.type === "asteroid_depleted" && `Asteroid mined (score: ${event.data.score})`}
                       {event.type === "asteroid_exit" && `Asteroid drifted off map`}
@@ -399,6 +402,30 @@ export const SectorEvents = ({ events }: SectorEventsProps) => {
                             <div className="mt-2 text-xs opacity-70">
                               💎 Chapter 4 staking requirement: This sector requires pilots to stake 10,000 CREDITS to
                               enter.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {event.type === "airspace_restricted" && (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 text-error">
+                            <span>
+                              🚫 {event.data.pilotName} unable to enter Class {event.data.airspaceClass} airspace
+                            </span>
+                          </div>
+                          <div className="text-xs bg-error/10 rounded px-2 py-1 border border-error/30">
+                            <div className="flex justify-between mb-1">
+                              <span>Ship Model:</span>
+                              <span className="font-mono text-purple-400">Model {event.data.shipModel}</span>
+                            </div>
+                            <div className="flex justify-between mb-1">
+                              <span>Airspace Class:</span>
+                              <span className="font-mono">Class {event.data.airspaceClass}</span>
+                            </div>
+                            <div className="mt-2 text-xs opacity-70 italic">
+                              🛫 {event.data.pilotName} got an opening but their ship model cannot navigate this
+                              airspace classification. Only larger ship models can operate in Class{" "}
+                              {event.data.airspaceClass} airspace.
                             </div>
                           </div>
                         </div>

@@ -94,11 +94,48 @@ mapping(string => address) public modules; // Your module registry`}</code>
             space.
           </p>
           <p className="mb-3">
-            Your sector will start as <strong>&ldquo;class 0&rdquo; airspace</strong>, only the toughest bastards will
-            venture here.
+            Your sector will start as <strong>&ldquo;Class 0&rdquo; airspace</strong>, the most dangerous
+            classification. Only the largest, most rugged ships can safely navigate these uncharted conditions.
           </p>
+
+          <div className="bg-error/10 border-2 border-error rounded-lg p-6 mb-4">
+            <div className="flex items-start space-x-3">
+              <div className="text-error text-2xl">🚨</div>
+              <div>
+                <h4 className="font-semibold text-error mb-3">Class 0 Airspace Restrictions</h4>
+                <p className="text-sm text-base-content mb-3">
+                  Only <strong>Ship Models E and F</strong> (the largest and most capable vessels) can get clearance to
+                  enter Class 0 airspace. Smaller ships simply cannot handle the hazardous conditions.
+                </p>
+                <p className="text-sm text-base-content">
+                  All pilots must be equipped with a <strong>killswitch transponder</strong> that broadcasts death
+                  signals to your relay station (your satellite), which relays critical events to the Max Extract
+                  system.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <h3 className="text-xl font-semibold mb-4 text-secondary">Getting an Opening</h3>
+          <div className="bg-info/10 border-2 border-info rounded-lg p-6 mb-4">
+            <div className="flex items-start space-x-3">
+              <div className="text-info text-2xl">🛫</div>
+              <div>
+                <p className="text-sm text-base-content mb-3">
+                  Pilots are constantly monitoring space traffic patterns, waiting for an{" "}
+                  <strong>&ldquo;opening&rdquo;</strong> to their desired sector. When the rolling entropy aligns and
+                  conditions are favorable, a pilot gets their opening and can attempt entry.
+                </p>
+                <p className="text-sm text-base-content">
+                  However, even with an opening, pilots must meet all airspace requirements. If their ship model is too
+                  small for the airspace class, they&apos;ll be denied entry and must wait for another opening.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <p className="mb-3">
-            Pilots that enter this space will interact with your registry to discover what contracts are available for
+            Pilots that successfully enter will interact with your registry to discover what contracts are available for
             interaction.
           </p>
           <p className="mb-3">
@@ -157,15 +194,20 @@ mapping(string => address) public modules; // Your module registry`}</code>
           <div className="bg-accent/10 border border-accent rounded-lg p-6">
             <p className="mb-3">
               <strong>As soon as you call the broadcast function</strong>, your sector becomes active and pilots can
-              start entering your airspace!
+              start getting openings to enter your airspace!
             </p>
             <p className="mb-3">
               A <strong>link to your sector</strong> will appear in your title bar, allowing you to monitor activity and
               see which pilots are exploring your space.
             </p>
+            <p className="mb-3">
+              Remember: your sector starts as <strong>Class 0 airspace</strong> - the most dangerous classification.
+              Only Ship Models E and F can get clearance to enter. These are the battle-hardened veterans with the most
+              capable vessels.
+            </p>
             <p>
-              Remember: your sector starts as <strong>class 0 airspace</strong> - the most dangerous classification.
-              Only the most skilled and daring pilots will venture into your sector at first.
+              As you progress through the chapters and upgrade your station, your airspace classification will improve,
+              allowing smaller ship models to safely navigate your sector.
             </p>
           </div>
         </div>

@@ -150,7 +150,8 @@ export interface SectorEvent {
     | "pilot_unstaked" // Chapter 4: New event for when a pilot unstakes credits
     | "pilot_insufficient_credits" // Chapter 4: New event for when a pilot can't stake due to insufficient credits
     | "stake_failed" // Chapter 4: New event for when staking fails
-    | "slash_failed"; // Chapter 4: New event for when slashing fails
+    | "slash_failed" // Chapter 4: New event for when slashing fails
+    | "airspace_restricted"; // Airspace: New event for when a pilot can't enter due to ship model restrictions
   timestamp: number;
   data: any; // Type varies by event type: TipEventData, CredentialMintFailedEventData, FuelTokenPurchaseEventData, etc.
 }

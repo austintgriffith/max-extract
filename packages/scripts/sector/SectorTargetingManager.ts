@@ -6,11 +6,13 @@ import { PositionUtils } from "../utils/PositionUtils";
 import { ShipAI } from "../utils/ShipAI";
 import { AsteroidUtils } from "../utils/AsteroidUtils";
 import type { BlockchainManager } from "../managers/blockchain";
+import type { CharacterManager } from "../managers/character";
 
 export class SectorTargetingManager {
   constructor(
     private blockchainManager: BlockchainManager,
     private sectorId: string,
+    private characterManager: CharacterManager,
     private debugMode: boolean = false
   ) {}
 
@@ -25,14 +27,18 @@ export class SectorTargetingManager {
     }
   }
 
-  public findBestTargetShip(
+  public async findBestTargetShip(
     attackerPos: Vector2D,
     attackerShip: Ship,
     ships: Map<string, Ship>,
     currentTargetId?: string | null
-  ): string | null {
+  ): Promise<string | null> {
     let bestId: string | null = null;
     let bestScore = 0;
+
+    // Check if sector has active slashing (cache result for this call)
+    const hasActiveSlashing =
+      await this.blockchainManager.hasSectorActiveSlashing(this.sectorId);
 
     for (const [id, ship] of ships) {
       if (
@@ -41,6 +47,31 @@ export class SectorTargetingManager {
         ship.state !== "exiting"
       ) {
         continue;
+      }
+
+      // If sector has active slashing, use aggression-based targeting
+      if (hasActiveSlashing) {
+        // Get attacker pilot's character to check aggression
+        const attackerCharacter = this.characterManager.getCharacter(
+          attackerShip.pilotAddress
+        );
+
+        if (attackerCharacter) {
+          const aggression = attackerCharacter.aggression; // 0-100
+          const randomRoll = Math.floor(Math.random() * 251); // 0-250
+
+          // Pilot must be more aggressive than the random roll to attack
+          if (aggression <= randomRoll) {
+            console.log(
+              `⚔️  [${attackerShip.pilotName}] Aggression: ${aggression} vs Random: ${randomRoll} → NO ATTACK (peaceful)`
+            );
+            continue; // Skip this target, pilot is not aggressive enough
+          } else {
+            console.log(
+              `⚔️  [${attackerShip.pilotName}] Aggression: ${aggression} vs Random: ${randomRoll} → ATTACK! Targeting: ${ship.pilotName}`
+            );
+          }
+        }
       }
 
       if (this.canShipReachShip(attackerPos, ship, attackerShip, ships)) {
@@ -295,7 +326,7 @@ export class SectorTargetingManager {
     this.debugLog(`Assigning target for ship ${ship.id} - reason: ${reason}`);
 
     // PRIORITY 1: Look for cargo ships to attack
-    const targetShipId = this.findBestTargetShip(
+    const targetShipId = await this.findBestTargetShip(
       currentPos,
       ship,
       ships,
@@ -429,11 +460,9 @@ export class SectorTargetingManager {
   ): void {
     for (const [shipId, ship] of ships) {
       if (ship.state === "flying") {
-        assignTarget(ship, "new cargo ship available", true).catch(
-          (error) => {
-            console.error(`Failed to assign target for ship ${shipId}:`, error);
-          }
-        );
+        assignTarget(ship, "new cargo ship available", true).catch((error) => {
+          console.error(`Failed to assign target for ship ${shipId}:`, error);
+        });
       }
     }
   }

@@ -25,7 +25,8 @@ export class SectorContractsService {
    */
   public async getSectorOwner(sectorId: string): Promise<string | null> {
     try {
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
       if (!maxExtractContract) {
         throw new Error("MaxExtract contract not found. Run: yarn deploy");
       }
@@ -51,7 +52,8 @@ export class SectorContractsService {
     sectorId: string
   ): Promise<string | null> {
     try {
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
       if (!maxExtractContract) {
         throw new Error("MaxExtract contract not found. Run: yarn deploy");
       }
@@ -432,6 +434,38 @@ export class SectorContractsService {
   }
 
   /**
+   * Chapter 4: Check if chapter 4 is visible
+   */
+  public async isChapter4Visible(): Promise<boolean> {
+    try {
+      const gameContract = this.blockchainManager.getContract("Game");
+      if (!gameContract) {
+        this.debugLog("Game contract not found for chapter visibility check");
+        return false;
+      }
+
+      // Get the array of visible chapters from Game contract
+      const visibleChapters = (await this.blockchainManager.readContract(
+        gameContract.address,
+        gameContract.abi,
+        "getVisibleChapters",
+        []
+      )) as number[];
+
+      this.debugLog(`Visible chapters: [${visibleChapters.join(", ")}]`);
+
+      // Check if chapter 4 is in the array
+      const isVisible = visibleChapters.includes(4);
+
+      this.debugLog(`Chapter 4 visibility: ${isVisible}`);
+      return isVisible;
+    } catch (error: any) {
+      this.debugLog(`Failed to check chapter 4 visibility:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Chapter 5: Check if chapter 5 is visible for a player
    */
   public async isChapter5Visible(playerAddress: string): Promise<boolean> {
@@ -496,5 +530,57 @@ export class SectorContractsService {
       return false;
     }
   }
-}
 
+  /**
+   * Get the airspace class for a sector
+   *
+   * Airspace Class Rules:
+   * - Class 0 (Base 1-2): Only ship models E, F can enter
+   * - Class 1 (Base 3): Ship models D, E, F can enter
+   * - Class 2 (Base 3+ with staking): Ship models B, C, D, E, F can enter
+   * - Class 3 (Base 4+): All ship models A-F can enter
+   */
+  public async getSectorAirspaceClass(sectorId: string): Promise<number> {
+    try {
+      const gameContract = this.blockchainManager.getContract("Game");
+      if (!gameContract) {
+        this.debugLog("Game contract not found for airspace class check");
+        return 0; // Default to most restrictive
+      }
+
+      // Get base type from blockchain
+      const baseType = (await this.blockchainManager.readContract(
+        gameContract.address,
+        gameContract.abi,
+        "getSectorBaseType",
+        [BigInt(sectorId)]
+      )) as number;
+
+      this.debugLog(`Sector ${sectorId} base type: ${baseType}`);
+
+      // Base 4+ = Class 3 (all ships)
+      if (baseType >= 4) {
+        return 3;
+      }
+
+      // Base 3 = Check if staking is active
+      if (baseType === 3) {
+        const hasStaking = await this.blockchainManager.canStake(sectorId);
+        this.debugLog(`Sector ${sectorId} has staking: ${hasStaking}`);
+
+        // Base 3 with staking = Class 2
+        // Base 3 without staking = Class 1
+        return hasStaking ? 2 : 1;
+      }
+
+      // Base 1-2 = Class 0
+      return 0;
+    } catch (error: any) {
+      this.debugLog(
+        `Failed to get airspace class for sector ${sectorId}:`,
+        error
+      );
+      return 0; // Default to most restrictive on error
+    }
+  }
+}

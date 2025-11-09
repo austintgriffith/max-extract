@@ -225,10 +225,40 @@ function deactivate() external {
               Pilots need 10k credits to enter. New pilots or those low on credits can&apos;t visit. But the pilots who
               do enter are <strong>heavily invested</strong> in not causing trouble.
             </p>
-            <p>
+            <p className="mb-3">
               If slashing works perfectly, you never lose points from deaths. If your contract has bugs, you lose 10
               points per death <em>and</em> pilots lose trust.
             </p>
+
+            <p className="font-semibold text-success mb-2 mt-4">🛫 Airspace Upgrade: Class 2 Unlocked!</p>
+            <p className="mb-3">
+              Once your stake contract is audited and active, your sector upgrades to <strong>Class 2 airspace</strong>.
+              This allows <strong>Ship Models B, C, D, E, and F</strong> to get openings to enter.
+            </p>
+            <p className="mb-3">
+              Smaller commercial vessels (Models B and C) can now navigate your airspace. This dramatically expands your
+              pilot traffic, but the staking requirement ensures only committed pilots with sufficient credits can
+              enter.
+            </p>
+
+            <div className="bg-info/10 border border-info rounded-lg p-4 mt-4">
+              <h4 className="font-semibold text-info mb-2">🔧 Transponder Requirements</h4>
+              <p className="text-sm text-base-content mb-2">
+                <strong>Class 2 airspace requires dual transponders:</strong>
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                <li>
+                  <strong>Killswitch transponder</strong>: Broadcasts death signals to your relay station
+                </li>
+                <li>
+                  <strong>Killstake transponder</strong>: Enables automatic stake slashing when deaths occur, protecting
+                  your score
+                </li>
+              </ul>
+              <p className="text-sm text-base-content mt-2">
+                All ships operating in Class 2+ airspace must have both systems installed and functional.
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
 import { usePilotsData } from "~~/hooks/usePilotsData";
 import { Pilot } from "~~/types/sector";
-import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS } from "~~/utils/shipConstants";
+import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS, getShipModel } from "~~/utils/shipConstants";
 
 interface PlayerData {
   address: string;
@@ -35,19 +35,24 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
   const containerSize = 48;
   // Scale ship size based on factor
   const shipSize = Math.round(containerSize * shipScale);
+  const shipModel = getShipModel(pilot.shipType);
 
   return (
     <tr>
       <td>
-        <div className="flex items-center justify-center" style={{ width: containerSize, height: containerSize }}>
+        <div
+          className="flex flex-col items-center justify-center gap-1"
+          style={{ width: containerSize, height: containerSize }}
+        >
           <Image
             src={`/ships/ship${pilot.shipType}.png`}
-            alt={`Ship ${pilot.shipType}`}
+            alt={`Ship Model ${shipModel}`}
             width={shipSize}
             height={shipSize}
             className="object-contain rotate-90"
-            title={`Ship #${pilot.shipType}`}
+            title={`Ship Model ${shipModel} (Type ${pilot.shipType})`}
           />
+          <span className="text-[10px] font-mono text-cyan-400">M-{shipModel}</span>
         </div>
       </td>
       <td>
@@ -145,8 +150,30 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
     },
   });
 
+  // Check if staking is active for this sector
+  const { data: canStakeData } = useScaffoldReadContract({
+    contractName: "MaxExtract",
+    functionName: "canStake" as any,
+    args: [BigInt(sectorId || "0")] as any,
+    query: {
+      enabled: !!sectorId,
+    },
+  });
+
   const baseType = baseTypeData ? Number(baseTypeData) : 1;
   const baseScale = BASE_SCALE_FACTORS[baseType - 1];
+  const canStake = canStakeData ? Boolean(canStakeData) : false;
+
+  // Calculate airspace class
+  const getAirspaceClass = (base: number, hasStaking: boolean): number => {
+    if (base >= 4) return 3; // Class 3
+    if (base === 3) return hasStaking ? 2 : 1; // Class 2 or 1
+    return 0; // Class 0
+  };
+
+  const airspaceClass = getAirspaceClass(baseType, canStake);
+  const airspaceColors = ["error", "warning", "info", "success"] as const;
+  const airspaceColor = airspaceColors[airspaceClass];
   // Container size for consistent row heights
   const containerSize = 50;
   // Scale base size based on factor (multiply by 2.8 for bigger image with minimal padding)
@@ -207,6 +234,15 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
           </Link>
         ) : (
           <span className="badge badge-ghost badge-sm">No Sector</span>
+        )}
+      </td>
+      <td>
+        {sectorId ? (
+          <span className={`badge badge-${airspaceColor} badge-sm font-mono`} title="Airspace Classification">
+            Class {airspaceClass}
+          </span>
+        ) : (
+          <span className="text-xs opacity-50">-</span>
         )}
       </td>
       <td>
@@ -689,6 +725,7 @@ const Dashboard: NextPage = () => {
                         <th>Station Name</th>
                         <th>Address</th>
                         <th>Sector</th>
+                        <th>Airspace</th>
                         <th>Registry</th>
                         <th>Score</th>
                       </tr>

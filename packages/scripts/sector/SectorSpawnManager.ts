@@ -7,6 +7,10 @@ import { SECTOR_CONFIG } from "../types";
 import type { CharacterManager, PilotManager } from "../managers/character";
 import type { BlockchainManager } from "../managers/blockchain";
 import { parseEther, formatEther } from "viem";
+import {
+  getShipModel,
+  canShipEnterAirspaceClass,
+} from "../utils/airspaceUtils";
 
 export class SectorSpawnManager {
   constructor(
@@ -188,7 +192,10 @@ export class SectorSpawnManager {
     }
 
     // Assign pilot to this sector
-    this.pilotManager.assignPilotToSector(selectedPilot.publicAddress, sectorId);
+    this.pilotManager.assignPilotToSector(
+      selectedPilot.publicAddress,
+      sectorId
+    );
 
     // Chapter 4: Check if sector requires staking
     try {
@@ -405,6 +412,61 @@ export class SectorSpawnManager {
       // Release the pilot
       this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
       return; // Don't spawn the ship
+    }
+
+    // Check airspace class restrictions
+    try {
+      const airspaceClass = await this.blockchainManager.getSectorAirspaceClass(
+        sectorId
+      );
+      const shipModel = getShipModel(selectedPilot.ship);
+
+      console.log(
+        `🛫 Checking airspace access: Pilot ${selectedPilot.firstname} ${
+          selectedPilot.lastname
+        } (Ship Model ${shipModel}) → Sector ${sectorId.slice(
+          0,
+          10
+        )}... (Class ${airspaceClass})`
+      );
+
+      if (!canShipEnterAirspaceClass(selectedPilot.ship, airspaceClass)) {
+        console.log(
+          `🚫 Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} cannot enter Class ${airspaceClass} airspace with Ship Model ${shipModel}`
+        );
+
+        // Release the pilot since they can't enter
+        this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
+
+        // Broadcast airspace restriction event
+        broadcastEvent({
+          type: "airspace_restricted",
+          timestamp: Date.now(),
+          data: {
+            pilotAddress: selectedPilot.publicAddress,
+            pilotName: `${selectedPilot.firstname} ${selectedPilot.lastname}`,
+            shipType: selectedPilot.ship,
+            shipModel: shipModel,
+            sectorId: sectorId,
+            airspaceClass: airspaceClass,
+            reason: `Ship Model ${shipModel} cannot enter Class ${airspaceClass} airspace`,
+          },
+        });
+
+        return; // Don't spawn the ship
+      }
+
+      console.log(
+        `✅ Pilot ${selectedPilot.firstname} ${selectedPilot.lastname} (Model ${shipModel}) cleared for entry into Class ${airspaceClass} airspace`
+      );
+    } catch (error: any) {
+      console.error(
+        `❌ Error checking airspace class for pilot ${selectedPilot.publicAddress}:`,
+        error
+      );
+      // Release the pilot
+      this.pilotManager.releasePilotFromSector(selectedPilot.publicAddress);
+      return; // Don't spawn the ship on error
     }
 
     const angle = this.getRandom() * 360;

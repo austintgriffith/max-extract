@@ -425,13 +425,51 @@ export const Chapter5 = () => {
               <code className="bg-base-100 px-1 rounded">upgrade()</code> to claim the 500 credit bounty.
             </p>
             <p className="mb-3">
-              After the upgrade completes, your station becomes <strong>class 1</strong> and can process asteroids into
-              fuel. Pilots can redeem their tokens for refueling services.
+              After the upgrade completes, your station becomes fully operational and can process asteroids into fuel.
+              Pilots can redeem their tokens for refueling services.
             </p>
-            <p>
+            <p className="mb-3">
               You&apos;ll earn <strong>10 points</strong> for the upgrade, and your sector becomes more attractive to
               pilots who need fuel for long expeditions.
             </p>
+
+            <p className="font-semibold text-success mb-2 mt-4">🛫 Airspace Upgrade: Class 3 Unlocked!</p>
+            <p className="mb-3">
+              After completing your crowdsale upgrade, your sector reaches <strong>Class 3 airspace</strong> - the
+              highest classification. <strong>ALL ship models (A through F)</strong> can now get openings to enter your
+              sector!
+            </p>
+            <p className="mb-3">
+              Even the smallest commercial ships (Models A and B) can safely navigate your fully-developed airspace.
+              Your sector is now accessible to the entire pilot population, maximizing traffic and opportunities.
+            </p>
+
+            <div className="bg-info/10 border border-info rounded-lg p-4 mt-4">
+              <h4 className="font-semibold text-info mb-2">🔧 Transponder Requirements</h4>
+              <p className="text-sm text-base-content mb-2">
+                <strong>Class 3 airspace maintains dual transponder requirements:</strong>
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                <li>
+                  <strong>Killswitch transponder</strong>: Broadcasts death signals to your relay station
+                </li>
+                <li>
+                  <strong>Killstake transponder</strong>: Enables automatic stake slashing when deaths occur
+                </li>
+              </ul>
+              <p className="text-sm text-base-content mt-2">
+                All ships, regardless of size, must have both systems functional to operate in your advanced sector.
+              </p>
+            </div>
+
+            <div className="bg-success/10 border border-success rounded-lg p-4 mt-4">
+              <h4 className="font-semibold text-success mb-2">🎉 Your Station Is Complete</h4>
+              <p className="text-sm text-base-content">
+                With Class 3 airspace, a full roster of audited contracts, and refueling capabilities, your sector is
+                now a thriving hub. You&apos;ve built one of the most advanced stations in the Max Extract universe.
+                Welcome to the elite.
+              </p>
+            </div>
           </div>
         </div>
       </div>

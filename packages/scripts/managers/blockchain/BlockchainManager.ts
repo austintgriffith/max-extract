@@ -350,7 +350,9 @@ export class BlockchainManager {
   }
 
   // Contract Configuration
-  public async setMaxExtractAddress(maxExtractAddress: string): Promise<string> {
+  public async setMaxExtractAddress(
+    maxExtractAddress: string
+  ): Promise<string> {
     return this.contractConfig.setMaxExtractAddress(maxExtractAddress);
   }
 
@@ -382,7 +384,9 @@ export class BlockchainManager {
     );
   }
 
-  public async setCrowdsaleGameInterface(crowdsaleAddress: string): Promise<void> {
+  public async setCrowdsaleGameInterface(
+    crowdsaleAddress: string
+  ): Promise<void> {
     return this.contractConfig.setCrowdsaleGameInterface(crowdsaleAddress);
   }
 
@@ -422,7 +426,9 @@ export class BlockchainManager {
     return this.credits.getPilotCreditsBalance(pilotAddress);
   }
 
-  public async getContractCreditBalance(contractAddress: string): Promise<bigint> {
+  public async getContractCreditBalance(
+    contractAddress: string
+  ): Promise<bigint> {
     return this.credits.getContractCreditBalance(contractAddress);
   }
 
@@ -448,7 +454,11 @@ export class BlockchainManager {
     minBalancePerAddress: string,
     batchSize: number = 50
   ): Promise<void> {
-    return this.pilots.fundAddresses(addresses, minBalancePerAddress, batchSize);
+    return this.pilots.fundAddresses(
+      addresses,
+      minBalancePerAddress,
+      batchSize
+    );
   }
 
   public async isPilot(pilotAddress: string): Promise<boolean> {
@@ -486,6 +496,10 @@ export class BlockchainManager {
     return this.staking.canStake(sectorId);
   }
 
+  public async getSectorAirspaceClass(sectorId: string): Promise<number> {
+    return this.sectors.getSectorAirspaceClass(sectorId);
+  }
+
   public async stakePilotInSector(
     pilotAddress: string,
     privateKey: string,
@@ -513,11 +527,19 @@ export class BlockchainManager {
     error?: string;
     errorDetails?: string;
   }> {
-    return this.staking.unstakePilotFromSector(pilotAddress, privateKey, sectorId);
+    return this.staking.unstakePilotFromSector(
+      pilotAddress,
+      privateKey,
+      sectorId
+    );
   }
 
   public async hasAuditedStakeModule(playerAddress: string): Promise<boolean> {
     return this.staking.hasAuditedStakeModule(playerAddress);
+  }
+
+  public async hasSectorActiveSlashing(sectorId: string): Promise<boolean> {
+    return this.staking.hasSectorActiveSlashing(sectorId);
   }
 
   // Death Mechanics
@@ -554,7 +576,11 @@ export class BlockchainManager {
     playerAddress: string,
     tipAmount: number
   ): Promise<string> {
-    return this.death.executePilotTip(pilotPrivateKey, playerAddress, tipAmount);
+    return this.death.executePilotTip(
+      pilotPrivateKey,
+      playerAddress,
+      tipAmount
+    );
   }
 
   // Sector Contracts
@@ -601,6 +627,10 @@ export class BlockchainManager {
     return this.sectors.setSectorBaseType(sectorId, baseType);
   }
 
+  public async isChapter4Visible(): Promise<boolean> {
+    return this.sectors.isChapter4Visible();
+  }
+
   public async isChapter5Visible(playerAddress: string): Promise<boolean> {
     return this.sectors.isChapter5Visible(playerAddress);
   }
@@ -614,7 +644,10 @@ export class BlockchainManager {
     pilotAddress: string,
     playerAddress: string
   ): Promise<boolean> {
-    return this.credentials.hasPilotMintedFromPlayer(pilotAddress, playerAddress);
+    return this.credentials.hasPilotMintedFromPlayer(
+      pilotAddress,
+      playerAddress
+    );
   }
 
   public async getCredentialAddress(
@@ -658,7 +691,11 @@ export class BlockchainManager {
     return this.fuel.getFuelTokenBalance(fuelAddress, holderAddress);
   }
 
-  public async buyFuelTokens(fromPilot: any, fuelAddress: string, amount: bigint) {
+  public async buyFuelTokens(
+    fromPilot: any,
+    fuelAddress: string,
+    amount: bigint
+  ) {
     return this.fuel.buyFuelTokens(fromPilot, fuelAddress, amount);
   }
 
@@ -666,8 +703,10 @@ export class BlockchainManager {
     return this.fuel.callUpgrade(fromPilot, fuelAddress);
   }
 
-  public async redeemFuelToken(fromPilot: any, fuelAddress: string): Promise<void> {
+  public async redeemFuelToken(
+    fromPilot: any,
+    fuelAddress: string
+  ): Promise<void> {
     return this.fuel.redeemFuelToken(fromPilot, fuelAddress);
   }
 }
-

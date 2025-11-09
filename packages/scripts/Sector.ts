@@ -28,14 +28,14 @@ export class Sector {
   public ships: Map<string, Ship> = new Map();
   public events: SectorEvent[] = [];
   public subscribers: Set<WebSocket> = new Set();
-  
+
   private rng: () => number;
   private deterministicDice: DeterministicDice | null = null;
   private currentEntropy: string | null = null;
   private lastUpdate: number = Date.now();
   private debugMode: boolean;
   private gameLoopCounter: number = 0;
-  
+
   private characterManager: CharacterManager;
   private pilotManager: PilotManager;
   private blockchainManager: BlockchainManager;
@@ -85,6 +85,7 @@ export class Sector {
     this.targeting = new SectorTargetingManager(
       blockchainManager,
       id,
+      characterManager,
       debugMode
     );
 
@@ -187,9 +188,24 @@ export class Sector {
       this.gameLoopCounter,
       this.lastUpdate,
       this.refueling.shouldShipRefuel.bind(this.refueling),
-      (ship) => this.refueling.initiateRefueling(ship, this.gameLoopCounter, this.broadcastEvent.bind(this)),
-      (ship) => this.refueling.completeRefueling(ship, this.assignTarget.bind(this), this.broadcastEvent.bind(this)),
-      (ship, score) => this.tipping.handlePilotTipping(ship, score, this.broadcastEvent.bind(this)),
+      (ship) =>
+        this.refueling.initiateRefueling(
+          ship,
+          this.gameLoopCounter,
+          this.broadcastEvent.bind(this)
+        ),
+      (ship) =>
+        this.refueling.completeRefueling(
+          ship,
+          this.assignTarget.bind(this),
+          this.broadcastEvent.bind(this)
+        ),
+      (ship, score) =>
+        this.tipping.handlePilotTipping(
+          ship,
+          score,
+          this.broadcastEvent.bind(this)
+        ),
       this.broadcastEvent.bind(this),
       this.getRandom.bind(this)
     );
@@ -271,7 +287,12 @@ export class Sector {
       reason,
       forceRetarget,
       this.refueling.shouldShipRefuel.bind(this.refueling),
-      (ship) => this.refueling.initiateRefueling(ship, this.gameLoopCounter, this.broadcastEvent.bind(this)),
+      (ship) =>
+        this.refueling.initiateRefueling(
+          ship,
+          this.gameLoopCounter,
+          this.broadcastEvent.bind(this)
+        ),
       this.broadcastEvent.bind(this)
     );
   }
@@ -414,10 +435,7 @@ export class Sector {
   }
 
   private notifyWaitingShips(): void {
-    this.targeting.notifyWaitingShips(
-      this.ships,
-      this.assignTarget.bind(this)
-    );
+    this.targeting.notifyWaitingShips(this.ships, this.assignTarget.bind(this));
   }
 
   private notifyShipsAboutCargoTarget(): void {

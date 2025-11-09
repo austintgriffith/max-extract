@@ -221,9 +221,19 @@ export const Chapter3 = () => {
               Once your credential contract is audited and working, pilots can start minting credentials to access your
               station.
             </p>
-            <p>
+            <p className="mb-3">
               Each credential mint earns you <strong>2 points</strong>, and pilots will need valid credentials to land
               at your station and interact with your contracts.
+            </p>
+            <p className="font-semibold text-success mb-2">🛫 Airspace Upgrade: Class 1 Unlocked!</p>
+            <p className="mb-3">
+              Your station automatically upgrades to <strong>Class 1 airspace</strong> once your credential system is
+              audited. This allows <strong>Ship Models D, E, and F</strong> to get openings to enter your sector.
+            </p>
+            <p className="text-sm opacity-80">
+              Medium-sized vessels (Model D) can now safely navigate your airspace alongside the larger ships. This
+              significantly increases the pool of pilots who can visit your station. All pilots still require killswitch
+              transponders to operate in your sector.
             </p>
           </div>
         </div>

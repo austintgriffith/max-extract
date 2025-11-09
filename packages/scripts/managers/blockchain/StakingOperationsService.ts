@@ -26,7 +26,8 @@ export class StakingOperationsService {
    */
   public async canStake(sectorId: string): Promise<boolean> {
     try {
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
       if (!maxExtractContract) {
         this.debugLog("MaxExtract contract not found for canStake check");
         return false;
@@ -113,7 +114,8 @@ export class StakingOperationsService {
     sectorId: string
   ): Promise<StakeResult> {
     try {
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
       const creditsContract = this.blockchainManager.getContract("Credits");
 
       if (!maxExtractContract || !creditsContract) {
@@ -236,7 +238,8 @@ export class StakingOperationsService {
     sectorId: string
   ): Promise<StakeResult> {
     try {
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
 
       if (!maxExtractContract) {
         return {
@@ -252,7 +255,7 @@ export class StakingOperationsService {
 
       const beforeUnstakeBlock = await publicClient.getBlockNumber();
       const beforeUnstakeTimestamp = new Date().toISOString();
-      
+
       this.debugLog(`Unstaking pilot ${pilotAddress} from sector ${sectorId}`);
       console.log(`🔓 UNSTAKE STARTING:`);
       console.log(`   Pilot: ${pilotAddress}`);
@@ -277,7 +280,7 @@ export class StakingOperationsService {
 
       const afterMinedBlock = await publicClient.getBlockNumber();
       const afterMinedTimestamp = new Date().toISOString();
-      
+
       this.debugLog(
         `Pilot ${pilotAddress} successfully unstaked from sector ${sectorId} (tx: ${unstakeHash})`
       );
@@ -303,7 +306,8 @@ export class StakingOperationsService {
    */
   public async hasAuditedStakeModule(playerAddress: string): Promise<boolean> {
     try {
-      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      const maxExtractContract =
+        this.blockchainManager.getContract("MaxExtract");
       const auditorContract = this.blockchainManager.getContract("Auditor");
 
       if (!maxExtractContract || !auditorContract) {
@@ -370,5 +374,62 @@ export class StakingOperationsService {
       return false;
     }
   }
-}
 
+  /**
+   * Check if a sector has active slashing enabled
+   * Active slashing requires:
+   * 1. Chapter 4 is visible in the game
+   * 2. Sector has an owner
+   * 3. Owner has an audited stake module (audit level 4)
+   */
+  public async hasSectorActiveSlashing(sectorId: string): Promise<boolean> {
+    try {
+      console.log(`⚔️  Checking active slashing for sector ${sectorId}...`);
+
+      // Check if Chapter 4 is visible
+      const isChapter4Visible =
+        await this.blockchainManager.isChapter4Visible();
+      console.log(`⚔️  Chapter 4 visible: ${isChapter4Visible}`);
+
+      if (!isChapter4Visible) {
+        console.log(
+          `⚔️  [Sector ${sectorId}] Active slashing: false (Chapter 4 not visible)`
+        );
+        return false;
+      }
+
+      // Get sector owner
+      const sectorOwner = await this.blockchainManager.getSectorOwner(sectorId);
+      console.log(`⚔️  Sector ${sectorId} owner: ${sectorOwner}`);
+
+      if (
+        !sectorOwner ||
+        sectorOwner === "0x0000000000000000000000000000000000000000"
+      ) {
+        console.log(
+          `⚔️  [Sector ${sectorId}] Active slashing: false (No owner)`
+        );
+        return false;
+      }
+
+      // Check if owner has audited stake module
+      const hasAuditedStake = await this.hasAuditedStakeModule(sectorOwner);
+      console.log(`⚔️  Owner has audited stake module: ${hasAuditedStake}`);
+
+      const result = isChapter4Visible && hasAuditedStake;
+      console.log(
+        `⚔️  [Sector ${sectorId}] Active slashing: ${result} - ${
+          result ? "aggression-based targeting enabled" : "normal targeting"
+        }`
+      );
+
+      return result;
+    } catch (error: any) {
+      this.debugLog(`Failed to check sector active slashing:`, error);
+      console.log(
+        `⚔️  [Sector ${sectorId}] Active slashing check failed: ${error.message}`
+      );
+      return false;
+    }
+  }
+}

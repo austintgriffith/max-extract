@@ -7,6 +7,7 @@ import { Address } from "./scaffold-eth";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { Asteroid, SelectedObjectType, ShipDetails, StationDetails, Vector2D } from "~~/types/sector";
+import { getShipModel } from "~~/utils/shipConstants";
 
 interface SectorInfoBoxProps {
   objectType: SelectedObjectType;
@@ -217,6 +218,40 @@ export const SectorInfoBox = ({
       displayName = "(Pending Audit)";
     }
 
+    // Calculate airspace class based on station progression
+    // Base 1-2 (no about or just about) = Class 0
+    // Base 3 (has credential, no staking) = Class 1
+    // Base 3 (has credential + staking) = Class 2
+    // Base 4+ (upgraded via crowdsale) = Class 3
+    const hasCredential = station.credentialAuditedChapter === 3;
+    const hasStaking = station.stakeAuditedChapter === 4;
+    const hasSale = station.saleAuditedChapter === 5;
+
+    let airspaceClass = 0;
+    let airspaceDescription = "Models E, F only";
+    let airspaceColor = "text-red-400";
+    let transponderReq = "Killswitch transponder required";
+
+    if (hasSale) {
+      // Chapter 5 complete = Class 3 (base 4+)
+      airspaceClass = 3;
+      airspaceDescription = "All models (A-F)";
+      airspaceColor = "text-green-400";
+      transponderReq = "Killswitch + Killstake transponders required";
+    } else if (hasCredential && hasStaking) {
+      // Chapter 3 + 4 = Class 2
+      airspaceClass = 2;
+      airspaceDescription = "Models B, C, D, E, F";
+      airspaceColor = "text-blue-400";
+      transponderReq = "Killswitch + Killstake transponders required";
+    } else if (hasCredential) {
+      // Chapter 3 only = Class 1
+      airspaceClass = 1;
+      airspaceDescription = "Models D, E, F";
+      airspaceColor = "text-yellow-400";
+      transponderReq = "Killswitch transponder required";
+    }
+
     return (
       <>
         <div className="text-lg font-bold text-cyan-400 mb-3 border-b border-cyan-600 pb-2 flex items-center gap-2">
@@ -237,6 +272,14 @@ export const SectorInfoBox = ({
             <div className="font-mono text-yellow-400 text-lg">
               {station.score !== undefined && !isNaN(station.score) ? station.score.toLocaleString() : "0"}
             </div>
+          </div>
+
+          {/* Airspace Class */}
+          <div className="bg-base-100 rounded-lg p-2 border border-gray-700">
+            <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Airspace Classification</div>
+            <div className={`font-mono font-bold ${airspaceColor} text-sm mb-1`}>Class {airspaceClass}</div>
+            <div className="text-gray-500 text-[9px] mb-1">{airspaceDescription}</div>
+            <div className="text-cyan-600 text-[9px] italic">{transponderReq}</div>
           </div>
 
           {/* Registry Contract */}
@@ -338,40 +381,6 @@ export const SectorInfoBox = ({
                   </div>
                 </div>
               )}
-              {station.saleAddress && (
-                <div>
-                  <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
-                    Sale Module
-                    {station.saleAuditedChapter === 5 ? (
-                      <span className="text-green-400">✓</span>
-                    ) : (
-                      <span className="text-yellow-400">⚠️</span>
-                    )}
-                    {station.saleAuditedChapter && (
-                      <span className="text-gray-500 text-[9px] font-normal">
-                        {station.saleAuditedChapter === 5 ? "Ch.5" : `Ch.${station.saleAuditedChapter}`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Address address={station.saleAddress} />
-                    <Link
-                      href={`https://abi.ninja/${station.saleAddress}/${targetNetwork.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:opacity-70 transition-opacity"
-                    >
-                      <Image
-                        src="/abininja.svg"
-                        alt="View on ABI Ninja"
-                        width={24}
-                        height={24}
-                        className="opacity-80"
-                      />
-                    </Link>
-                  </div>
-                </div>
-              )}
               {station.stakeAddress && (
                 <div>
                   <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
@@ -391,6 +400,40 @@ export const SectorInfoBox = ({
                     <Address address={station.stakeAddress} />
                     <Link
                       href={`https://abi.ninja/${station.stakeAddress}/${targetNetwork.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      <Image
+                        src="/abininja.svg"
+                        alt="View on ABI Ninja"
+                        width={24}
+                        height={24}
+                        className="opacity-80"
+                      />
+                    </Link>
+                  </div>
+                </div>
+              )}
+              {station.saleAddress && (
+                <div>
+                  <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
+                    Sale Module
+                    {station.saleAuditedChapter === 5 ? (
+                      <span className="text-green-400">✓</span>
+                    ) : (
+                      <span className="text-yellow-400">⚠️</span>
+                    )}
+                    {station.saleAuditedChapter && (
+                      <span className="text-gray-500 text-[9px] font-normal">
+                        {station.saleAuditedChapter === 5 ? "Ch.5" : `Ch.${station.saleAuditedChapter}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Address address={station.saleAddress} />
+                    <Link
+                      href={`https://abi.ninja/${station.saleAddress}/${targetNetwork.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:opacity-70 transition-opacity"
@@ -463,8 +506,10 @@ export const SectorInfoBox = ({
           </div>
 
           <div>
-            <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Ship Type</div>
-            <div className="font-mono text-purple-400">Class {ship.shipType}</div>
+            <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Ship Model</div>
+            <div className="font-mono text-purple-400">
+              Model {getShipModel(ship.shipType)} <span className="text-gray-500">(Type {ship.shipType})</span>
+            </div>
           </div>
 
           <div>
