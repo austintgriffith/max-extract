@@ -113,28 +113,28 @@ export const useSectorSounds = () => {
     };
 
     // Load UI sounds
-    loadSound("open", "/sounds/open.wav");
-    loadSound("close", "/sounds/close.wav");
+    loadSound("open", "/sounds/open.mp3");
+    loadSound("close", "/sounds/close.mp3");
 
     // Load asteroid sonar sounds (by size)
-    loadSound("sonar1", "/sounds/sonar1.wav");
-    loadSound("sonar2", "/sounds/sonar2.wav");
-    loadSound("sonar3", "/sounds/sonar3.wav");
-    loadSound("sonar4", "/sounds/sonar4.wav");
-    loadSound("sonar5", "/sounds/sonar5.wav");
+    loadSound("sonar1", "/sounds/sonar1.mp3");
+    loadSound("sonar2", "/sounds/sonar2.mp3");
+    loadSound("sonar3", "/sounds/sonar3.mp3");
+    loadSound("sonar4", "/sounds/sonar4.mp3");
+    loadSound("sonar5", "/sounds/sonar5.mp3");
 
     // Load ship spawn sounds (by size)
-    loadSound("ship1", "/sounds/ship1.wav");
-    loadSound("ship2", "/sounds/ship2.wav");
-    loadSound("ship3", "/sounds/ship3.wav");
-    loadSound("ship4", "/sounds/ship4.wav");
-    loadSound("ship5", "/sounds/ship5.wav");
+    loadSound("ship1", "/sounds/ship1.mp3");
+    loadSound("ship2", "/sounds/ship2.mp3");
+    loadSound("ship3", "/sounds/ship3.mp3");
+    loadSound("ship4", "/sounds/ship4.mp3");
+    loadSound("ship5", "/sounds/ship5.mp3");
 
     // Load mining drill sounds
-    loadSound("drill1", "/sounds/drill1.wav");
-    loadSound("drill2", "/sounds/drill2.wav");
-    loadSound("drill3", "/sounds/drill3.wav");
-    loadSound("drill4", "/sounds/drill4.wav");
+    loadSound("drill1", "/sounds/drill1.mp3");
+    loadSound("drill2", "/sounds/drill2.mp3");
+    loadSound("drill3", "/sounds/drill3.mp3");
+    loadSound("drill4", "/sounds/drill4.mp3");
 
     // Load explosion sounds (by asteroid size)
     loadSound("explode1", "/sounds/explode1.mp3");
@@ -148,15 +148,15 @@ export const useSectorSounds = () => {
     loadSound("blip", "/sounds/blip.mp3");
 
     // Load station rebroadcast sound
-    loadSound("accept", "/sounds/accept.wav");
+    loadSound("accept", "/sounds/accept.mp3");
 
     // Load combat sounds
-    loadSound("blast1", "/sounds/blast1.wav");
-    loadSound("blast2", "/sounds/blast2.wav");
-    loadSound("whipsplat", "/sounds/whipsplat.wav");
-    loadSound("death1", "/sounds/death1.wav");
-    loadSound("death2", "/sounds/death2.wav");
-    loadSound("death3", "/sounds/death3.wav");
+    loadSound("blast1", "/sounds/blast1.mp3");
+    loadSound("blast2", "/sounds/blast2.mp3");
+    loadSound("whipsplat", "/sounds/whipsplat.mp3");
+    loadSound("death1", "/sounds/death1.mp3");
+    loadSound("death2", "/sounds/death2.mp3");
+    loadSound("death3", "/sounds/death3.mp3");
 
     // Load station upgrade sounds
     loadSound("upgrade1", "/sounds/upgrade1.mp3"); // base1 -> base2
@@ -164,17 +164,17 @@ export const useSectorSounds = () => {
     loadSound("upgrade3", "/sounds/upgrade3.mp3"); // base3 -> base4
 
     // Load points/tip sounds
-    loadSound("points1", "/sounds/points1.wav"); // Smallest tip
-    loadSound("points2", "/sounds/points2.wav");
-    loadSound("points3", "/sounds/points3.wav");
-    loadSound("points4", "/sounds/points4.wav");
-    loadSound("points5", "/sounds/points5.wav"); // Largest tip
-    loadSound("pointsX", "/sounds/pointsX.wav"); // Extra large tip
+    loadSound("points1", "/sounds/points1.mp3"); // Smallest tip
+    loadSound("points2", "/sounds/points2.mp3");
+    loadSound("points3", "/sounds/points3.mp3");
+    loadSound("points4", "/sounds/points4.mp3");
+    loadSound("points5", "/sounds/points5.mp3"); // Largest tip
+    loadSound("pointsX", "/sounds/pointsX.mp3"); // Extra large tip
 
     // Future sounds can be loaded here as they become available:
-    // loadSound("combat", "/sounds/combat.wav");
-    // loadSound("exit", "/sounds/exit.wav");
-    // loadSound("tip", "/sounds/tip.wav");
+    // loadSound("combat", "/sounds/combat.mp3");
+    // loadSound("exit", "/sounds/exit.mp3");
+    // loadSound("tip", "/sounds/tip.mp3");
 
     return () => {
       // Cleanup: pause and remove all audio elements
