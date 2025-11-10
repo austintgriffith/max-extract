@@ -40,17 +40,38 @@ export class SectorTargetingManager {
     const hasActiveSlashing =
       await this.blockchainManager.hasSectorActiveSlashing(this.sectorId);
 
+    // Count potential targets for debugging
+    let fullCargoShipsCount = 0;
+    let eligibleTargetsCount = 0;
+    let unreachableTargetsCount = 0;
+
     for (const [id, ship] of ships) {
-      if (
-        id === attackerShip.id ||
-        !ship.fullCargo ||
-        ship.state !== "exiting"
-      ) {
+      // Skip self
+      if (id === attackerShip.id) {
         continue;
       }
 
-      // If sector has active slashing, use aggression-based targeting
+      // Skip ships without full cargo
+      if (!ship.fullCargo) {
+        continue;
+      }
+
+      fullCargoShipsCount++;
+      this.debugLog(
+        `[${attackerShip.pilotName}] Checking full cargo ship: ${ship.pilotName} (state: ${ship.state}, cargo: ${ship.currentCargo})`
+      );
+
+      // BEFORE Chapter 4: Target any full cargo ship (flying or exiting) - pirates are aggressive
+      // AFTER Chapter 4: Only target exiting ships + apply aggression check
       if (hasActiveSlashing) {
+        // Chapter 4+: Only target ships that are exiting
+        if (ship.state !== "exiting") {
+          this.debugLog(
+            `[${attackerShip.pilotName}] Skipping ${ship.pilotName} - not exiting (Chapter 4+)`
+          );
+          continue;
+        }
+
         // Get attacker pilot's character to check aggression
         const attackerCharacter = this.characterManager.getCharacter(
           attackerShip.pilotAddress
@@ -72,7 +93,21 @@ export class SectorTargetingManager {
             );
           }
         }
+      } else {
+        // BEFORE Chapter 4: Target any full cargo ship that is flying or exiting
+        if (ship.state !== "flying" && ship.state !== "exiting") {
+          this.debugLog(
+            `[${attackerShip.pilotName}] Skipping ${ship.pilotName} - state is ${ship.state} (not flying/exiting)`
+          );
+          continue;
+        }
+        // No aggression check - all ships are pirates before Chapter 4
+        console.log(
+          `⚔️  [Pre-Chapter 4] ${attackerShip.pilotName} considering full cargo ship: ${ship.pilotName} (state: ${ship.state}, cargo: ${ship.currentCargo})`
+        );
       }
+
+      eligibleTargetsCount++;
 
       if (this.canShipReachShip(attackerPos, ship, attackerShip, ships)) {
         const score = this.calculateShipTargetScore(
@@ -82,11 +117,27 @@ export class SectorTargetingManager {
           ships
         );
 
+        this.debugLog(
+          `[${attackerShip.pilotName}] Can reach ${ship.pilotName} - score: ${score.toFixed(2)}`
+        );
+
         if (score > bestScore) {
           bestScore = score;
           bestId = id;
         }
+      } else {
+        unreachableTargetsCount++;
+        this.debugLog(
+          `[${attackerShip.pilotName}] Cannot reach ${ship.pilotName} (too far or will escape)`
+        );
       }
+    }
+
+    // Log summary
+    if (fullCargoShipsCount > 0 || eligibleTargetsCount > 0) {
+      console.log(
+        `🎯 [${attackerShip.pilotName}] Target scan: ${fullCargoShipsCount} full ships, ${eligibleTargetsCount} eligible, ${unreachableTargetsCount} unreachable → ${bestId ? `TARGETING ${ships.get(bestId)?.pilotName}` : "NO TARGET"}`
+      );
     }
 
     return bestId;
@@ -302,8 +353,8 @@ export class SectorTargetingManager {
     initiateRefueling: (ship: Ship) => void,
     broadcastEvent: (event: any) => void
   ): Promise<void> {
-    // Skip if already refueling
-    if (ship.state === "refueling") {
+    // Skip if already refueling or exiting
+    if (ship.state === "refueling" || ship.state === "exiting") {
       return;
     }
 
@@ -336,6 +387,11 @@ export class SectorTargetingManager {
     if (targetShipId && targetShipId !== currentShipTarget) {
       const targetShip = ships.get(targetShipId);
       if (targetShip) {
+        // Double-check state before modifying - it may have changed during async operations
+        if (ship.state === "exiting" || ship.state === "refueling") {
+          return;
+        }
+        
         ship.targetAsteroidId = null;
         ship.targetShipId = targetShipId;
 
@@ -361,6 +417,9 @@ export class SectorTargetingManager {
             targetShipId: targetShipId,
             state: ship.state,
             fuel: ship.fuel,
+            fullCargo: ship.fullCargo,
+            currentCargo: ship.currentCargo,
+            score: ship.score,
           },
         });
         return;
@@ -380,6 +439,11 @@ export class SectorTargetingManager {
     if (targetAsteroidId && targetAsteroidId !== currentAsteroidTarget) {
       const targetAsteroid = asteroids.get(targetAsteroidId);
       if (targetAsteroid) {
+        // Double-check state before modifying - it may have changed during async operations
+        if (ship.state === "exiting" || ship.state === "refueling") {
+          return;
+        }
+        
         ship.targetShipId = null;
         ship.targetAsteroidId = targetAsteroidId;
 
@@ -417,6 +481,11 @@ export class SectorTargetingManager {
     }
 
     // PRIORITY 3: No targets - fly to center
+    // Double-check state before modifying - it may have changed during async operations
+    if (ship.state === "exiting" || ship.state === "refueling") {
+      return;
+    }
+    
     ship.targetAsteroidId = null;
     ship.targetShipId = null;
     ship.velocity = ShipAI.calculateCenterVelocity(currentPos, ship);
@@ -435,6 +504,9 @@ export class SectorTargetingManager {
         targetShipId: null,
         state: ship.state,
         fuel: ship.fuel,
+        fullCargo: ship.fullCargo,
+        currentCargo: ship.currentCargo,
+        score: ship.score,
       },
     });
   }
@@ -459,7 +531,9 @@ export class SectorTargetingManager {
     assignTarget: (ship: Ship, reason: string, force: boolean) => Promise<void>
   ): void {
     for (const [shipId, ship] of ships) {
-      if (ship.state === "flying") {
+      // Only retarget ships that are flying and NOT currently mining
+      // (Ships that are vector-matched to asteroids are about to mine and set exit velocity)
+      if (ship.state === "flying" && !ship.isVectorMatched) {
         assignTarget(ship, "new cargo ship available", true).catch((error) => {
           console.error(`Failed to assign target for ship ${shipId}:`, error);
         });

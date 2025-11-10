@@ -1,16 +1,19 @@
 import { BlockchainManager } from "./blockchain";
 
 /**
- * BaseUpgradeManager handles automatic base upgrades for bases 1-3
+ * BaseUpgradeManager handles automatic base upgrades for bases 1-4
  * based on current module audit status.
  * 
  * Base Requirements:
  * - Base 1: Default starting base
  * - Base 2: About contract in registry modules + audited for Chapter 2
  * - Base 3: Base 2 requirements + Credential contract in registry modules + audited for Chapter 3
- * - Base 4+: Manual upgrades only (via upgradeStation contract function)
+ * - Base 4: Base 3 requirements + Stake contract in registry modules + audited for Chapter 4
+ * - Base 5: Crowdsale completed (permanent, cannot downgrade)
  * 
- * The system can both upgrade AND downgrade if requirements are no longer met.
+ * The system can upgrade AND downgrade for bases 1-3 if requirements are no longer met.
+ * Base 4 can only upgrade to Base 5 (via crowdsale), not downgrade.
+ * Base 5+ is permanent and never downgrades.
  */
 export class BaseUpgradeManager {
   private blockchainManager: BlockchainManager;
@@ -75,13 +78,19 @@ export class BaseUpgradeManager {
     
     this.debugLog(`Sector ${sectorId} current base: ${currentBase}`);
 
-    // If base is 4+, it was manually upgraded - don't touch it
-    if (currentBase >= 4) {
-      this.debugLog(`Sector ${sectorId} is at base ${currentBase} (manual) - skipping automatic management`);
+    // If base is 5+, it's permanent - never downgrade
+    if (currentBase >= 5) {
+      this.debugLog(`Sector ${sectorId} is at base ${currentBase} (permanent) - no changes`);
       return;
     }
 
-    // Calculate target base from current state
+    // If base is 4, only allow upgrade to 5 (via crowdsale), not downgrade
+    if (currentBase >= 4) {
+      this.debugLog(`Sector ${sectorId} is at base ${currentBase} - can only upgrade to 5 via crowdsale`);
+      return;
+    }
+
+    // Calculate target base (1-4) from current state
     let targetBase = 1; // Start at minimum
 
     // Check about contract (Chapter 2)
@@ -119,6 +128,26 @@ export class BaseUpgradeManager {
       ) {
         targetBase = 3;
         this.debugLog(`Sector ${sectorId} qualifies for base 3`);
+      }
+    }
+
+    // Check stake contract (Chapter 4) - only if base 3 requirements met
+    if (targetBase >= 3) {
+      const stakeInfo = await this.blockchainManager.getStakeContractInfo(sectorId);
+      
+      this.debugLog(`Sector ${sectorId} stake info:`, {
+        hasStake: stakeInfo.hasStakeContract,
+        isAudited: stakeInfo.isAudited,
+        chapter: stakeInfo.auditedChapter,
+      });
+
+      if (
+        stakeInfo.hasStakeContract &&
+        stakeInfo.isAudited &&
+        stakeInfo.auditedChapter === 4
+      ) {
+        targetBase = 4;
+        this.debugLog(`Sector ${sectorId} qualifies for base 4`);
       }
     }
 

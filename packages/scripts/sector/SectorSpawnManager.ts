@@ -497,6 +497,7 @@ export class SectorSpawnManager {
       isVectorMatched: false,
       vectorMatchTime: null,
       fullCargo: false,
+      currentCargo: 0,
       lastCourseUpdate: gameLoopCounter,
     };
 
@@ -541,6 +542,8 @@ export class SectorSpawnManager {
         score: ship.score,
         fuel: ship.fuel,
         maxFuel: ship.maxFuel,
+        fullCargo: ship.fullCargo,
+        currentCargo: ship.currentCargo,
       },
     });
   }

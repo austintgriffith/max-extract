@@ -1,13 +1,90 @@
 // Pilot assignment tracking and management
 
-import { PilotAssignment } from "../../types";
+import { PilotAssignment, SECTOR_CONFIG } from "../../types";
+import type { CharacterManager } from "./CharacterManager";
 
 export class PilotManager {
   private pilotAssignments: Map<string, PilotAssignment> = new Map();
   private debugMode: boolean;
+  private characterManager: CharacterManager | null = null;
+  private federationTimer: NodeJS.Timeout | null = null;
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
+  }
+  
+  /**
+   * Set the character manager reference for federation management
+   */
+  public setCharacterManager(characterManager: CharacterManager): void {
+    this.characterManager = characterManager;
+    // Start federation timer
+    this.startFederationTimer();
+  }
+  
+  /**
+   * Start the background timer to release pilots from federation
+   */
+  private startFederationTimer(): void {
+    if (this.federationTimer) {
+      return; // Already running
+    }
+    
+    this.federationTimer = setInterval(() => {
+      this.checkFederationTimers();
+    }, 10000); // Check every 10 seconds
+    
+    this.debugLog("Federation timer started");
+  }
+  
+  /**
+   * Check all pilots in federation and release those who have completed their time
+   */
+  private checkFederationTimers(): void {
+    if (!this.characterManager) {
+      return;
+    }
+    
+    const now = Date.now();
+    const characters = this.characterManager.getAllCharacters();
+    
+    for (const character of characters) {
+      if (character.federationStatus.inFederation) {
+        const elapsed = now - (character.federationStatus.federationEntryTime || 0);
+        
+        if (elapsed >= SECTOR_CONFIG.FEDERATION_LOCK_TIME) {
+          // Release pilot from federation
+          character.federationStatus.inFederation = false;
+          character.federationStatus.federationEntryTime = null;
+          
+          console.log(
+            `🏛️ Pilot ${character.firstname} ${character.lastname} released from Federation Space`
+          );
+        }
+      }
+    }
+  }
+  
+  /**
+   * Enter a pilot into Federation Space
+   */
+  public enterFederation(pilotAddress: string, cargoAmount: number): void {
+    if (!this.characterManager) {
+      console.error("CharacterManager not set in PilotManager");
+      return;
+    }
+    
+    const character = this.characterManager.getCharacterByAddress(pilotAddress);
+    if (!character) {
+      console.error(`Character not found for pilot ${pilotAddress}`);
+      return;
+    }
+    
+    character.federationStatus.inFederation = true;
+    character.federationStatus.federationEntryTime = Date.now();
+    character.federationStatus.cargoSold = cargoAmount;
+    
+    this.debugLog(`Pilot ${character.firstname} ${character.lastname} entered Federation Space with ${cargoAmount} cargo`);
   }
 
   private debugLog(message: string, data?: any): void {
@@ -46,6 +123,15 @@ export class PilotManager {
 
   public isPilotAvailable(pilotAddress: string): boolean {
     const assignment = this.pilotAssignments.get(pilotAddress);
+    
+    // Check if pilot is in federation
+    if (this.characterManager) {
+      const character = this.characterManager.getCharacterByAddress(pilotAddress);
+      if (character && character.federationStatus.inFederation) {
+        return false; // Not available while in federation
+      }
+    }
+    
     return (
       !assignment || (assignment.currentSectorId === null && !assignment.isDead)
     );

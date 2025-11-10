@@ -504,8 +504,10 @@ export class SectorContractsService {
 
   /**
    * Chapter 5: Check if a sector has been upgraded via crowdsale
-   * Returns true if the crowdsale upgrade has been called (baseType >= 4)
-   * Note: Bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 2-3
+   * Returns true if the crowdsale upgrade has been called (baseType >= 5)
+   * Note: Bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 1-3
+   * Base 4 is set when Chapter 4 staking module is in place
+   * Base 5 is set when Chapter 5 crowdsale upgrade() is called
    */
   public async isSectorUpgraded(sectorId: string): Promise<boolean> {
     try {
@@ -522,9 +524,14 @@ export class SectorContractsService {
         [BigInt(sectorId)]
       )) as number;
 
-      // baseType >= 4 means crowdsale upgrade has been called
-      // (bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 2-3)
-      return baseType >= 4;
+      console.log(
+        `   🏗️  Current base type: ${baseType} (crowdsale runs if == 4, skips if >= 5)`
+      );
+
+      // baseType >= 5 means crowdsale upgrade has been called
+      // baseType == 4 means ready for crowdsale (Chapter 4 complete, Chapter 5 pending)
+      // (bases 1-3 are auto-managed by BaseUpgradeManager for Chapters 1-3)
+      return baseType >= 5;
     } catch (error: any) {
       this.debugLog(`Failed to check sector upgrade status:`, error);
       return false;

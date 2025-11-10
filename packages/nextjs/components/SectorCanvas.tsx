@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { SelectionIndicator } from "./SelectionIndicator";
 import { Starfield } from "./Starfield";
+import { useSectorSounds } from "~~/hooks/useSectorSounds";
 import { Asteroid, Particle, SECTOR_CONFIG, SectorSnapshot, SelectedObject, Ship, Vector2D } from "~~/types/sector";
 import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS } from "~~/utils/shipConstants";
 
@@ -17,6 +18,7 @@ interface SectorCanvasProps {
   onObjectSelect: (object: SelectedObject | null) => void;
   infoBoxPosition: Vector2D | null;
   baseType?: number;
+  soundEnabled?: boolean;
 }
 
 // Utility functions
@@ -50,6 +52,7 @@ export const SectorCanvas = ({
   onObjectSelect,
   infoBoxPosition,
   baseType = 1,
+  soundEnabled = true,
 }: SectorCanvasProps) => {
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const baseCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -77,6 +80,9 @@ export const SectorCanvas = ({
     scrap3: null,
     scrap4: null,
   });
+
+  // Sound hook for sector sounds
+  const { playSound } = useSectorSounds();
 
   // Handle canvas click for object selection
   const handleCanvasClick = useCallback(
@@ -110,6 +116,11 @@ export const SectorCanvas = ({
       const stationDistance = Math.sqrt((sectorX - stationX) ** 2 + (sectorY - stationY) ** 2);
 
       if (stationDistance <= stationRadius / scale) {
+        // Play open sound when station is clicked
+        if (soundEnabled) {
+          playSound("open", 0.15);
+        }
+
         onObjectSelect({
           type: "station",
           id: "station",
@@ -126,6 +137,11 @@ export const SectorCanvas = ({
         const distance = Math.sqrt((sectorX - pos.x) ** 2 + (sectorY - pos.y) ** 2);
 
         if (distance <= shipSize) {
+          // Play open sound when ship is clicked
+          if (soundEnabled) {
+            playSound("open", 0.15);
+          }
+
           onObjectSelect({
             type: "ship",
             id: ship.id,
@@ -143,6 +159,11 @@ export const SectorCanvas = ({
         const distance = Math.sqrt((sectorX - pos.x) ** 2 + (sectorY - pos.y) ** 2);
 
         if (distance <= asteroidRadius) {
+          // Play open sound when asteroid is clicked
+          if (soundEnabled) {
+            playSound("open", 0.15);
+          }
+
           onObjectSelect({
             type: "asteroid",
             id: asteroid.id,
@@ -156,7 +177,7 @@ export const SectorCanvas = ({
       // No object clicked, clear selection
       onObjectSelect(null);
     },
-    [sectorData, onObjectSelect, baseType],
+    [sectorData, onObjectSelect, baseType, playSound, soundEnabled],
   );
 
   // Load ship images (1-12)
@@ -409,18 +430,19 @@ export const SectorCanvas = ({
 
     // Draw explosion particles (scraps) - after asteroids, before ships
     particles.forEach(particle => {
-      const pos = calculateParticlePosition(particle, currentTime);
       const age = currentTime - particle.spawnTime;
       const ageRatio = age / particle.lifetime;
 
-      // Only draw if within bounds and still alive
-      if (
-        ageRatio < 1 &&
-        pos.x >= -500 &&
-        pos.x <= SECTOR_CONFIG.WIDTH + 500 &&
-        pos.y >= -500 &&
-        pos.y <= SECTOR_CONFIG.HEIGHT + 500
-      ) {
+      // Early exit: skip expired or not-yet-started particles (performance optimization)
+      if (age < 0 || ageRatio >= 1) {
+        return;
+      }
+
+      // Optimization: ping particles don't move (velocity is 0), so skip position calculation
+      const pos = particle.pingEffect ? particle.position : calculateParticlePosition(particle, currentTime);
+
+      // Only draw if within bounds
+      if (pos.x >= -500 && pos.x <= SECTOR_CONFIG.WIDTH + 500 && pos.y >= -500 && pos.y <= SECTOR_CONFIG.HEIGHT + 500) {
         ctx.save();
         ctx.translate(pos.x * scale, pos.y * scale);
 
@@ -428,8 +450,21 @@ export const SectorCanvas = ({
         const alpha = 1 - ageRatio;
         ctx.globalAlpha = alpha;
 
-        // Check if this is a scrap particle
-        if (particle.scrapType && scrapImagesRef.current[particle.scrapType]) {
+        // Check if this is a ping effect particle
+        if (particle.pingEffect) {
+          // Draw expanding ping ring (sonar effect)
+          const customExpansionSpeed = particle.expansionSpeed || 30; // Use custom speed if provided
+          const expansionFactor = 1 + ageRatio * customExpansionSpeed;
+          const ringRadius = particle.size * scale * expansionFactor;
+          const thicknessMultiplier = particle.pingThickness || 1.0;
+          const lineWidth = Math.max(1, 5 * scale * thicknessMultiplier * (1 - ageRatio)); // Variable thickness
+
+          ctx.strokeStyle = particle.color;
+          ctx.lineWidth = lineWidth;
+          ctx.beginPath();
+          ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (particle.scrapType && scrapImagesRef.current[particle.scrapType]) {
           // Draw scrap PNG image - make visually larger
           const scrapImage = scrapImagesRef.current[particle.scrapType];
           const scrapSize = particle.size * scale * 2.0; // Double the size for better visibility
@@ -480,7 +515,7 @@ export const SectorCanvas = ({
           const target = sectorData.asteroids[ship.targetAsteroidId];
           const targetPos = calculatePosition(target, currentTime);
 
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+          ctx.strokeStyle = "rgba(255, 255, 0, 0.35)";
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(0, 0); // From ship position (already translated)
@@ -488,7 +523,7 @@ export const SectorCanvas = ({
           ctx.stroke();
 
           // Draw a small circle at the target position
-          ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+          ctx.fillStyle = "rgba(255, 255, 0, 0.5)";
           ctx.beginPath();
           ctx.arc((targetPos.x - pos.x) * scale, (targetPos.y - pos.y) * scale, 3, 0, Math.PI * 2);
           ctx.fill();

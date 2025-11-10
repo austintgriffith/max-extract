@@ -1,18 +1,20 @@
-import { Vector2D, Asteroid, Ship, SECTOR_CONFIG } from "../types";
+import { Vector2D, Asteroid, Ship, SECTOR_CONFIG, getCargoCapacity } from "../types";
 import { PositionUtils } from "./PositionUtils";
 
 export class ShipAI {
   /**
-   * Calculate ship speed based on cargo status - ships with full cargo move slower
-   * @param ship The ship to calculate speed for
-   * @returns The adjusted speed for the ship
+   * Get ship speed based on cargo fill percentage
+   * Speed scales from 100% (empty) to 50% (full) - makes full ships slower but not helpless
    */
   static getShipSpeed(ship: Ship): number {
-    if (ship.fullCargo) {
-      return SECTOR_CONFIG.SHIP_SPEED * SECTOR_CONFIG.CARGO_SPEED_MULTIPLIER; // Reduced speed when carrying cargo
-    }
-
-    return SECTOR_CONFIG.SHIP_SPEED; // Full speed when no cargo
+    // Calculate fill percentage (0 to 1)
+    const maxCapacity = getCargoCapacity(ship.shipType);
+    const fillPercentage = Math.min(1, ship.currentCargo / maxCapacity);
+    
+    // Speed multiplier ranges from 1.0 (empty) to 0.5 (full) - half speed when full
+    const speedMultiplier = 1.0 - (0.5 * fillPercentage);
+    
+    return SECTOR_CONFIG.SHIP_SPEED * speedMultiplier;
   }
 
   /**

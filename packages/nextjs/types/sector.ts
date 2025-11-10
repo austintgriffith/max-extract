@@ -36,6 +36,7 @@ export interface Ship {
   isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
   vectorMatchTime: number | null; // When the vector matching started
   fullCargo: boolean; // Flag to indicate if ship has mined cargo and should move slower
+  currentCargo: number; // Actual cargo amount (used for capacity-based mechanics)
 }
 
 export interface SectorSnapshot {
@@ -165,6 +166,10 @@ export interface Particle {
   size: number;
   color: string; // Keep for backward compatibility
   scrapType?: ScrapType; // New field for scrap particles
+  pingEffect?: boolean; // New field for ping/sonar effects
+  pingThickness?: number; // Thickness multiplier for ping rings
+  isRebroadcast?: boolean; // True if this is a station rebroadcast (don't retrigger)
+  expansionSpeed?: number; // Custom expansion speed multiplier (default: 30)
   spawnTime: number;
   lifetime: number; // milliseconds
 }
@@ -177,7 +182,18 @@ export const SECTOR_CONFIG = {
   PADDING: 5, // Huge padding to see ships exiting way beyond boundaries
   EXIT_REMOVAL_BUFFER: 5, // Buffer for when entities are actually removed from the game
   REFUEL_ARRIVAL_DISTANCE: 50, // Distance at which ships can refuel at the station
+  FEDERATION_LOCK_TIME: 180000, // 3 minutes in milliseconds
+  CARGO_PAYMENT_RATE: 5, // Credits per cargo unit
 };
+
+/**
+ * Calculate cargo capacity based on ship type (1-12)
+ * Formula: 20 + (shipType * 25)
+ * Range: 45 (type 1) to 320 (type 12)
+ */
+export function getCargoCapacity(shipType: number): number {
+  return 20 + shipType * 25;
+}
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
@@ -202,6 +218,12 @@ export interface PilotDeath {
   killedBy: string | null;
 }
 
+export interface FederationStatus {
+  inFederation: boolean;
+  federationEntryTime: number | null;
+  cargoSold: number;
+}
+
 export interface Pilot {
   address: string;
   name: string;
@@ -211,6 +233,7 @@ export interface Pilot {
   stats: PilotStats;
   assignment: PilotAssignment;
   death: PilotDeath;
+  federationStatus: FederationStatus;
   isAvailable: boolean;
   ethBalance: string;
   credits: string; // Credits balance (as string for large numbers)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useReadContract } from "wagmi";
@@ -13,7 +13,8 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticleCleanup } from "~~/hooks/useParticleCleanup";
 import { useSectorData } from "~~/hooks/useSectorData";
 import { useSectorOwner } from "~~/hooks/useSectorOwner";
-import { useSectorWebSocket } from "~~/hooks/useSectorWebSocket";
+import { useSectorSounds } from "~~/hooks/useSectorSounds";
+import { createBaseUpgradeParticles, createPingParticles, useSectorWebSocket } from "~~/hooks/useSectorWebSocket";
 import { useVectorMatching } from "~~/hooks/useVectorMatching";
 import {
   Asteroid,
@@ -32,9 +33,36 @@ const SectorPage = () => {
   const sectorId = params?.sectorId as string;
   const [particles, setParticles] = useState<Particle[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [showGrid, setShowGrid] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [showTargeting, setShowTargeting] = useState(false);
+
+  // Initialize preferences from localStorage with defaults
+  const [showGrid, setShowGrid] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("showGrid");
+      return saved !== null ? JSON.parse(saved) : true; // Default ON
+    }
+    return true;
+  });
+  const [showDebug, setShowDebug] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("showDebug");
+      return saved !== null ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
+  const [showTargeting, setShowTargeting] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("showTargeting");
+      return saved !== null ? JSON.parse(saved) : true; // Default ON
+    }
+    return true;
+  });
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("soundEnabled");
+      return saved !== null ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
 
   // Selection state
   const [selectedObject, setSelectedObject] = useState<SelectedObject | null>(null);
@@ -46,10 +74,241 @@ const SectorPage = () => {
 
   // Custom hooks for data management
   const { sectorData, setSectorData, error } = useSectorData({ sectorId });
+  const {
+    playSound,
+    getSonarForAsteroidSize,
+    getShipSoundForType,
+    getExplosionForAsteroidSize,
+    playDrillSound,
+    stopDrillSound,
+    playRefuelSound,
+    stopRefuelSound,
+    playShipAttackSequence,
+    playShipDestructionSequence,
+    getPointsSoundForTipAmount,
+  } = useSectorSounds();
+
+  // Track which ships are currently mining (to avoid duplicate drill sounds)
+  const miningShipsRef = useRef<Set<string>>(new Set());
+
+  // Track which ships are currently refueling (to avoid duplicate refuel sounds)
+  const refuelingShipsRef = useRef<Set<string>>(new Set());
+
+  // Track previous base type for upgrade sound detection
+  const previousBaseTypeRef = useRef<number | null>(null);
+
+  // Track which ping particles have already triggered a station rebroadcast
+  const rebroadcastedPingsRef = useRef<Set<string>>(new Set());
+
+  // Track when pings were rebroadcast for cleanup (ping ID -> timestamp)
+  const rebroadcastTimestampsRef = useRef<Map<string, number>>(new Map());
+
+  // Track last rebroadcast time for debouncing
+  const lastRebroadcastTimeRef = useRef<number>(0);
+
+  // Callback for asteroid spawn sounds and visual effects
+  const handleAsteroidSpawn = useCallback(
+    (asteroidSize: number, position: Vector2D) => {
+      if (soundEnabled) {
+        const sonarSound = getSonarForAsteroidSize(asteroidSize);
+        playSound(sonarSound, 0.2);
+      }
+      // Create visual ping effect with thickness based on asteroid size
+      // Small asteroids (< 30): thin rings (0.6x)
+      // Medium asteroids (30-60): normal rings (1.0x)
+      // Large asteroids (> 60): thick rings (1.5x)
+      let thickness = 1.0;
+      if (asteroidSize < 30) {
+        thickness = 0.6;
+      } else if (asteroidSize > 60) {
+        thickness = 1.5;
+      }
+      const pingParticles = createPingParticles(position, "rgba(150, 200, 255, 0.35)", thickness);
+      setParticles(prev => {
+        const combined = [...prev, ...pingParticles];
+        // Safety limit: cap at 200 particles
+        return combined.length > 200 ? combined.slice(-200) : combined;
+      });
+    },
+    [playSound, getSonarForAsteroidSize, soundEnabled, setParticles],
+  );
+
+  // Callback for ship spawn sounds and visual effects
+  const handleShipSpawn = useCallback(
+    (shipType: number, position: Vector2D) => {
+      if (soundEnabled) {
+        const shipSound = getShipSoundForType(shipType);
+        playSound(shipSound, 0.2);
+      }
+      // Create visual ping effect with thickness based on ship type
+      // Ships 1-4: thin rings (0.6x)
+      // Ships 5-8: normal rings (1.0x)
+      // Ships 9-12: thick rings (1.4x)
+      let thickness = 1.0;
+      if (shipType <= 4) {
+        thickness = 0.6;
+      } else if (shipType >= 9) {
+        thickness = 1.4;
+      }
+      const pingParticles = createPingParticles(position, "rgba(100, 255, 150, 0.35)", thickness);
+      setParticles(prev => {
+        const combined = [...prev, ...pingParticles];
+        // Safety limit: cap at 200 particles
+        return combined.length > 200 ? combined.slice(-200) : combined;
+      });
+    },
+    [playSound, getShipSoundForType, soundEnabled, setParticles],
+  );
+
+  // Store sectorData in a ref so we can access it without causing re-renders
+  const sectorDataRef = useRef(sectorData);
+  useEffect(() => {
+    sectorDataRef.current = sectorData;
+  }, [sectorData]);
+
+  // Callback for vector match (mining or refueling) sounds
+  const handleVectorMatched = useCallback(
+    (shipId: string) => {
+      // Check if the ship is targeting an asteroid (mining) or the station (refueling)
+      const currentSectorData = sectorDataRef.current;
+      if (currentSectorData?.ships[shipId]) {
+        const ship = currentSectorData.ships[shipId];
+
+        if (ship.targetAsteroidId) {
+          // Ship is mining an asteroid
+          console.log("Ship", shipId, "started mining asteroid", ship.targetAsteroidId);
+          if (!soundEnabled) return;
+
+          // Only play drill sound if we haven't already for this ship
+          if (!miningShipsRef.current.has(shipId)) {
+            console.log("Playing drill sound for new mining session");
+            miningShipsRef.current.add(shipId);
+
+            // Play drill sound using shared audio element
+            playDrillSound(0.5);
+          } else {
+            console.log("Ship already mining - skipping duplicate drill sound");
+          }
+        } else if (ship.targetStationId) {
+          // Ship is refueling at station
+          console.log("Ship", shipId, "started refueling at station");
+          if (!soundEnabled) return;
+
+          // Only play refuel sound if we haven't already for this ship
+          if (!refuelingShipsRef.current.has(shipId)) {
+            console.log("Playing refuel sound for new refueling session");
+            refuelingShipsRef.current.add(shipId);
+
+            // Play refuel sound using shared audio element
+            playRefuelSound(0.5);
+          } else {
+            console.log("Ship already refueling - skipping duplicate refuel sound");
+          }
+        } else {
+          console.log("Ship", shipId, "vector matched but no target");
+        }
+      }
+    },
+    [soundEnabled, playDrillSound, playRefuelSound],
+  );
+
+  // Callback for asteroid depletion (explosion) sounds
+  const handleAsteroidDepleted = useCallback(
+    (asteroidSize: number, asteroidId: string) => {
+      console.log("Asteroid depleted for asteroid:", asteroidId);
+
+      // Clear mining tracking for all ships
+      miningShipsRef.current.clear();
+
+      // STOP the drill sound BEFORE playing explosion
+      console.log("Stopping drill sound NOW");
+      stopDrillSound();
+
+      if (!soundEnabled) return;
+
+      // Play the explosion
+      const explosionSound = getExplosionForAsteroidSize(asteroidSize);
+      playSound(explosionSound, 0.6);
+    },
+    [playSound, stopDrillSound, getExplosionForAsteroidSize, soundEnabled],
+  );
+
+  // Callback for ship retarget (when ship starts flying again)
+  const handleShipRetarget = useCallback(
+    (shipId: string) => {
+      console.log("Ship", shipId, "retargeting (starting to fly)");
+
+      // Check if this ship was refueling and stop the refuel sound
+      if (refuelingShipsRef.current.has(shipId)) {
+        console.log("Stopping refuel sound for ship", shipId);
+        refuelingShipsRef.current.delete(shipId);
+        stopRefuelSound();
+      }
+
+      // Also check if this ship was mining and stop the drill sound
+      if (miningShipsRef.current.has(shipId)) {
+        console.log("Stopping drill sound for ship", shipId);
+        miningShipsRef.current.delete(shipId);
+        stopDrillSound();
+      }
+
+      // Play blip sound for retargeting
+      if (soundEnabled) {
+        playSound("blip", 0.33);
+      }
+    },
+    [stopRefuelSound, stopDrillSound, playSound, soundEnabled],
+  );
+
+  // Callback for ship attack (when ship pattern matches another ship)
+  const handleShipAttack = useCallback(
+    (attackerId: string, victimId: string) => {
+      console.log("Ship", attackerId, "attacking ship", victimId);
+      if (!soundEnabled) return;
+
+      // Play blast1 then blast2 sequence
+      playShipAttackSequence(0.5);
+    },
+    [playShipAttackSequence, soundEnabled],
+  );
+
+  // Callback for ship destruction (when ship is destroyed)
+  const handleShipDestroyed = useCallback(
+    (victimId: string, attackerId: string) => {
+      console.log("Ship", victimId, "destroyed by ship", attackerId);
+      if (!soundEnabled) return;
+
+      // Play whipsplat, then random death sound after 0.5s at 0.7 volume
+      playShipDestructionSequence(0.7);
+    },
+    [playShipDestructionSequence, soundEnabled],
+  );
+
+  // Callback for pilot tip (when pilot tips the player)
+  const handlePilotTip = useCallback(
+    (tipAmount: number, pilotName: string) => {
+      console.log("Pilot", pilotName, "tipped", tipAmount, "points");
+      if (!soundEnabled) return;
+
+      // Get the appropriate sound based on tip amount
+      const pointsSound = getPointsSoundForTipAmount(tipAmount);
+      playSound(pointsSound, 0.35);
+    },
+    [getPointsSoundForTipAmount, playSound, soundEnabled],
+  );
+
   const { connectionStatus, events, wsRef } = useSectorWebSocket({
     sectorId,
     setSectorData,
     setParticles,
+    onAsteroidSpawn: handleAsteroidSpawn,
+    onShipSpawn: handleShipSpawn,
+    onVectorMatched: handleVectorMatched,
+    onAsteroidDepleted: handleAsteroidDepleted,
+    onShipRetarget: handleShipRetarget,
+    onShipAttack: handleShipAttack,
+    onShipDestroyed: handleShipDestroyed,
+    onPilotTip: handlePilotTip,
   });
   const { ownerAddress, score, sectorName, auditStatus, isLoading: ownerLoading } = useSectorOwner(sectorId);
 
@@ -560,13 +819,18 @@ const SectorPage = () => {
 
   // Handle object selection
   const handleObjectSelect = (object: SelectedObject | null) => {
+    // Play close sound when deselecting (closing the UI)
+    if (!object && selectedObject && soundEnabled) {
+      playSound("close", 0.15);
+    }
     setSelectedObject(object);
   };
 
   // Handle outside clicks to deselect
   const handlePageClick = () => {
     if (selectedObject) {
-      setSelectedObject(null);
+      // Use handleObjectSelect to ensure sound is played
+      handleObjectSelect(null);
     }
   };
 
@@ -575,21 +839,40 @@ const SectorPage = () => {
     setAdjustedBoxPosition(newPosition);
   };
 
-  // Keyboard shortcuts for toggling grid, debug, and targeting
+  // Keyboard shortcuts for toggling grid, debug, targeting, and sound
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "g" || e.key === "G") {
-        setShowGrid(prev => !prev);
+        setShowGrid((prev: boolean) => !prev);
       } else if (e.key === "d" || e.key === "D") {
-        setShowDebug(prev => !prev);
+        setShowDebug((prev: boolean) => !prev);
       } else if (e.key === "t" || e.key === "T") {
-        setShowTargeting(prev => !prev);
+        setShowTargeting((prev: boolean) => !prev);
+      } else if (e.key === "s" || e.key === "S") {
+        setSoundEnabled((prev: boolean) => !prev);
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, []);
+
+  // Save preferences to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem("showGrid", JSON.stringify(showGrid));
+  }, [showGrid]);
+
+  useEffect(() => {
+    localStorage.setItem("showDebug", JSON.stringify(showDebug));
+  }, [showDebug]);
+
+  useEffect(() => {
+    localStorage.setItem("showTargeting", JSON.stringify(showTargeting));
+  }, [showTargeting]);
+
+  useEffect(() => {
+    localStorage.setItem("soundEnabled", JSON.stringify(soundEnabled));
+  }, [soundEnabled]);
 
   // Auto-reload functionality when there's an error
   useEffect(() => {
@@ -610,6 +893,187 @@ const SectorPage = () => {
       setCountdown(null);
     }
   }, [error]);
+
+  // Cleanup: Clear mining tracking when component unmounts
+  useEffect(() => {
+    const miningSessions = miningShipsRef.current;
+    return () => {
+      miningSessions.clear();
+    };
+  }, []);
+
+  // Watch for ping waves reaching the station and trigger rebroadcasts
+  useEffect(() => {
+    const stationPos = { x: SECTOR_CONFIG.WIDTH / 2, y: SECTOR_CONFIG.HEIGHT / 2 };
+
+    // Use an interval to continuously check for pings reaching the station
+    // Optimized: interval doesn't recreate on every particle change
+    const checkInterval = setInterval(() => {
+      const currentTime = Date.now();
+
+      // Cleanup old rebroadcast tracking entries (memory leak fix)
+      // Remove entries older than 3 seconds (pings are long gone by then)
+      if (rebroadcastTimestampsRef.current.size > 0) {
+        const expiredIds: string[] = [];
+        rebroadcastTimestampsRef.current.forEach((timestamp, id) => {
+          if (currentTime - timestamp > 3000) {
+            expiredIds.push(id);
+          }
+        });
+        expiredIds.forEach(id => {
+          rebroadcastedPingsRef.current.delete(id);
+          rebroadcastTimestampsRef.current.delete(id);
+        });
+      }
+
+      // Debounce: Only rebroadcast once per second
+      const timeSinceLastRebroadcast = currentTime - lastRebroadcastTimeRef.current;
+      if (timeSinceLastRebroadcast < 1000) {
+        return; // Too soon, skip this check
+      }
+
+      // Get current particles from state (access via closure)
+      particles.forEach(particle => {
+        // Only process original ping particles (not rebroadcasts) that haven't been rebroadcast yet
+        if (!particle.pingEffect || particle.isRebroadcast || rebroadcastedPingsRef.current.has(particle.id)) {
+          return;
+        }
+
+        const age = currentTime - particle.spawnTime;
+        const ageRatio = age / particle.lifetime;
+
+        // Only check if particle has started and is still alive (optimization: skip expired)
+        if (age < 0 || ageRatio >= 1) {
+          return;
+        }
+
+        // Calculate current ring radius (must match the visual expansion in SectorCanvas)
+        const customExpansionSpeed = particle.expansionSpeed || 30;
+        const expansionFactor = 1 + ageRatio * customExpansionSpeed;
+        const ringRadius = particle.size * expansionFactor;
+
+        // Calculate distance from ping origin to station
+        const dx = particle.position.x - stationPos.x;
+        const dy = particle.position.y - stationPos.y;
+        const distanceToStation = Math.sqrt(dx * dx + dy * dy);
+
+        // Check if the expanding ring has reached the station (within a threshold)
+        // Increased threshold to 80 pixels for more reliable detection
+        const threshold = 80;
+        if (Math.abs(ringRadius - distanceToStation) < threshold) {
+          // Mark this ping as rebroadcast with timestamp for cleanup
+          rebroadcastedPingsRef.current.add(particle.id);
+          rebroadcastTimestampsRef.current.set(particle.id, currentTime);
+          lastRebroadcastTimeRef.current = currentTime;
+
+          console.log(
+            `🛰️ Station rebroadcasting ping from ${particle.color.includes("150, 200") ? "asteroid" : "ship"}`,
+          );
+
+          // Create white rebroadcast ping from the station
+          // Station broadcasts: MUCH SLOWER expansion (6 vs 30) but SHORTER lifetime (1000ms vs 2200ms)
+          // This creates a "long-range broadcast" feel - slow moving waves that fade quickly
+          const rebroadcastPings = createPingParticles(
+            stationPos,
+            "rgba(255, 255, 255, 0.4)", // White color for station rebroadcast (more transparent)
+            particle.pingThickness || 1.0, // Use same thickness as original ping
+            true, // Mark as rebroadcast so it doesn't retrigger
+            6, // Much slower expansion speed - only 20% the speed of ships/asteroids (6 vs 30)
+            1000, // Much shorter lifetime - fades quickly (vs 2200ms for ships/asteroids)
+          );
+
+          setParticles(prev => {
+            // Safety limit: cap total particles at 200 to prevent performance issues
+            const combined = [...prev, ...rebroadcastPings];
+            if (combined.length > 200) {
+              // Keep newest particles (at the end of array)
+              return combined.slice(-200);
+            }
+            return combined;
+          });
+
+          // Optional: Play a subtle rebroadcast sound
+          if (soundEnabled) {
+            playSound("accept", 0.1);
+          }
+        }
+      });
+    }, 50); // Check every 50ms for better detection
+
+    return () => clearInterval(checkInterval);
+  }, [particles, soundEnabled, playSound, setParticles]);
+
+  // Watch for base type changes and play upgrade sounds + particles
+  useEffect(() => {
+    if (!baseType) return;
+
+    const currentBaseType = Number(baseType);
+
+    // Initialize previous base type on first render
+    if (previousBaseTypeRef.current === null) {
+      previousBaseTypeRef.current = currentBaseType;
+      return;
+    }
+
+    const previousBaseType = previousBaseTypeRef.current;
+
+    // Detect upgrades and play appropriate sound + create particles
+    if (currentBaseType > previousBaseType) {
+      // Base upgraded!
+      if (previousBaseType === 1 && currentBaseType === 2) {
+        console.log("🎉 Station upgraded from base 1 to base 2!");
+        if (soundEnabled) {
+          playSound("upgrade1", 0.6);
+        }
+        // Create blue magic dust particles at station (center of map)
+        const stationPos = { x: SECTOR_CONFIG.WIDTH / 2, y: SECTOR_CONFIG.HEIGHT / 2 };
+        const upgradeParticles = createBaseUpgradeParticles(stationPos);
+        setParticles(prev => {
+          const combined = [...prev, ...upgradeParticles];
+          return combined.length > 200 ? combined.slice(-200) : combined;
+        });
+      } else if (previousBaseType === 2 && currentBaseType === 3) {
+        console.log("🎉 Station upgraded from base 2 to base 3!");
+        if (soundEnabled) {
+          playSound("upgrade2", 0.6);
+        }
+        // Create blue magic dust particles at station (center of map)
+        const stationPos = { x: SECTOR_CONFIG.WIDTH / 2, y: SECTOR_CONFIG.HEIGHT / 2 };
+        const upgradeParticles = createBaseUpgradeParticles(stationPos);
+        setParticles(prev => {
+          const combined = [...prev, ...upgradeParticles];
+          return combined.length > 200 ? combined.slice(-200) : combined;
+        });
+      } else if (previousBaseType === 3 && currentBaseType === 4) {
+        console.log("🎉 Station upgraded from base 3 to base 4!");
+        if (soundEnabled) {
+          playSound("upgrade3", 0.6);
+        }
+        // Create blue magic dust particles at station (center of map)
+        const stationPos = { x: SECTOR_CONFIG.WIDTH / 2, y: SECTOR_CONFIG.HEIGHT / 2 };
+        const upgradeParticles = createBaseUpgradeParticles(stationPos);
+        setParticles(prev => {
+          const combined = [...prev, ...upgradeParticles];
+          return combined.length > 200 ? combined.slice(-200) : combined;
+        });
+      } else if (previousBaseType === 4 && currentBaseType === 5) {
+        console.log("🎉 Station upgraded from base 4 to base 5! (Crowdsale Complete)");
+        if (soundEnabled) {
+          playSound("upgrade3", 0.6);
+        }
+        // Create blue magic dust particles at station (center of map)
+        const stationPos = { x: SECTOR_CONFIG.WIDTH / 2, y: SECTOR_CONFIG.HEIGHT / 2 };
+        const upgradeParticles = createBaseUpgradeParticles(stationPos);
+        setParticles(prev => {
+          const combined = [...prev, ...upgradeParticles];
+          return combined.length > 200 ? combined.slice(-200) : combined;
+        });
+      }
+    }
+
+    // Update the ref to the current base type
+    previousBaseTypeRef.current = currentBaseType;
+  }, [baseType, soundEnabled, playSound, setParticles]);
 
   if (error) {
     return (
@@ -721,6 +1185,7 @@ const SectorPage = () => {
             onObjectSelect={handleObjectSelect}
             infoBoxPosition={adjustedBoxPosition}
             baseType={baseType ? Number(baseType) : 1}
+            soundEnabled={soundEnabled}
           />
           <div className="text-xs text-center mt-2">
             <span style={{ opacity: showGrid ? 1 : 0.77 }}>
@@ -734,6 +1199,10 @@ const SectorPage = () => {
             <span style={{ opacity: showTargeting ? 1 : 0.77 }}>
               <kbd className="kbd kbd-xs">T</kbd> Targeting
             </span>
+            {" • "}
+            <span style={{ opacity: soundEnabled ? 1 : 0.77 }}>
+              <kbd className="kbd kbd-xs">S</kbd> Sound
+            </span>
           </div>
         </div>
       </div>
@@ -746,7 +1215,7 @@ const SectorPage = () => {
         <SectorInfoBox
           objectType={selectedObject.type}
           position={clickPosition}
-          onClose={() => setSelectedObject(null)}
+          onClose={() => handleObjectSelect(null)}
           data={selectedDetails}
           isLoading={isLoadingDetails}
           onPositionAdjusted={handlePositionAdjusted}

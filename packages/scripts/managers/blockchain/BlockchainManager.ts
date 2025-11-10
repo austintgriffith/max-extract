@@ -583,6 +583,61 @@ export class BlockchainManager {
     );
   }
 
+  /**
+   * Pay pilot from GOD account (for cargo sales)
+   */
+  public async payPilotFromGod(
+    pilotAddress: string,
+    amountInCredits: number
+  ): Promise<string> {
+    const creditsContract = this.getContract("Credits");
+    if (!creditsContract) {
+      throw new Error("Credits contract not found. Run: yarn deploy");
+    }
+
+    const amountInWei = BigInt(amountInCredits) * BigInt(10 ** 18);
+    
+    // Check GOD's Credits balance before attempting transfer
+    try {
+      const godBalance = await this.publicClient.readContract({
+        address: creditsContract.address as `0x${string}`,
+        abi: creditsContract.abi,
+        functionName: "balanceOf",
+        args: [this.godAccount.address],
+      });
+
+      this.debugLog(
+        `GOD Credits balance: ${Number(godBalance) / 1e18} | Attempting to pay: ${amountInCredits}`
+      );
+
+      if (godBalance < amountInWei) {
+        throw new Error(
+          `Insufficient GOD Credits balance. Has: ${
+            Number(godBalance) / 1e18
+          }, needs: ${amountInCredits}`
+        );
+      }
+    } catch (error: any) {
+      // If balance check fails, log but continue (might be contract issue)
+      console.error(`⚠️ Failed to check GOD Credits balance: ${error.message}`);
+    }
+    
+    // GOD account transfers credits to pilot
+    const godAccount = privateKeyToAccount(this.config.godPrivateKey as `0x${string}`);
+    
+    const hash = await this.walletClient.writeContract({
+      address: creditsContract.address as `0x${string}`,
+      abi: creditsContract.abi,
+      functionName: "transfer",
+      args: [pilotAddress as `0x${string}`, amountInWei],
+      account: godAccount,
+      chain: this.getChain(),
+    });
+    
+    await this.waitForTransactionReceipt(hash);
+    return hash;
+  }
+
   // Sector Contracts
   public async getSectorOwner(sectorId: string): Promise<string | null> {
     return this.sectors.getSectorOwner(sectorId);
@@ -677,6 +732,10 @@ export class BlockchainManager {
 
   public async getCredentialContractInfo(sectorId: string) {
     return this.credentials.getCredentialContractInfo(sectorId);
+  }
+
+  public async getStakeContractInfo(sectorId: string) {
+    return this.staking.getStakeContractInfo(sectorId);
   }
 
   // Fuel Operations

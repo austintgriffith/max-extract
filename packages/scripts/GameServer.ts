@@ -6,10 +6,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { Sector } from "./Sector";
 import { SECTOR_CONFIG } from "./types";
-import {
-  BlockchainManager,
-  BlockchainConfig,
-} from "./managers/blockchain";
+import { BlockchainManager, BlockchainConfig } from "./managers/blockchain";
 import { EntropyManager } from "./managers/EntropyManager";
 import { WebSocketManager } from "./managers/WebSocketManager";
 import { RouteManager } from "./managers/RouteManager";
@@ -392,6 +389,22 @@ export class GameServer {
       );
       this.debugLog("WebSocket manager reinitialized");
 
+      // Reinitialize CrowdsaleManager with fresh state
+      this.crowdsaleManager = new CrowdsaleManager(
+        this.blockchainManager,
+        this.characterManager,
+        this.sectors,
+        this.debugMode
+      );
+      this.debugLog("Crowdsale manager reinitialized");
+
+      // Reinitialize BaseUpgradeManager with fresh state
+      this.baseUpgradeManager = new BaseUpgradeManager(
+        this.blockchainManager,
+        this.debugMode
+      );
+      this.debugLog("Base upgrade manager reinitialized");
+
       // Reinitialize Simulation manager
       this.simulationManager = new SimulationManager(
         this.sectors,
@@ -465,7 +478,9 @@ export class GameServer {
 
       // NOTE: Simulation will be started AFTER pilots are added
       // This is triggered by the GameCycleManager callback after initializeCharacters completes
-      console.log("⏳ Simulation will start after pilots are added to contract...");
+      console.log(
+        "⏳ Simulation will start after pilots are added to contract..."
+      );
 
       console.log(
         `✅ Game server restarted successfully with new contracts!\n`
@@ -477,7 +492,7 @@ export class GameServer {
       console.error(`❌ Failed to restart game server: ${error.message}`);
       this.debugLog("Restart error details:", error);
       console.log("⚠️  Attempting to continue with existing state...");
-      
+
       // NOTE: Don't try to start simulation here - it will be started by GameCycleManager
       // after pilots are added to the contract
     }
@@ -631,7 +646,9 @@ export class GameServer {
 
     // NOTE: Simulation loops will be started AFTER pilots are added to contract
     // This is triggered by the GameCycleManager callback after initializeCharacters completes
-    console.log("⏳ Simulation loops will start after pilots are added to contract...");
+    console.log(
+      "⏳ Simulation loops will start after pilots are added to contract..."
+    );
 
     console.log("✅ Server initialization complete\n");
 

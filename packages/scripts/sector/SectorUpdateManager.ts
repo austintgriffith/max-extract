@@ -2,15 +2,12 @@
 
 import type { Sector } from "../Sector";
 import type { Ship, Asteroid, Vector2D } from "../types";
-import { SECTOR_CONFIG } from "../types";
+import { SECTOR_CONFIG, getCargoCapacity } from "../types";
 import { PositionUtils } from "../utils/PositionUtils";
 import { ShipAI } from "../utils/ShipAI";
 
 export class SectorUpdateManager {
-  constructor(
-    private sector: Sector,
-    private debugMode: boolean = false
-  ) {}
+  constructor(private sector: Sector, private debugMode: boolean = false) {}
 
   private debugLog(message: string, data?: any): void {
     if (this.debugMode) {
@@ -132,13 +129,15 @@ export class SectorUpdateManager {
               targetShipId: null,
               state: "exiting",
               fuel: ship.fuel,
+              fullCargo: ship.fullCargo,
+              currentCargo: ship.currentCargo,
+              score: ship.score,
             },
           });
         }
       } else if (ship.state === "flying" && !ship.isVectorMatched) {
         // Recalculate course every N game loops to adjust for moving targets
-        const cyclesSinceLastUpdate =
-          gameLoopCounter - ship.lastCourseUpdate;
+        const cyclesSinceLastUpdate = gameLoopCounter - ship.lastCourseUpdate;
         if (cyclesSinceLastUpdate >= SECTOR_CONFIG.COURSE_RECALC_CYCLES) {
           const currentShipPos = PositionUtils.calculatePosition(
             ship,
@@ -163,7 +162,10 @@ export class SectorUpdateManager {
           }
           // Handle asteroid targeting recalculation
           else if (ship.targetAsteroidId) {
-            const asteroids = (this.sector as any).asteroids as Map<string, Asteroid>;
+            const asteroids = (this.sector as any).asteroids as Map<
+              string,
+              Asteroid
+            >;
             const asteroid = asteroids.get(ship.targetAsteroidId);
             if (asteroid) {
               const interceptResult = ShipAI.calculateInterceptCourse(
@@ -262,11 +264,23 @@ export class SectorUpdateManager {
         // Ship successfully mines the asteroid even though off-screen
         const baseBounty = Math.floor(asteroid.size * 2);
         const randomBonus = Math.floor(getRandom() * asteroid.size);
-        ship.score = baseBounty + randomBonus;
+        const totalYield = baseBounty + randomBonus;
+
+        // Calculate cargo capacity and how much we can actually take
+        const maxCapacity = getCargoCapacity(ship.shipType);
+        const cargoTaken = Math.min(totalYield, maxCapacity);
+        const cargoWasted = totalYield - cargoTaken;
+
+        ship.currentCargo = cargoTaken;
+        ship.score = cargoTaken;
         ship.fullCargo = true;
 
         console.log(
-          `Ship ${ship.id} mined asteroid ${asteroid.id} while drifting off-screen for ${ship.score} points!`
+          `Ship ${ship.id} (capacity ${maxCapacity}) mined asteroid ${
+            asteroid.id
+          } off-screen: took ${cargoTaken}${
+            cargoWasted > 0 ? ` (wasted ${cargoWasted})` : ""
+          }`
         );
 
         // Remove the asteroid since it was mined
@@ -389,16 +403,16 @@ export class SectorUpdateManager {
       // Find ships targeting this deleted asteroid and give them new targets
       for (const [shipId, ship] of ships) {
         if (ship.targetAsteroidId === asteroidId && ship.state === "flying") {
-          assignTarget(
-            ship,
-            "target asteroid drifted off map",
-            true
-          ).catch((error) => {
-            console.error(`Failed to assign target for ship ${shipId}:`, error);
-          });
+          assignTarget(ship, "target asteroid drifted off map", true).catch(
+            (error) => {
+              console.error(
+                `Failed to assign target for ship ${shipId}:`,
+                error
+              );
+            }
+          );
         }
       }
     });
   }
 }
-

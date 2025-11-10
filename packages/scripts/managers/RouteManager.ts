@@ -234,6 +234,7 @@ export class RouteManager {
               deathTime: assignment?.deathTime || null,
               killedBy: assignment?.killedBy || null,
             },
+            federationStatus: character.federationStatus,
             ethBalance: blockchainData?.ethBalance || "0",
             credits: blockchainData?.credits || "0",
             isAvailable: pilotManager.isPilotAvailable(character.publicAddress),

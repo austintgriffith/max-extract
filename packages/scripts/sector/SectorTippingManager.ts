@@ -172,6 +172,30 @@ export class SectorTippingManager {
       this.characterManager.updatePilotFuel(ship.pilotAddress, ship.fuel);
       this.debugLog(`Updated pilot ${ship.pilotName} fuel to ${ship.fuel}%`);
 
+      // Federation Space: If ship has cargo, enter federation and sell it
+      if (ship.currentCargo > 0) {
+        this.debugLog(`Pilot ${ship.pilotName} has ${ship.currentCargo} cargo - entering Federation Space`);
+        
+        // Mark pilot as in federation
+        this.pilotManager.enterFederation(ship.pilotAddress, ship.currentCargo);
+        
+        // GOD pays pilot for cargo (5 credits per unit)
+        const cargoPayment = ship.currentCargo * 5;
+        try {
+          const txHash = await this.blockchainManager.payPilotFromGod(ship.pilotAddress, cargoPayment);
+          console.log(`🏛️ ${ship.pilotName} → Federation: sold ${ship.currentCargo} cargo for ${cargoPayment} credits (tx: ${txHash})`);
+        } catch (error: any) {
+          console.error(`⚠️ Failed to pay pilot ${ship.pilotName} for cargo: ${error.message}`);
+        }
+        
+        // Reset cargo and randomly refuel (between current fuel and 100%)
+        this.characterManager.updatePilotCargo(ship.pilotAddress, 0);
+        const currentFuel = ship.fuel;
+        const randomFuel = currentFuel + Math.random() * (100 - currentFuel);
+        this.characterManager.updatePilotFuel(ship.pilotAddress, randomFuel);
+        this.debugLog(`Pilot ${ship.pilotName} cargo reset to 0, fuel refilled to ${randomFuel.toFixed(1)}% (was ${currentFuel.toFixed(1)}%)`);
+      }
+
       // Calculate enhanced tip amount
       const { tipAmount, aboutInfo } =
         await this.blockchainManager.calculateEnhancedTipAmount(

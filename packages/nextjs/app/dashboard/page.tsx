@@ -8,8 +8,44 @@ import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
 import { usePilotsData } from "~~/hooks/usePilotsData";
-import { Pilot } from "~~/types/sector";
+import { Pilot, SECTOR_CONFIG } from "~~/types/sector";
 import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS, getShipModel } from "~~/utils/shipConstants";
+
+// Federation countdown badge component
+const FederationBadge = ({ entryTime }: { entryTime: number | null }) => {
+  const [timeLeft, setTimeLeft] = useState<string>("");
+
+  useEffect(() => {
+    const updateTimer = () => {
+      if (!entryTime) {
+        setTimeLeft("--");
+        return;
+      }
+
+      const elapsed = Date.now() - entryTime;
+      const remaining = Math.max(0, SECTOR_CONFIG.FEDERATION_LOCK_TIME - elapsed);
+
+      if (remaining === 0) {
+        setTimeLeft("0s");
+        return;
+      }
+
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      setTimeLeft(`${minutes}m ${seconds}s`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [entryTime]);
+
+  return (
+    <span className="badge badge-secondary badge-sm" title="In Federation Space">
+      🏛️ {timeLeft}
+    </span>
+  );
+};
 
 interface PlayerData {
   address: string;
@@ -78,6 +114,8 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
       <td>
         {pilot.death.isDead ? (
           <span className="badge badge-error badge-sm">💀 Dead</span>
+        ) : pilot.federationStatus?.inFederation ? (
+          <FederationBadge entryTime={pilot.federationStatus.federationEntryTime} />
         ) : pilot.assignment.isAssigned && pilot.assignment.currentSectorId ? (
           <Link
             href={`/sector/${pilot.assignment.currentSectorId}`}

@@ -432,4 +432,149 @@ export class StakingOperationsService {
       return false;
     }
   }
+
+  /**
+   * Check if a sector has a valid stake contract in registry modules
+   * Similar to getAboutContractInfo and getCredentialContractInfo
+   */
+  public async getStakeContractInfo(sectorId: string): Promise<{
+    hasStakeContract: boolean;
+    stakeAddress?: string;
+    registryAddress?: string;
+    isAudited?: boolean;
+    auditedChapter?: number;
+    error?: string;
+  }> {
+    try {
+      // Get the registry address for this sector
+      const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
+      if (!maxExtractContract) {
+        return {
+          hasStakeContract: false,
+          error: "MaxExtract contract not found",
+        };
+      }
+
+      const registryAddress = await this.blockchainManager.readContract(
+        maxExtractContract.address,
+        maxExtractContract.abi,
+        "sectors",
+        [BigInt(sectorId)]
+      );
+
+      this.debugLog(
+        `Registry address for sector ${sectorId}: ${registryAddress}`
+      );
+
+      if (
+        !registryAddress ||
+        registryAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        return {
+          hasStakeContract: false,
+          error: "No registry found for sector",
+        };
+      }
+
+      // Get the stake contract address from the registry
+      const publicClient = this.blockchainManager.getPublicClient();
+      
+      let stakeAddress: string;
+      try {
+        stakeAddress = (await publicClient.readContract({
+          address: registryAddress as `0x${string}`,
+          abi: [
+            {
+              inputs: [{ name: "name", type: "string" }],
+              name: "modules",
+              outputs: [{ name: "", type: "address" }],
+              stateMutability: "view",
+              type: "function",
+            },
+          ],
+          functionName: "modules",
+          args: ["stake"],
+        })) as string;
+      } catch (error: any) {
+        this.debugLog(
+          `Failed to call modules("stake") on registry ${registryAddress}:`,
+          error
+        );
+        return {
+          hasStakeContract: false,
+          registryAddress: registryAddress as string,
+          error: "Registry does not have modules function or stake module",
+        };
+      }
+
+      this.debugLog(
+        `Stake address for sector ${sectorId}: ${stakeAddress}`
+      );
+
+      if (
+        !stakeAddress ||
+        stakeAddress === "0x0000000000000000000000000000000000000000"
+      ) {
+        return {
+          hasStakeContract: false,
+          registryAddress: registryAddress as string,
+          error: "No stake contract in registry modules",
+        };
+      }
+
+      // Check if the stake contract is audited for Chapter 4
+      let isAudited = false;
+      let auditedChapter = 0;
+      try {
+        const auditorContract = this.blockchainManager.getContract("Auditor");
+        if (auditorContract) {
+          auditedChapter = (await publicClient.readContract({
+            address: auditorContract.address as `0x${string}`,
+            abi: auditorContract.abi,
+            functionName: "isAudited",
+            args: [stakeAddress as `0x${string}`],
+          })) as number;
+
+          // Stake is audited for Chapter 4
+          isAudited = auditedChapter === 4;
+
+          this.debugLog(
+            `Audit check for stake contract ${stakeAddress}: chapter=${auditedChapter}, isChapter4=${isAudited}`
+          );
+        } else {
+          this.debugLog("Auditor contract not found, skipping audit check");
+        }
+      } catch (error: any) {
+        this.debugLog(
+          `Failed to check audit status for stake contract ${stakeAddress}:`,
+          error
+        );
+        // Continue without audit check - treat as not audited
+      }
+
+      // Stake contract is valid if it exists AND is audited for Chapter 4
+      const hasStakeContract = isAudited;
+
+      this.debugLog(
+        `Stake contract check for sector ${sectorId}: stakeAddress="${stakeAddress}", isAudited=${isAudited}, hasStakeContract=${hasStakeContract}`
+      );
+
+      return {
+        hasStakeContract,
+        stakeAddress,
+        registryAddress: registryAddress as string,
+        isAudited,
+        auditedChapter,
+      };
+    } catch (error: any) {
+      this.debugLog(
+        `Error checking stake contract for sector ${sectorId}:`,
+        error
+      );
+      return {
+        hasStakeContract: false,
+        error: error.message,
+      };
+    }
+  }
 }

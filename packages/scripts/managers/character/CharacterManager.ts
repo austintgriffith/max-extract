@@ -173,6 +173,11 @@ export class CharacterManager {
       credits,
       privateKey,
       publicAddress,
+      federationStatus: {
+        inFederation: false,
+        federationEntryTime: null,
+        cargoSold: 0,
+      },
     };
 
     // Store character using their address as the key
@@ -259,6 +264,26 @@ export class CharacterManager {
         `Warning: Attempted to update fuel for unknown pilot ${address}`
       );
     }
+  }
+
+  /**
+   * Update a pilot's cargo level
+   */
+  public updatePilotCargo(address: string, newCargoLevel: number): void {
+    const character = this.characters.get(address);
+    if (character) {
+      character.cargo = Math.max(0, newCargoLevel);
+      this.debugLog(
+        `Updated pilot ${character.firstname} ${character.lastname} cargo to ${character.cargo}`
+      );
+    }
+  }
+
+  /**
+   * Get all characters
+   */
+  public getAllCharacters(): Character[] {
+    return Array.from(this.characters.values());
   }
 
   /**
@@ -399,6 +424,11 @@ export class CharacterManager {
               : 10000 + Math.floor(Math.random() * 90000),
           privateKey: charData.privateKey as `0x${string}`,
           publicAddress: charData.publicAddress as `0x${string}`,
+          federationStatus: {
+            inFederation: false,
+            federationEntryTime: null,
+            cargoSold: 0,
+          },
         };
         this.characters.set(character.publicAddress, character);
       }
@@ -850,6 +880,37 @@ export class CharacterManager {
         }
       } else {
         console.log(`✅ All pilots already have CREDITS tokens`);
+      }
+
+      // Ensure GOD account has sufficient CREDITS to pay pilots for cargo
+      try {
+        const godAccount = blockchainManager.getGodAccount();
+        const godCredits = await blockchainManager.getCreditsBalance(
+          godAccount.address
+        );
+
+        // GOD should have at least 100 million Credits to pay for cargo
+        const requiredGodCredits = BigInt(100_000_000) * BigInt(10 ** 18);
+
+        if (godCredits < requiredGodCredits) {
+          const creditsToMint = requiredGodCredits - godCredits;
+          console.log(
+            `💰 Minting ${Number(creditsToMint) / 1e18} CREDITS to GOD account for cargo payments...`
+          );
+          await blockchainManager.mintCredits(godAccount.address, creditsToMint);
+          console.log(`✅ GOD account now has ${Number(requiredGodCredits) / 1e18} CREDITS`);
+        } else {
+          console.log(
+            `✅ GOD account already has sufficient CREDITS (${
+              Number(godCredits) / 1e18
+            })`
+          );
+        }
+      } catch (error: any) {
+        console.error(
+          `⚠️  Failed to mint credits to GOD account:`,
+          error.message
+        );
       }
 
       this.debugLog("Successfully processed all character addresses as pilots");

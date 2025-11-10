@@ -1,7 +1,7 @@
 // Ship-to-ship and ship-to-asteroid combat/arrival checking
 
 import type { Ship, Asteroid, Vector2D } from "../types";
-import { SECTOR_CONFIG } from "../types";
+import { SECTOR_CONFIG, getCargoCapacity } from "../types";
 import { PositionUtils } from "../utils/PositionUtils";
 import { ShipAI } from "../utils/ShipAI";
 import type { BlockchainManager } from "../managers/blockchain";
@@ -193,7 +193,12 @@ export class SectorCombatManager {
         `⏳ Executing death transaction for ${targetShip.pilotName}...`
       );
       try {
-        await this.executeDeadMansSwitch(targetShip, attackerShip, currentTime, broadcastEvent);
+        await this.executeDeadMansSwitch(
+          targetShip,
+          attackerShip,
+          currentTime,
+          broadcastEvent
+        );
         console.log(
           `✅ Death transaction completed for ${targetShip.pilotName}`
         );
@@ -252,6 +257,9 @@ export class SectorCombatManager {
           targetShipId: null,
           state: "exiting",
           fuel: attackerShip.fuel,
+          fullCargo: attackerShip.fullCargo,
+          currentCargo: attackerShip.currentCargo,
+          score: attackerShip.score,
         },
       });
     }
@@ -274,14 +282,9 @@ export class SectorCombatManager {
     const asteroid = asteroids.get(ship.targetAsteroidId);
     if (!asteroid) {
       if (!ship.isVectorMatched) {
-        assignTarget(ship, "target asteroid missing", true).catch(
-          (error) => {
-            console.error(
-              `Failed to assign target for ship ${ship.id}:`,
-              error
-            );
-          }
-        );
+        assignTarget(ship, "target asteroid missing", true).catch((error) => {
+          console.error(`Failed to assign target for ship ${ship.id}:`, error);
+        });
       }
       return;
     }
@@ -309,14 +312,26 @@ export class SectorCombatManager {
         return;
       }
 
-      // Mine the asteroid
+      // Mine the asteroid with cargo capacity limit
       const baseBounty = Math.floor(asteroid.size * 2);
       const randomBonus = Math.floor(getRandom() * asteroid.size);
-      ship.score = baseBounty + randomBonus;
-      ship.fullCargo = true;
+      const totalYield = baseBounty + randomBonus;
+
+      // Calculate cargo capacity and how much we can actually take
+      const maxCapacity = getCargoCapacity(ship.shipType);
+      const cargoTaken = Math.min(totalYield, maxCapacity);
+      const cargoWasted = totalYield - cargoTaken;
+
+      ship.currentCargo = cargoTaken;
+      ship.score = cargoTaken;
+      ship.fullCargo = true; // Always set to true when mining
 
       console.log(
-        `Ship ${ship.id} reached asteroid ${asteroid.id} and mined it for ${ship.score} points!`
+        `Ship ${ship.id} (capacity ${maxCapacity}) mined asteroid ${
+          asteroid.id
+        }: took ${cargoTaken}${
+          cargoWasted > 0 ? ` (wasted ${cargoWasted})` : ""
+        }`
       );
 
       asteroids.delete(asteroid.id);
@@ -351,6 +366,9 @@ export class SectorCombatManager {
           targetShipId: null,
           state: "exiting",
           fuel: ship.fuel,
+          fullCargo: ship.fullCargo,
+          currentCargo: ship.currentCargo,
+          score: ship.score,
         },
       });
     }
@@ -401,31 +419,32 @@ export class SectorCombatManager {
         // DEBUG: Check killer's staked status BEFORE attempting slash
         try {
           const publicClient = this.blockchainManager.getPublicClient();
-          const maxExtractContract = this.blockchainManager.getContract("MaxExtract");
-          
+          const maxExtractContract =
+            this.blockchainManager.getContract("MaxExtract");
+
           if (!maxExtractContract) {
             throw new Error("MaxExtract contract not found");
           }
 
           // Get player's sector ID from MaxExtract
-          const sectorIdBigInt = await publicClient.readContract({
+          const sectorIdBigInt = (await publicClient.readContract({
             address: maxExtractContract.address as `0x${string}`,
             abi: maxExtractContract.abi,
             functionName: "playerToSector",
             args: [playerAddress],
-          }) as bigint;
+          })) as bigint;
           const sectorId = sectorIdBigInt.toString();
 
           // Get registry address for this sector
-          const registryAddress = await publicClient.readContract({
+          const registryAddress = (await publicClient.readContract({
             address: maxExtractContract.address as `0x${string}`,
             abi: maxExtractContract.abi,
             functionName: "sectors",
             args: [sectorIdBigInt],
-          }) as string;
+          })) as string;
 
           // Get stake module from registry
-          const stakeContract = await publicClient.readContract({
+          const stakeContract = (await publicClient.readContract({
             address: registryAddress as `0x${string}`,
             abi: [
               {
@@ -438,18 +457,18 @@ export class SectorCombatManager {
             ],
             functionName: "modules",
             args: ["stake"],
-          }) as string;
+          })) as string;
 
           // Get killer's staked balance from MaxExtract
-          const killerStakedBalance = await publicClient.readContract({
+          const killerStakedBalance = (await publicClient.readContract({
             address: maxExtractContract.address as `0x${string}`,
             abi: maxExtractContract.abi,
             functionName: "stakedBalance",
             args: [killerShip.pilotAddress],
-          }) as bigint;
+          })) as bigint;
 
           // Read staked[killer] from Chapter4 contract
-          const isStaked = await publicClient.readContract({
+          const isStaked = (await publicClient.readContract({
             address: stakeContract as `0x${string}`,
             abi: [
               {
@@ -462,13 +481,19 @@ export class SectorCombatManager {
             ],
             functionName: "staked",
             args: [killerShip.pilotAddress],
-          }) as boolean;
+          })) as boolean;
 
           const blockNumber = await publicClient.getBlockNumber();
-          
+
           console.log(`\n🔍 SLASH DEBUG INFO:`);
-          console.log(`   Killer: ${killerShip.pilotAddress} (${killerShip.pilotName})`);
-          console.log(`   Killer's staked balance in MaxExtract: ${killerStakedBalance.toString()} (${Number(killerStakedBalance) / 1e18} CREDITS)`);
+          console.log(
+            `   Killer: ${killerShip.pilotAddress} (${killerShip.pilotName})`
+          );
+          console.log(
+            `   Killer's staked balance in MaxExtract: ${killerStakedBalance.toString()} (${
+              Number(killerStakedBalance) / 1e18
+            } CREDITS)`
+          );
           console.log(`   Killer's staked status in Chapter4: ${isStaked}`);
           console.log(`   Stake contract: ${stakeContract}`);
           console.log(`   Registry: ${registryAddress}`);

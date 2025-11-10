@@ -115,6 +115,9 @@ export class SectorRefuelingManager {
         targetStationId: "station_center",
         state: "refueling",
         fuel: ship.fuel,
+        fullCargo: ship.fullCargo,
+        currentCargo: ship.currentCargo,
+        score: ship.score,
       },
     });
   }
@@ -131,7 +134,9 @@ export class SectorRefuelingManager {
     const currentTime = Date.now();
 
     // Get player address first (needed for fuel token check)
-    const playerAddress = await this.blockchainManager.getSectorOwner(this.sectorId);
+    const playerAddress = await this.blockchainManager.getSectorOwner(
+      this.sectorId
+    );
 
     // Chapter 5: Check if pilot has fuel tokens and redeem one
     if (this.crowdsaleManager && playerAddress) {
@@ -181,7 +186,12 @@ export class SectorRefuelingManager {
 
     // Execute blockchain tip (async, don't wait)
     if (playerAddress) {
-      this.executeRefuelTip(ship, playerAddress, stationName, broadcastEvent).catch((error) => {
+      this.executeRefuelTip(
+        ship,
+        playerAddress,
+        stationName,
+        broadcastEvent
+      ).catch((error) => {
         console.error(
           `Failed to execute refuel tip for pilot ${ship.pilotName}:`,
           error
@@ -259,4 +269,3 @@ export class SectorRefuelingManager {
     }
   }
 }
-

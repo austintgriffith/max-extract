@@ -7,6 +7,14 @@ interface UseSectorWebSocketProps {
   sectorId: string;
   setSectorData: React.Dispatch<React.SetStateAction<SectorSnapshot | null>>;
   setParticles: React.Dispatch<React.SetStateAction<Particle[]>>;
+  onAsteroidSpawn?: (asteroidSize: number, position: Vector2D) => void;
+  onShipSpawn?: (shipType: number, position: Vector2D) => void;
+  onVectorMatched?: (shipId: string) => void;
+  onAsteroidDepleted?: (asteroidSize: number, asteroidId: string) => void;
+  onShipRetarget?: (shipId: string) => void;
+  onShipAttack?: (attackerId: string, victimId: string) => void;
+  onShipDestroyed?: (victimId: string, attackerId: string) => void;
+  onPilotTip?: (tipAmount: number, pilotName: string) => void;
 }
 
 interface UseSectorWebSocketReturn {
@@ -17,13 +25,24 @@ interface UseSectorWebSocketReturn {
 
 // Utility functions for particle creation
 const createExplosionParticles = (asteroidPos: Vector2D, asteroidSize: number): Particle[] => {
-  const particleCount = Math.floor(asteroidSize / 6) + 4; // Fewer particles but they're scraps now
+  // Scale explosion based on asteroid size (more subtle scaling)
+  // Small asteroids (< 30): 0.7x multiplier
+  // Medium asteroids (30-60): 1.0x multiplier (baseline)
+  // Large asteroids (> 60): 1.3x multiplier
+  let sizeMultiplier = 1.0;
+  if (asteroidSize < 30) {
+    sizeMultiplier = 0.7;
+  } else if (asteroidSize > 60) {
+    sizeMultiplier = 1.3;
+  }
+
+  const particleCount = Math.floor((asteroidSize / 5) * sizeMultiplier) + 6; // Fewer particles (was /4 + 8)
   const newParticles: Particle[] = [];
   const scrapTypes: ScrapType[] = ["scrap1", "scrap2", "scrap3", "scrap4"];
 
   for (let i = 0; i < particleCount; i++) {
-    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.8;
-    const speed = 15 + Math.random() * 30; // Slightly slower for more realistic scraps
+    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * (0.9 * sizeMultiplier); // Tighter spread (was 1.2)
+    const speed = (20 + Math.random() * 40) * sizeMultiplier; // More moderate speed (was 30 + 60)
 
     // Randomly select a scrap type
     const scrapType = scrapTypes[Math.floor(Math.random() * scrapTypes.length)];
@@ -35,11 +54,11 @@ const createExplosionParticles = (asteroidPos: Vector2D, asteroidSize: number): 
         x: Math.cos(angle) * speed,
         y: Math.sin(angle) * speed,
       },
-      size: 8 + Math.random() * 12, // Larger scraps (8-20 pixels)
+      size: (7 + Math.random() * 10) * sizeMultiplier, // Smaller scraps (was 10-26, now 7-17 baseline)
       color: "#8B4513", // Keep for fallback, but won't be used with scrap images
       scrapType: scrapType,
       spawnTime: Date.now(),
-      lifetime: 2000 + Math.random() * 1500, // 2-3.5 seconds (longer to see the scraps)
+      lifetime: 2500 + Math.random() * 2000, // Consistent lifetime so all scraps fade at similar rate
     });
   }
 
@@ -90,6 +109,84 @@ const createShipExplosionParticles = (shipPos: Vector2D): Particle[] => {
   return newParticles;
 };
 
+// Create sonar ping particles for spawning ships/asteroids
+export const createPingParticles = (
+  position: Vector2D,
+  color: string = "rgba(100, 200, 255, 0.4)",
+  thickness: number = 1.0,
+  isRebroadcast: boolean = false,
+  expansionSpeed: number = 30,
+  lifetime: number = 2200,
+): Particle[] => {
+  const newParticles: Particle[] = [];
+  const now = Date.now();
+
+  // Create 3 expanding ring waves with slight delays for a ripple effect
+  for (let ring = 0; ring < 3; ring++) {
+    newParticles.push({
+      id: `ping_${now}_${ring}`,
+      position: { ...position },
+      velocity: { x: 0, y: 0 }, // Stationary - expansion happens via size growth in render
+      size: 60, // Even larger starting size for the ring
+      color: color,
+      pingEffect: true,
+      pingThickness: thickness, // Store thickness multiplier
+      isRebroadcast: isRebroadcast, // Mark if this is a station rebroadcast
+      expansionSpeed: expansionSpeed, // Custom expansion speed
+      spawnTime: now + ring * 250, // Stagger rings by 250ms each (even slower ripple)
+      lifetime: lifetime, // Custom lifetime
+    });
+  }
+
+  return newParticles;
+};
+
+// Create magical blue particles for base upgrades
+export const createBaseUpgradeParticles = (stationPos: Vector2D): Particle[] => {
+  const particleCount = 24; // More particles for a celebratory effect
+  const newParticles: Particle[] = [];
+
+  // Main blue magic dust particles - radiating outward
+  for (let i = 0; i < particleCount; i++) {
+    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+    const speed = 20 + Math.random() * 40; // Medium speed for floaty magic effect
+
+    newParticles.push({
+      id: `upgrade_particle_${Date.now()}_${i}`,
+      position: { ...stationPos },
+      velocity: {
+        x: Math.cos(angle) * speed,
+        y: Math.sin(angle) * speed,
+      },
+      size: 4 + Math.random() * 6, // Medium-large particles
+      color: `hsl(${200 + Math.random() * 40}, 85%, ${65 + Math.random() * 25}%)`, // Blue/cyan shades
+      spawnTime: Date.now(),
+      lifetime: 2500 + Math.random() * 1500, // 2.5-4 seconds (longer for magical feel)
+    });
+  }
+
+  // Add sparkles/stars
+  for (let i = 0; i < 12; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 10 + Math.random() * 20;
+
+    newParticles.push({
+      id: `upgrade_sparkle_${Date.now()}_${i}`,
+      position: { ...stationPos },
+      velocity: {
+        x: Math.cos(angle) * speed,
+        y: Math.sin(angle) * speed,
+      },
+      size: 2 + Math.random() * 3, // Small sparkles
+      color: `hsl(${180 + Math.random() * 60}, 100%, 85%)`, // Bright cyan/white sparkles
+      spawnTime: Date.now(),
+      lifetime: 2000 + Math.random() * 1000, // 2-3 seconds
+    });
+  }
+
+  return newParticles;
+};
+
 const calculatePosition = (
   entity: { position: Vector2D; velocity: Vector2D; spawnTime: number },
   currentTime: number,
@@ -105,6 +202,14 @@ export const useSectorWebSocket = ({
   sectorId,
   setSectorData,
   setParticles,
+  onAsteroidSpawn,
+  onShipSpawn,
+  onVectorMatched,
+  onAsteroidDepleted,
+  onShipRetarget,
+  onShipAttack,
+  onShipDestroyed,
+  onPilotTip,
 }: UseSectorWebSocketProps): UseSectorWebSocketReturn => {
   const wsRef = useRef<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
@@ -207,6 +312,10 @@ export const useSectorWebSocket = ({
                 switch (sectorEvent.type) {
                   case "asteroid_spawn":
                     newData.asteroids[sectorEvent.data.id] = sectorEvent.data;
+                    // Notify about asteroid spawn for sound playback and visual effects
+                    if (onAsteroidSpawn && sectorEvent.data.size && sectorEvent.data.position) {
+                      onAsteroidSpawn(sectorEvent.data.size, sectorEvent.data.position);
+                    }
                     break;
                   case "ship_spawn":
                     newData.ships[sectorEvent.data.id] = {
@@ -216,7 +325,12 @@ export const useSectorWebSocket = ({
                       targetShipId: sectorEvent.data.targetShipId || null, // Handle ship targeting
                       targetStationId: sectorEvent.data.targetStationId || null, // Handle station targeting (refueling)
                       fullCargo: sectorEvent.data.fullCargo || false, // Handle cargo status
+                      currentCargo: sectorEvent.data.currentCargo || 0, // Handle current cargo amount
                     };
+                    // Notify about ship spawn for sound playback and visual effects
+                    if (onShipSpawn && sectorEvent.data.shipType && sectorEvent.data.position) {
+                      onShipSpawn(sectorEvent.data.shipType, sectorEvent.data.position);
+                    }
                     break;
                   case "asteroid_depleted":
                     // Create explosion particles at asteroid position before deleting
@@ -225,6 +339,10 @@ export const useSectorWebSocket = ({
                       const asteroidPos = calculatePosition(asteroid, Date.now());
                       const explosionParticles = createExplosionParticles(asteroidPos, asteroid.size);
                       setParticles(prev => [...prev, ...explosionParticles]);
+                      // Notify about asteroid depletion for explosion sound playback
+                      if (onAsteroidDepleted && asteroid.size && sectorEvent.data.asteroidId) {
+                        onAsteroidDepleted(asteroid.size, sectorEvent.data.asteroidId);
+                      }
                     }
                     delete newData.asteroids[sectorEvent.data.asteroidId];
                     break;
@@ -235,6 +353,11 @@ export const useSectorWebSocket = ({
                       const shipPos = sectorEvent.data.victimPosition || calculatePosition(victimShip, Date.now());
                       const explosionParticles = createShipExplosionParticles(shipPos);
                       setParticles(prev => [...prev, ...explosionParticles]);
+
+                      // Notify about ship destruction for sound playback
+                      if (onShipDestroyed && sectorEvent.data.victimId && sectorEvent.data.attackerId) {
+                        onShipDestroyed(sectorEvent.data.victimId, sectorEvent.data.attackerId);
+                      }
                     }
                     delete newData.ships[sectorEvent.data.victimId];
                     break;
@@ -243,7 +366,7 @@ export const useSectorWebSocket = ({
                     delete newData.asteroids[sectorEvent.data.asteroidId];
                     break;
                   case "ship_retarget":
-                    // Ship changed direction/target - update its state including fuel
+                    // Ship changed direction/target - update its state including fuel and cargo
                     if (newData.ships[sectorEvent.data.shipId]) {
                       newData.ships[sectorEvent.data.shipId].position = sectorEvent.data.position;
                       newData.ships[sectorEvent.data.shipId].velocity = sectorEvent.data.velocity;
@@ -255,24 +378,54 @@ export const useSectorWebSocket = ({
                       if (sectorEvent.data.fuel !== undefined) {
                         newData.ships[sectorEvent.data.shipId].fuel = sectorEvent.data.fuel;
                       }
+                      if (sectorEvent.data.fullCargo !== undefined) {
+                        newData.ships[sectorEvent.data.shipId].fullCargo = sectorEvent.data.fullCargo;
+                      }
+                      if (sectorEvent.data.currentCargo !== undefined) {
+                        newData.ships[sectorEvent.data.shipId].currentCargo = sectorEvent.data.currentCargo;
+                      }
+                      if (sectorEvent.data.score !== undefined) {
+                        newData.ships[sectorEvent.data.shipId].score = sectorEvent.data.score;
+                      }
                       // Reset vector matching when ship retargets
                       newData.ships[sectorEvent.data.shipId].isVectorMatched = false;
                       newData.ships[sectorEvent.data.shipId].vectorMatchTime = null;
+
+                      // Notify about ship retarget to stop any sounds (like refueling)
+                      if (onShipRetarget && sectorEvent.data.shipId) {
+                        onShipRetarget(sectorEvent.data.shipId);
+                      }
                     }
                     break;
                   case "ship_vector_matched":
-                    // Ship has matched vector with asteroid (frontend event)
+                    // Ship has matched vector with asteroid or another ship
                     if (newData.ships[sectorEvent.data.shipId]) {
                       newData.ships[sectorEvent.data.shipId].velocity = sectorEvent.data.velocity;
                       newData.ships[sectorEvent.data.shipId].position = sectorEvent.data.position;
                       newData.ships[sectorEvent.data.shipId].spawnTime = sectorEvent.timestamp;
                       newData.ships[sectorEvent.data.shipId].isVectorMatched = true;
                       newData.ships[sectorEvent.data.shipId].vectorMatchTime = sectorEvent.timestamp;
+
+                      // Check if this is a ship-to-ship attack
+                      const ship = newData.ships[sectorEvent.data.shipId];
+                      if (ship.targetShipId && onShipAttack) {
+                        // This is an attack - notify for combat sounds
+                        onShipAttack(sectorEvent.data.shipId, ship.targetShipId);
+                      } else if (onVectorMatched && sectorEvent.data.shipId) {
+                        // This is mining or refueling - notify for those sounds
+                        onVectorMatched(sectorEvent.data.shipId);
+                      }
                     }
                     break;
                   case "ship_exit":
                     // Ship actually left the map → remove it from local state
                     delete newData.ships[sectorEvent.data.shipId];
+                    break;
+                  case "pilot_tip":
+                    // Pilot tipped the player - notify for sound playback
+                    if (onPilotTip && sectorEvent.data.tipAmount && sectorEvent.data.pilotName) {
+                      onPilotTip(sectorEvent.data.tipAmount, sectorEvent.data.pilotName);
+                    }
                     break;
                 }
 
@@ -325,7 +478,19 @@ export const useSectorWebSocket = ({
         wsRef.current = null;
       }
     };
-  }, [sectorId, setSectorData, setParticles]);
+  }, [
+    sectorId,
+    setSectorData,
+    setParticles,
+    onAsteroidSpawn,
+    onShipSpawn,
+    onVectorMatched,
+    onAsteroidDepleted,
+    onShipRetarget,
+    onShipAttack,
+    onShipDestroyed,
+    onPilotTip,
+  ]);
 
   return {
     connectionStatus,

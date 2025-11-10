@@ -3,7 +3,7 @@ import { SECTOR_CONFIG } from "../types";
 import { BlockchainManager } from "./blockchain";
 import { EntropyManager } from "./EntropyManager";
 import { CharacterManager, PilotManager } from "./character";
-import { CrowdsaleManager } from "./CrowdsaleManager";
+import { CrowdsaleManager } from "./crowdsale";
 import { BaseUpgradeManager } from "./BaseUpgradeManager";
 
 export class SimulationManager {
@@ -34,6 +34,8 @@ export class SimulationManager {
     this.debugMode = debugMode;
     this.characterManager = characterManager;
     this.pilotManager = new PilotManager(debugMode);
+    // Set character manager reference for federation management
+    this.pilotManager.setCharacterManager(characterManager);
     this.crowdsaleManager = crowdsaleManager!;
     this.baseUpgradeManager = baseUpgradeManager!;
   }

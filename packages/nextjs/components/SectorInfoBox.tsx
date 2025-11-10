@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Address } from "./scaffold-eth";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
-import { Asteroid, SelectedObjectType, ShipDetails, StationDetails, Vector2D } from "~~/types/sector";
+import { Asteroid, SelectedObjectType, ShipDetails, StationDetails, Vector2D, getCargoCapacity } from "~~/types/sector";
 import { getShipModel } from "~~/utils/shipConstants";
 
 interface SectorInfoBoxProps {
@@ -559,11 +559,16 @@ export const SectorInfoBox = ({
             <div className="font-mono text-yellow-400 text-lg">{ship.score.toLocaleString()}</div>
           </div>
 
-          {ship.fullCargo && (
-            <div>
-              <div className="badge badge-accent badge-sm">Full Cargo</div>
+          <div>
+            <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Cargo</div>
+            <div className="font-mono text-lg">
+              {ship.currentCargo || 0}/{getCargoCapacity(ship.shipType)}
+              <span className="text-sm text-gray-400 ml-2">
+                ({Math.round(((ship.currentCargo || 0) / getCargoCapacity(ship.shipType)) * 100)}%)
+              </span>
             </div>
-          )}
+            {ship.fullCargo && <div className="badge badge-accent badge-xs mt-1">Carrying Cargo</div>}
+          </div>
 
           <div className="pt-2 border-t border-gray-700">
             <div className="text-gray-400 uppercase tracking-wide text-[10px] mb-2">Pilot Stats</div>

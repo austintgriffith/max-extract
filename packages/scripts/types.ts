@@ -40,6 +40,7 @@ export interface Ship {
   isVectorMatched: boolean; // New field to track if ship has matched asteroid's vector
   vectorMatchTime: number | null; // When the vector matching started
   fullCargo: boolean; // Flag to indicate if ship has mined cargo and should move slower
+  currentCargo: number; // Actual cargo amount (used for capacity-based mechanics)
   lastCourseUpdate: number; // Track which game loop cycle the course was last updated
 }
 
@@ -130,12 +131,12 @@ export const SECTOR_CONFIG = {
   ASTEROID_SPEED: 20,
   SHIP_SPEED: 80,
   // Dual-loop system configuration
-  INNER_LOOP_INTERVAL: 2000, // Fast loop for ship movement, mining, battles
-  OUTER_LOOP_INTERVAL: 6000, // Slow loop for heavy operations (including rolling commit-reveal)
+  INNER_LOOP_INTERVAL: 3000, // Fast loop for ship movement, mining, battles
+  OUTER_LOOP_INTERVAL: 9000, // Slow loop for heavy operations (including rolling commit-reveal)
   // Independent spawn probabilities (0-1 range, checked each outer loop)
   // Both can spawn in the same cycle if both rolls succeed
-  ASTEROID_SPAWN_CHANCE: 1, // % chance per outer loop
-  SHIP_SPAWN_CHANCE: 1, // % chance per outer loop (slightly more ships than asteroids)
+  ASTEROID_SPAWN_CHANCE: 0.8, // % chance per outer loop
+  SHIP_SPAWN_CHANCE: 0.7, // % chance per outer loop
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station
@@ -174,4 +175,16 @@ export const SECTOR_CONFIG = {
   CROWDSALE_PILOTS_PER_LOOP: 3, // Process 3 pilots per outer loop (faster crowdsale)
   CROWDSALE_TARGET_CREDITS: 50_000n * 10n ** 18n, // 50k total (49.5k to game + 500 reward)
   CROWDSALE_MAX_UPGRADE_ATTEMPTS: 3, // Stop after 3 pilots try upgrade
+  // Cargo system configuration
+  FEDERATION_LOCK_TIME: 180000, // 3 minutes in milliseconds
+  CARGO_PAYMENT_RATE: 5, // Credits per cargo unit
 };
+
+/**
+ * Calculate cargo capacity based on ship type (1-12)
+ * Formula: 20 + (shipType * 25)
+ * Range: 45 (type 1) to 320 (type 12)
+ */
+export function getCargoCapacity(shipType: number): number {
+  return 20 + shipType * 25;
+}

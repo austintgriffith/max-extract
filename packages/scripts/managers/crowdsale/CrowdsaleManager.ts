@@ -213,16 +213,18 @@ export class CrowdsaleManager {
         console.log(`   🎫 Sale contract: ${fuelContractAddress}`);
         console.log(`   🔐 Audit status: ${auditStatus}`);
 
-        // Check if the sector has already been upgraded (station baseType > 1)
-        console.log(`   🔍 Checking if sector has already been upgraded...`);
+        // Check if the sector has already been upgraded to base 5 (crowdsale complete)
+        // Base 4 = Chapter 4 complete (staking), ready for crowdsale
+        // Base 5 = Chapter 5 complete (crowdsale upgrade called)
+        console.log(`   🔍 Checking if crowdsale already completed...`);
         const isUpgraded = await this.blockchainManager.isSectorUpgraded(
           sectorId.toString()
         );
-        console.log(`   🏗️  Upgraded: ${isUpgraded}`);
+        console.log(`   🏗️  Crowdsale complete: ${isUpgraded}`);
 
         if (isUpgraded) {
           console.log(
-            `   ⏭️  Skipping - Station already upgraded (crowdsale complete)`
+            `   ⏭️  Skipping - Crowdsale already completed (base upgraded to 5)`
           );
           // Mark as complete so we don't check again
           this.activeCrowdsales.set(playerAddress.toLowerCase(), {
@@ -712,9 +714,17 @@ export class CrowdsaleManager {
       const sectorId = await this.findSectorIdForPlayer(playerAddress);
 
       if (upgradeResult.success) {
-        console.log(`   🎉 Upgrade successful! Station upgraded to class 1`);
+        console.log(`   🎉 Upgrade successful! Station upgraded via crowdsale`);
         console.log(`   💰 Pilot ${pilotName} received 500 credit bounty`);
         console.log(`   🏆 Player earned 10 points`);
+        
+        // Force base to 5 (permanent upgrade from crowdsale)
+        console.log(`   🏗️  Setting base to 5 (permanent crowdsale upgrade)...`);
+        if (sectorId) {
+          await this.blockchainManager.setSectorBaseType(sectorId, 5);
+          console.log(`   ✅ Base set to 5 - this upgrade is permanent!`);
+        }
+        
         state.isComplete = true;
 
         // Broadcast success event
@@ -727,7 +737,7 @@ export class CrowdsaleManager {
               pilotName: pilotName,
               sectorId: sectorId,
               fuelContractAddress: state.fuelContractAddress,
-              newStationClass: 1,
+              newStationClass: 5,
               pilotBounty: 500,
               playerPoints: 10,
               transactionHash: upgradeResult.txHash,
