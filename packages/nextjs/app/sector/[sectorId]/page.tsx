@@ -994,7 +994,7 @@ const SectorPage = () => {
 
           // Optional: Play a subtle rebroadcast sound
           if (soundEnabled) {
-            playSound("accept", 0.1);
+            playSound("accept", 0.5);
           }
         }
       });

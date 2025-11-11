@@ -118,7 +118,7 @@ export const AnimatedSubtitle = () => {
   // No longer need this cleanup effect - characters are now cleaned up individually
 
   return (
-    <div className="relative -mt-6 mb-8 z-10 overflow-hidden w-full">
+    <div className="relative -mt-6 mb-8 z-10 overflow-visible w-full">
       <div
         className="text-sm md:text-base lg:text-lg text-white font-medium relative"
         style={{
