@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { MarkdownWithMath } from "~~/components/MarkdownWithMath";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { usePlaceholderRedirect } from "~~/hooks/usePlaceholderRedirect";
 
 // Add Google Font import
 if (typeof document !== "undefined") {
@@ -16,9 +15,6 @@ if (typeof document !== "undefined") {
 }
 
 const WhitepaperPage = () => {
-  // Redirect to home if maintenance mode is active
-  usePlaceholderRedirect();
-
   // Read visible chapters from the Game contract for dynamic content
   const { data: visibleChapters } = useScaffoldReadContract({
     contractName: "Game",
