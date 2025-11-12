@@ -32,12 +32,12 @@ export const StorySection = ({ children }: StorySectionProps) => {
           </p>
           <p className="text-lg leading-relaxed px-4">
             From a forgotten outpost barely clinging to gravity, Max deployed the first shared record -- an immutable
-            contract that let pirates stake exclusive claims on asteroids, earn daily fuel credits, and register their
-            word with something stronger than talk. To dock in the garage, you needed a credential: proof that you
-            bought in, agreed not to fire first, and played by the rules. Every deal made or broken left a trace in the
-            record. Build a good rep, and you could refuel in peace. Break too many promises, and the record made you
-            open season. Over time, the chaos thinned. Crews stopped clashing over the same rocks. Refueling stations
-            stayed intact. Loot got bigger, not bloodier.
+            contract that let pirates extract from asteroid sectors, earn daily fuel credits, and register their word
+            with something stronger than talk. To dock in the garage, you staked 10,000 credits as a bond: proof that
+            you wouldn&apos;t fire first. Kill another pilot, and the contract slashed your stake. Every deal made or
+            broken left a trace in the record. Build a good rep, and you could refuel in peace. Break the code, and the
+            record made you open season. Over time, the chaos thinned. Crews stopped clashing over the same rocks.
+            Refueling stations stayed intact. Loot got bigger, not bloodier.
           </p>
         </div>
 

@@ -461,6 +461,7 @@ contract MaxExtract {
     /**
      * Slash a killer's entire staked balance
      * Only callable by audited stake contracts when a pilot kills another pilot
+     * Burns the slashed credits permanently from circulation
      * @param killer The pilot address whose stake should be slashed
      * @param sectorId The sector ID where the killing occurred
      */
@@ -482,10 +483,20 @@ contract MaxExtract {
         uint256 slashAmount = stakedBalance[killer];
         require(slashAmount > 0, "No staked balance to slash");
         
-        // Set killer's balance to 0 (slashing everything they staked)
+        // Verify MaxExtract has enough credits to burn
+        uint256 contractBalance = creditsContract.balanceOf(address(this));
+        require(contractBalance >= slashAmount, "Insufficient credits in contract");
+        
+        // Set killer's balance to 0 BEFORE burning (checks-effects-interactions pattern)
         stakedBalance[killer] = 0;
         
-        // Credits remain in MaxExtract contract (burned/kept)
+        // Actually burn the slashed credits by sending to dead address
+        // This permanently removes them from circulation
+        require(
+            creditsContract.transfer(0x000000000000000000000000000000000000dEaD, slashAmount),
+            "Burn transfer failed"
+        );
+        
         emit PilotSlashed(killer, sectorId, slashAmount);
     }
     

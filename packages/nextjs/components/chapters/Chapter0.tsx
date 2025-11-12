@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { formatEther } from "viem";
 import { Address } from "~~/components/scaffold-eth";
-import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 export const Chapter0 = () => {
   const { data: maxExtractContract } = useDeployedContractInfo("MaxExtract");
   const { data: gameContract } = useDeployedContractInfo("Game");
   const { data: auditorContract } = useDeployedContractInfo("Auditor");
+
+  const { data: buyInPrice } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "BUY_IN_PRICE",
+  });
 
   return (
     <div className="bg-base-300 rounded-3xl p-8 mb-6">
@@ -116,6 +122,38 @@ export const Chapter0 = () => {
               goal: build the safest, most profitable sector in the network.
             </p>
             <p className="text-sm opacity-80">Ready to broadcast your signal? Chapter 1 awaits.</p>
+          </div>
+
+          <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">Game Economics</h3>
+          <div className="bg-base-100 rounded-lg p-6 border">
+            <h4 className="font-semibold mb-3 text-accent">Buy-In and Scoring</h4>
+            <p className="mb-3">
+              To enter the competition, programmers must <strong>buy into the game</strong> with a payment of{" "}
+              {buyInPrice ? (
+                <strong className="text-accent">{formatEther(buyInPrice)} ETH</strong>
+              ) : (
+                <strong className="text-accent">loading...</strong>
+              )}
+              . All players start with <strong>0 points</strong> and must earn their way to victory through successful
+              sector operations.
+            </p>
+            <p className="mb-3">
+              Points are awarded when pilots successfully mint credentials from your sector (+2 points each), when your
+              station is upgraded (+10 points), and through other protocol interactions. However, if a pilot dies in
+              your sector without proper transponder protections, you&apos;ll lose points—a harsh penalty that keeps
+              station operators honest.
+            </p>
+
+            <h4 className="font-semibold mb-3 mt-4 text-accent">Winner Payouts</h4>
+            <p className="mb-3">
+              When the game timer expires, anyone can trigger settlement. The contract identifies the{" "}
+              <strong>highest scoring player(s)</strong> and distributes the entire pot among them. If multiple players
+              tie for first place, they <strong>split the pot equally</strong>—cooperation through competition.
+            </p>
+            <p className="text-sm opacity-80">
+              The pot grows with each buy-in and can be sweetened by additional contributions. Build the safest sector,
+              attract the most pilots, and claim your share of the prize pool.
+            </p>
           </div>
         </div>
       </div>

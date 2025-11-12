@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { blo } from "blo";
 import type { NextPage } from "next";
-import { Address } from "~~/components/scaffold-eth";
+import { useBalance } from "wagmi";
+import { Address, Balance } from "~~/components/scaffold-eth";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
@@ -80,7 +81,8 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
     <tr>
       <td>
         <div
-          className="flex flex-col items-center justify-center gap-1"
+          className="flex flex-col items-center justify-center gap-1 tooltip tooltip-right"
+          data-tip={`Model ${shipModel} • Type ${pilot.shipType}`}
           style={{ width: containerSize, height: containerSize }}
         >
           <Image
@@ -89,7 +91,6 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
             width={shipSize}
             height={shipSize}
             className="object-contain rotate-90"
-            title={`Ship Model ${shipModel} (Type ${pilot.shipType})`}
           />
         </div>
       </td>
@@ -223,7 +224,8 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
     <tr>
       <td>
         <div
-          className="flex items-center justify-center bg-black"
+          className={`flex items-center justify-center bg-black ${sectorId ? "tooltip tooltip-right" : ""}`}
+          data-tip={sectorId ? `Base Type ${baseType} • Class ${airspaceClass}` : undefined}
           style={{ width: containerSize, height: containerSize }}
         >
           {sectorId ? (
@@ -233,7 +235,6 @@ const PlayerRow = ({ player, sectorId }: { player: PlayerData; sectorId?: string
               width={baseSize}
               height={baseSize}
               className="object-contain"
-              title={`Base #${baseType}`}
             />
           ) : null}
         </div>
@@ -392,6 +393,11 @@ const Dashboard: NextPage = () => {
   const networkContracts = deployedContracts[networkId as keyof typeof deployedContracts];
   const maxExtractAddress = networkContracts?.MaxExtract?.address;
   const gameAddress = networkContracts?.Game?.address;
+
+  // Get Game contract ETH balance
+  const { data: gameBalance } = useBalance({
+    address: gameAddress as `0x${string}`,
+  });
 
   // Generate stable star positions once
   const [stars] = useState(() => ({
@@ -630,7 +636,7 @@ const Dashboard: NextPage = () => {
 
           {/* Contract Blockies - Visual signature of deployed contracts */}
           {maxExtractAddress && (
-            <div className="absolute top-20 left-4 z-10 tooltip tooltip-bottom" data-tip="MaxExtract Contract">
+            <div className="absolute top-8 left-4 z-10 tooltip tooltip-bottom" data-tip="MaxExtract Contract">
               <div className="ring-2 ring-primary rounded-full p-1 bg-base-100 shadow-lg">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -644,7 +650,7 @@ const Dashboard: NextPage = () => {
             </div>
           )}
           {gameAddress && (
-            <div className="absolute top-20 right-4 z-10 tooltip tooltip-bottom" data-tip="Game Contract">
+            <div className="absolute top-8 right-4 z-10 tooltip tooltip-bottom" data-tip="Game Contract">
               <div className="ring-2 ring-secondary rounded-full p-1 bg-base-100 shadow-lg">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -663,9 +669,12 @@ const Dashboard: NextPage = () => {
             {(placeholder && placeholder.trim() !== "" ? placeholder : siteUrl) && (
               <h1 className="text-5xl font-bold text-center mb-8 text-warning drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
                 {placeholder && placeholder.trim() !== "" ? placeholder : siteUrl}
-                {visibleChapters && Array.isArray(visibleChapters) && visibleChapters.length > 0 && (
-                  <span className="ml-3">[{visibleChapters.map((chapter: number) => chapter).join(", ")}]</span>
-                )}
+                {visibleChapters &&
+                  Array.isArray(visibleChapters) &&
+                  visibleChapters.length > 0 &&
+                  !(placeholder && placeholder.trim() !== "") && (
+                    <span className="ml-3">[{visibleChapters.map((chapter: number) => chapter).join(", ")}]</span>
+                  )}
               </h1>
             )}
 
@@ -694,8 +703,30 @@ const Dashboard: NextPage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm opacity-70">Pot:</span>
-                  <span className="font-mono">
-                    {gameInfo ? `${(Number(gameInfo[1]) * Number(gameInfo[2])) / 1e18}Ξ` : "0Ξ"}
+                  <span className="font-mono flex items-center gap-1">
+                    {gameInfo
+                      ? (() => {
+                          const numPlayers = Number(gameInfo[1]);
+                          const buyIn = Number(gameInfo[2]);
+                          const calculatedPot = (numPlayers * buyIn) / 1e18;
+                          const actualBalance = gameBalance?.value ? Number(gameBalance.value) / 1e18 : 0;
+                          const bonus = actualBalance > calculatedPot ? actualBalance - calculatedPot : 0;
+
+                          return (
+                            <>
+                              {bonus > 0
+                                ? `${calculatedPot.toFixed(6)}Ξ (${bonus.toFixed(6)}Ξ bonus!)`
+                                : `${calculatedPot.toFixed(6)}Ξ`}
+                              {gameAddress && actualBalance > 0 && (
+                                <span className="text-xs">
+                                  [
+                                  <Balance address={gameAddress} className="inline" usdMode />]
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()
+                      : "0Ξ"}
                   </span>
                 </div>
                 {/* Countdown Timer for Active Games */}

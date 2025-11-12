@@ -39,7 +39,7 @@ contract DeployYourContract is ScaffoldETHDeploy {
         Game game = new Game(address(universe));
         
         // Deploy Auditor contract (auditor address is hardcoded as immutable)
-        Auditor auditor = new Auditor(address(universe), address(game));
+        Auditor auditor = new Auditor(address(universe), payable(address(game)));
         
         // Stop broadcasting to wire up Game contract as GOD
         vm.stopBroadcast();

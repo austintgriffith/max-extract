@@ -48,7 +48,7 @@ interface IMaxExtract {
 contract Game {
     // Game configuration - hardcoded values
     uint256 public constant BUY_IN_PRICE = 0.000001 ether;
-    uint256 public immutable gameEndTime = block.timestamp + 120 minutes;
+    uint256 public immutable gameEndTime = block.timestamp + 30 minutes;
     
     // WETH contract address (Ethereum mainnet - update for other networks)
     address public constant WETH_ADDRESS = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -330,8 +330,8 @@ contract Game {
         players.push(msg.sender);
         isPlayerMapping[msg.sender] = true;
         
-        // Give player 10 points for debugging (allows testing audits, etc.)
-        scores[msg.sender] = 10;
+        // Players start with 0 points
+        scores[msg.sender] = 0;
         
         emit PlayerBoughtIn(msg.sender, msg.value);
         
@@ -952,5 +952,14 @@ contract Game {
     function setPlaceholder(string calldata _placeholder) external onlyGod {
         placeholder = _placeholder;
         emit PlaceholderUpdated(_placeholder);
+    }
+    
+    /**
+     * Accept direct ETH transfers to sweeten the pot
+     * Anyone can contribute to increase the winner's prize pool
+     */
+    receive() external payable {
+        // ETH is automatically added to contract balance
+        // Will be distributed to winners in settleGame()
     }
 }

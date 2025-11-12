@@ -157,9 +157,9 @@ export class CharacterManager {
     const intelligence = this.generateDeterministicRandom(seed, 6);
     const dexterity = this.generateDeterministicRandom(seed, 7);
 
-    // Generate credits (10,000 to 100,000) using public seed for deterministic traits
+    // Generate credits (5,000 to 15,000) using public seed for deterministic traits
     const creditsRandom = this.generateDeterministicRandom(seed, 8); // 0-99
-    const credits = 10000 + Math.floor((creditsRandom / 100) * 90000); // Scale to 10,000-100,000 range
+    const credits = 5000 + Math.floor((creditsRandom / 100) * 10000); // Scale to 5,000-15,000 range
 
     const character: Character = {
       firstname,
@@ -212,6 +212,76 @@ export class CharacterManager {
 
     this.debugLog(`Generated ${count} characters`);
     return characters;
+  }
+
+  /**
+   * Generate a special "Max Extract" pilot with guaranteed Model F ship (type 12)
+   * This ensures there's always at least one large ship for players to earn points from
+   */
+  private generateMaxExtractPilot(baseSeed: string): Character {
+    this.debugLog(`Generating special "Max Extract" pilot with Model F ship`);
+
+    // Use a special seed for Max Extract (append "MAX_EXTRACT" to base seed)
+    const maxExtractSeed = keccak256(toHex(baseSeed + "MAX_EXTRACT"));
+
+    // Generate private key using server secret
+    const securePrivateKeySeed = keccak256(
+      toHex(this.serverSecret + maxExtractSeed)
+    );
+    const privateKey = keccak256(toHex(securePrivateKeySeed)) as `0x${string}`;
+    const publicAddress = privateKeyToAddress(privateKey);
+
+    // Fixed name: "Max Extract"
+    const firstname = "Max";
+    const lastname = "Extract";
+    const ship = 12; // Model F (largest ship)
+
+    // Generate stats using the seed for deterministic traits
+    const fuelRandom = this.generateDeterministicRandom(maxExtractSeed, 3);
+    const fuel = 30 + Math.floor((fuelRandom / 100) * 70); // Scale to 30-100 range
+    const cargo = this.generateDeterministicRandom(maxExtractSeed, 4);
+    const aggression = this.generateDeterministicRandom(maxExtractSeed, 5);
+    const intelligence = this.generateDeterministicRandom(maxExtractSeed, 6);
+    const dexterity = this.generateDeterministicRandom(maxExtractSeed, 7);
+
+    // Generate credits (5,000 to 15,000)
+    const creditsRandom = this.generateDeterministicRandom(maxExtractSeed, 8);
+    const credits = 5000 + Math.floor((creditsRandom / 100) * 10000);
+
+    const character: Character = {
+      firstname,
+      lastname,
+      ship,
+      fuel,
+      cargo,
+      aggression,
+      intelligence,
+      dexterity,
+      credits,
+      privateKey,
+      publicAddress,
+      federationStatus: {
+        inFederation: false,
+        federationEntryTime: null,
+        cargoSold: 0,
+      },
+    };
+
+    // Store character using their address as the key
+    this.characters.set(publicAddress, character);
+
+    this.debugLog(`Generated Max Extract pilot with Model F ship (type 12)`, {
+      ship,
+      fuel,
+      cargo,
+      aggression,
+      intelligence,
+      dexterity,
+      credits,
+      address: publicAddress,
+    });
+
+    return character;
   }
 
   /**
@@ -655,6 +725,11 @@ export class CharacterManager {
       SECTOR_CONFIG.CHARACTER_COUNT
     );
 
+    // Always generate one additional "Max Extract" pilot with Model F ship
+    // This ensures there's always at least one large ship for players to earn points from
+    const maxExtractPilot = this.generateMaxExtractPilot(baseSeed);
+    characters.push(maxExtractPilot);
+
     // Store the Game contract address these characters belong to
     this.gameContractAddressForCharacters = gameContractAddress;
 
@@ -663,7 +738,7 @@ export class CharacterManager {
     const generationTime = Math.round(endTime - startTime);
 
     console.log(
-      `🎭 Generated ${characters.length} new characters in ${generationTime}ms`
+      `🎭 Generated ${characters.length} new characters in ${generationTime}ms (including special "Max Extract" pilot with Model F ship)`
     );
 
     // Save characters to backup file with Game contract address

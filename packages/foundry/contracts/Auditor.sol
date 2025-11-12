@@ -85,7 +85,7 @@ contract Auditor {
         _;
     }
     
-    constructor(address _universe, address _game) {
+    constructor(address _universe, address payable _game) {
         universe = Universe(_universe);
         gameContract = Game(_game);
     }
@@ -262,7 +262,7 @@ contract Auditor {
      * Only callable by God
      * @param _game The game contract address
      */
-    function setGameContract(address _game) external onlyGod {
+    function setGameContract(address payable _game) external onlyGod {
         require(_game != address(0), "Invalid game address");
         gameContract = Game(_game);
         emit GameContractSet(_game);

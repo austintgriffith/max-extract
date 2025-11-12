@@ -108,7 +108,9 @@ export const SECTOR_CONFIG = {
   WIDTH: 2000,
   HEIGHT: 2000,
   // Character generation
-  CHARACTER_COUNT: 30,
+  // Note: One additional "Max Extract" pilot with Model F ship is always created
+  // So if CHARACTER_COUNT = 3, a total of 4 pilots will be generated
+  CHARACTER_COUNT: 50,
   get CHARACTER_ETH() {
     // Load from environment variable ONLY - no default
     if (!process.env.CHARACTER_ETH) {
@@ -131,12 +133,12 @@ export const SECTOR_CONFIG = {
   ASTEROID_SPEED: 20,
   SHIP_SPEED: 80,
   // Dual-loop system configuration
-  INNER_LOOP_INTERVAL: 3000, // Fast loop for ship movement, mining, battles
-  OUTER_LOOP_INTERVAL: 9000, // Slow loop for heavy operations (including rolling commit-reveal)
+  INNER_LOOP_INTERVAL: 2000, // Fast loop for ship movement, mining, battles
+  OUTER_LOOP_INTERVAL: 15000, // Slow loop for heavy operations (including rolling commit-reveal)
   // Independent spawn probabilities (0-1 range, checked each outer loop)
   // Both can spawn in the same cycle if both rolls succeed
-  ASTEROID_SPAWN_CHANCE: 0.8, // % chance per outer loop
-  SHIP_SPAWN_CHANCE: 0.7, // % chance per outer loop
+  ASTEROID_SPAWN_CHANCE: 0.6, // % chance per outer loop
+  SHIP_SPAWN_CHANCE: 0.5, // % chance per outer loop
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station
