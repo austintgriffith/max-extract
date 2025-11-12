@@ -45,6 +45,9 @@ contract Game {
     // Reference to the Credits ERC20 token contract
     IERC20 public creditsContract;
     
+    // Maintenance mode placeholder message
+    string public placeholder;
+    
     // Game states
     enum GameState {
         Open,    // 0 - Players can buy in
@@ -95,6 +98,7 @@ contract Game {
     event PointsDeducted(address indexed player, uint256 amount, uint256 newScore);
     event StationUpgraded(uint256 indexed sectorId, address indexed player, address indexed pilotCaller, uint8 newBaseType);
     event StationBaseTypeSet(uint256 indexed sectorId, uint8 newBaseType, address indexed setBy);
+    event PlaceholderUpdated(string newPlaceholder);
     
     // Errors
     error OnlyGod();
@@ -917,5 +921,16 @@ contract Game {
         }
         
         return (pilotAddresses, creditsBalances);
+    }
+    
+    /**
+     * Set the placeholder message for maintenance mode
+     * Only callable by the God address
+     * When set to a non-empty string, the frontend will display maintenance mode
+     * @param _placeholder The placeholder message to display (empty string to disable maintenance mode)
+     */
+    function setPlaceholder(string calldata _placeholder) external onlyGod {
+        placeholder = _placeholder;
+        emit PlaceholderUpdated(_placeholder);
     }
 }

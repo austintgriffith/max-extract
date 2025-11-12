@@ -6,11 +6,15 @@ import { useAccount } from "wagmi";
 import { CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { Address, AddressInput } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { usePlaceholderRedirect } from "~~/hooks/usePlaceholderRedirect";
 import { notification } from "~~/utils/scaffold-eth";
 
 type AuditStatus = 0 | 1 | 2; // Pending, Audited, Failed
 
 const AuditsPage = () => {
+  // Redirect to home if maintenance mode is active
+  usePlaceholderRedirect();
+
   const { address: connectedAddress } = useAccount();
   const [contractAddress, setContractAddress] = useState("");
   const [selectedChapter, setSelectedChapter] = useState<number>(0);

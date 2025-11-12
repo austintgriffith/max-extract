@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xe1da8919f262ee86f9be05059c9280142cf23f48",
+      address: "0x33b1b5aa9aa4da83a332f0bc5cac6a903fde5d92",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 7,
+      deployedOnBlock: 31,
     },
     Credits: {
-      address: "0x0c8e79f3534b00d9a3d4a856b665bf4ebc22f2ba",
+      address: "0x19a1c09fe3399c4daaa2c98b936a8e460fc5eaa4",
       abi: [
         {
           type: "constructor",
@@ -889,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 8,
+      deployedOnBlock: 32,
     },
     Game: {
-      address: "0xed1db453c3156ff3155a97ad217b3087d5dc5f6e",
+      address: "0x49b8e3b089d4ebf9f37b1da9b839ec013c2cd8c9",
       abi: [
         {
           type: "constructor",
@@ -1540,6 +1540,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "placeholder",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "players",
           inputs: [
             {
@@ -1629,6 +1642,19 @@ const deployedContracts = {
               name: "_maxExtract",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setPlaceholder",
+          inputs: [
+            {
+              name: "_placeholder",
+              type: "string",
+              internalType: "string",
             },
           ],
           outputs: [],
@@ -1928,6 +1954,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "PlaceholderUpdated",
+          inputs: [
+            {
+              name: "newPlaceholder",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "PlayerBoughtIn",
           inputs: [
             {
@@ -2198,10 +2237,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9,
+      deployedOnBlock: 33,
     },
     Auditor: {
-      address: "0xf7cd8fa9b94db2aa972023b379c7f72c65e4de9d",
+      address: "0x067c804bb006836469379d4a2a69a81803bd1f45",
       abi: [
         {
           type: "constructor",
@@ -2765,10 +2804,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9,
+      deployedOnBlock: 33,
     },
     MaxExtract: {
-      address: "0x12975173b87f7595ee45dffb2ab812ece596bf84",
+      address: "0x45009dd3abbe29db54fc5d893ceaa98a624882df",
       abi: [
         {
           type: "constructor",
@@ -3407,7 +3446,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 9,
+      deployedOnBlock: 33,
     },
   },
   42161: {
@@ -4945,6 +4984,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "placeholder",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "players",
           inputs: [
             {
@@ -5034,6 +5086,19 @@ const deployedContracts = {
               name: "_maxExtract",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setPlaceholder",
+          inputs: [
+            {
+              name: "_placeholder",
+              type: "string",
+              internalType: "string",
             },
           ],
           outputs: [],
@@ -5327,6 +5392,19 @@ const deployedContracts = {
               type: "address[]",
               indexed: false,
               internalType: "address[]",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PlaceholderUpdated",
+          inputs: [
+            {
+              name: "newPlaceholder",
+              type: "string",
+              indexed: false,
+              internalType: "string",
             },
           ],
           anonymous: false,

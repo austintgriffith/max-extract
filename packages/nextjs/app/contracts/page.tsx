@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Address } from "~~/components/scaffold-eth";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { usePlaceholderRedirect } from "~~/hooks/usePlaceholderRedirect";
 
 interface ContractInfo {
   name: string;
@@ -14,6 +15,9 @@ interface ContractInfo {
 }
 
 const ContractsPage = () => {
+  // Redirect to home if maintenance mode is active
+  usePlaceholderRedirect();
+
   const { targetNetwork } = useTargetNetwork();
   const [contracts, setContracts] = useState<ContractInfo[]>([]);
 

@@ -8,6 +8,7 @@ import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
 import { usePilotsData } from "~~/hooks/usePilotsData";
+import { usePlaceholderRedirect } from "~~/hooks/usePlaceholderRedirect";
 import { Pilot, SECTOR_CONFIG } from "~~/types/sector";
 import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS, getShipModel } from "~~/utils/shipConstants";
 
@@ -373,6 +374,9 @@ const WinnersDisplay = ({ winners, winningScore }: { winners: string[]; winningS
 };
 
 const Dashboard: NextPage = () => {
+  // Redirect to home if maintenance mode is active
+  usePlaceholderRedirect();
+
   const [siteUrl, setSiteUrl] = useState<string>("");
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [playerSectors, setPlayerSectors] = useState<Map<string, string>>(new Map());

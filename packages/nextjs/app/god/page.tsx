@@ -25,6 +25,9 @@ export default function GodPage() {
   // MaxExtract address state
   const [maxExtractAddress, setMaxExtractAddress] = useState<string>("");
 
+  // Placeholder state
+  const [placeholderInput, setPlaceholderInput] = useState<string>("");
+
   // Read the god address from the Universe contract
   const { data: godAddress } = useScaffoldReadContract({
     contractName: "Universe",
@@ -77,6 +80,12 @@ export default function GodPage() {
   const { data: currentMaxExtractAddress } = useScaffoldReadContract({
     contractName: "Game",
     functionName: "maxExtract",
+  });
+
+  // Read current placeholder message
+  const { data: currentPlaceholder } = useScaffoldReadContract({
+    contractName: "Game",
+    functionName: "placeholder",
   });
 
   // Write functions
@@ -307,6 +316,39 @@ export default function GodPage() {
     } catch (error) {
       console.error("Error updating MaxExtract address:", error);
       notification.error("Error updating MaxExtract address");
+    }
+  };
+
+  // Placeholder management handlers
+  const handleSetPlaceholder = async () => {
+    if (!placeholderInput.trim()) {
+      notification.error("Please enter a placeholder message");
+      return;
+    }
+
+    try {
+      await writeGameAsync({
+        functionName: "setPlaceholder",
+        args: [placeholderInput],
+      });
+      notification.success("Placeholder message set successfully! Users will now see maintenance mode.");
+      setPlaceholderInput(""); // Clear the input after successful update
+    } catch (error) {
+      console.error("Error setting placeholder:", error);
+      notification.error("Error setting placeholder");
+    }
+  };
+
+  const handleClearPlaceholder = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "setPlaceholder",
+        args: [""],
+      });
+      notification.success("Placeholder cleared! Users will now see the normal site.");
+    } catch (error) {
+      console.error("Error clearing placeholder:", error);
+      notification.error("Error clearing placeholder");
     }
   };
 
@@ -549,6 +591,87 @@ export default function GodPage() {
               <strong>💡 Note:</strong> This enables credential minting and sector-based features. Each pilot that mints
               a sector credential awards 2 points to the player.
             </p>
+          </div>
+        </div>
+
+        {/* Maintenance Mode / Placeholder Management */}
+        <div className="bg-base-300 rounded-3xl p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">🚧 Maintenance Mode Management</h2>
+
+          {/* Current Placeholder Status */}
+          <div className="bg-base-200 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-lg font-semibold">Current Status:</span>
+              <span
+                className={`badge badge-lg ${currentPlaceholder && currentPlaceholder.trim() !== "" ? "badge-warning" : "badge-success"}`}
+              >
+                {currentPlaceholder && currentPlaceholder.trim() !== ""
+                  ? "🚧 MAINTENANCE MODE ACTIVE"
+                  : "✅ Normal Operation"}
+              </span>
+            </div>
+            {currentPlaceholder && currentPlaceholder.trim() !== "" && (
+              <div className="mt-3 p-3 bg-warning/10 rounded-lg border border-warning">
+                <p className="text-sm font-semibold mb-1">Current Placeholder Message:</p>
+                <p className="text-base">{currentPlaceholder}</p>
+              </div>
+            )}
+            <p className="text-sm opacity-70 mt-2">
+              When maintenance mode is active, all users will be redirected to the home page showing the placeholder
+              message and a loading GIF. The page auto-reloads every 20 seconds to check if maintenance is complete.
+            </p>
+          </div>
+
+          {/* Placeholder Input */}
+          <div className="space-y-4">
+            <div>
+              <label className="label">
+                <span className="label-text font-semibold">Placeholder Message</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered w-full"
+                placeholder="e.g. 'brb deploying the next round' or 'Upgrading contracts...'"
+                value={placeholderInput}
+                onChange={e => setPlaceholderInput(e.target.value)}
+              />
+              <div className="label">
+                <span className="label-text-alt opacity-70">
+                  This message will be displayed to users during maintenance mode.
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                className={`btn btn-lg ${placeholderInput.trim() ? "btn-warning" : "btn-disabled"}`}
+                onClick={handleSetPlaceholder}
+                disabled={!placeholderInput.trim()}
+              >
+                🚧 Enable Maintenance Mode
+              </button>
+              <button
+                className={`btn btn-lg ${currentPlaceholder && currentPlaceholder.trim() !== "" ? "btn-success" : "btn-disabled"}`}
+                onClick={handleClearPlaceholder}
+                disabled={!currentPlaceholder || currentPlaceholder.trim() === ""}
+              >
+                ✅ Clear Maintenance Mode
+              </button>
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="mt-4 text-sm opacity-70">
+            <p>
+              <strong>💡 How it works:</strong>
+            </p>
+            <ul className="list-disc list-inside ml-2 space-y-1">
+              <li>When active, home page shows the placeholder message instead of normal content</li>
+              <li>All other pages (dashboard, contracts, audits, etc.) automatically redirect to home</li>
+              <li>Pages auto-reload every 20 seconds to detect when maintenance is cleared</li>
+              <li>God page remains accessible for managing the placeholder</li>
+              <li>Perfect for deploying new contracts or making major updates</li>
+            </ul>
           </div>
         </div>
 

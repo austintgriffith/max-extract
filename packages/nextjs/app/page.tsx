@@ -6,11 +6,19 @@ import { ChapterLoader } from "~~/components/ChapterLoader";
 import { ConnectionStatus } from "~~/components/ConnectionStatus";
 import { GameBuyIn } from "~~/components/GameBuyIn";
 import { HeroSection } from "~~/components/HeroSection";
+import { MaintenanceMode } from "~~/components/MaintenanceMode";
 import { StorySection } from "~~/components/StorySection";
 import { useGameServerStatus } from "~~/hooks/useGameServerStatus";
+import { usePlaceholder } from "~~/hooks/usePlaceholder";
 
 const Home: NextPage = () => {
   const gameServerStatus = useGameServerStatus();
+  const { placeholder, isLoading } = usePlaceholder();
+
+  // Show maintenance mode if placeholder is set
+  if (!isLoading && placeholder && placeholder.trim() !== "") {
+    return <MaintenanceMode message={placeholder} />;
+  }
 
   return (
     <>

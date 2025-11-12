@@ -11,6 +11,7 @@ import { SectorInfoBox } from "~~/components/SectorInfoBox";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticleCleanup } from "~~/hooks/useParticleCleanup";
+import { usePlaceholderRedirect } from "~~/hooks/usePlaceholderRedirect";
 import { useSectorData } from "~~/hooks/useSectorData";
 import { useSectorOwner } from "~~/hooks/useSectorOwner";
 import { useSectorSounds } from "~~/hooks/useSectorSounds";
@@ -29,6 +30,9 @@ import {
 import { getGameServerHttpUrl } from "~~/utils/scaffold-eth/getGameServerUrl";
 
 const SectorPage = () => {
+  // Redirect to home if maintenance mode is active
+  usePlaceholderRedirect();
+
   const params = useParams();
   const sectorId = params?.sectorId as string;
   const [particles, setParticles] = useState<Particle[]>([]);
