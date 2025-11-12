@@ -22,7 +22,9 @@ export const Chapter3 = () => {
           <h3 className="text-xl font-semibold mb-4 text-secondary">The Credential System</h3>
           <p className="mb-4">
             You need to deploy a <strong>soulbound ERC-721 NFT contract</strong> that acts as an access pass to your
-            sector. Pilots will mint these credentials to gain landing rights at your station.
+            sector. This implements another fundamental Ethereum pattern: <strong>onchain credentialing</strong>. Pilots
+            will mint these credentials to gain landing rights at your station, creating a permissionless yet verifiable
+            access system.
           </p>
 
           <div className="bg-info/10 border border-info rounded-lg p-4 mb-4">
@@ -51,7 +53,8 @@ export const Chapter3 = () => {
                   <strong>Be Soulbound</strong>: Override transfer functions to prevent transfers after minting
                 </li>
                 <li>
-                  <strong>Have an issue() function</strong>: Public function pilots call to mint their credential
+                  <strong>Have an issue() function</strong>: Public function pilots call to mint their credential (and
+                  just pay the gas, no fee in credits at this point)
                 </li>
                 <li>
                   <strong>Call Game.pilotMintSectorCredential(sectorId)</strong>: Pass your sector ID to earn points

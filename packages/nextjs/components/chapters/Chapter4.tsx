@@ -66,6 +66,7 @@ export const Chapter4 = () => {
                 </p>
                 <p className="text-sm text-base-content">
                   This creates a strong deterrent against killing in your sector, but pilots who enter know the risk.
+                  Some of them are so aggressive they will still do it.
                 </p>
               </div>
             </div>

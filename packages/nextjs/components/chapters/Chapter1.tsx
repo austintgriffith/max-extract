@@ -105,7 +105,8 @@ mapping(string => address) public modules; // Your module registry`}</code>
                 <h4 className="font-semibold text-error mb-3">Class 0 Airspace Restrictions</h4>
                 <p className="text-sm text-base-content mb-3">
                   Only <strong>Ship Models E and F</strong> (the largest and most capable vessels) can get clearance to
-                  enter Class 0 airspace. Smaller ships simply cannot handle the hazardous conditions.
+                  enter Class 0 airspace. Smaller ships simply cannot handle the hazardous conditions. Only the{" "}
+                  <strong>toughest bastards</strong> fly Class 0.
                 </p>
                 <p className="text-sm text-base-content">
                   All pilots must be equipped with a <strong>killswitch transponder</strong> that broadcasts death
@@ -197,8 +198,8 @@ mapping(string => address) public modules; // Your module registry`}</code>
               start getting openings to enter your airspace!
             </p>
             <p className="mb-3">
-              A <strong>link to your sector</strong> will appear in your title bar, allowing you to monitor activity and
-              see which pilots are exploring your space.
+              A <strong>link to your sector</strong> will appear in the header navigation (at the top of this page!),
+              allowing you to monitor activity and see which pilots are exploring your space.
             </p>
             <p className="mb-3">
               Remember: your sector starts as <strong>Class 0 airspace</strong> - the most dangerous classification.

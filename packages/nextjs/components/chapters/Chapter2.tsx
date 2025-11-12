@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Address } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 
@@ -51,8 +52,10 @@ export const Chapter2 = () => {
 
           <h3 className="text-xl font-semibold mb-4 text-secondary">Part 1: The Announcement Contract</h3>
           <p className="mb-4">
-            You need to deploy an Announcement contract that contains your canonical information. The contract requires
-            two constant fields:
+            You need to deploy an Announcement contract that contains your canonical information. This leverages one of
+            the most fundamental use cases of Ethereum smart contracts: storing canonical data onchain in a way that{" "}
+            <strong>never goes down</strong> and <strong>no one can tamper with</strong>. The contract requires two
+            constant fields:
           </p>
 
           {/* Contract Fields */}
@@ -97,7 +100,8 @@ export const Chapter2 = () => {
                 <h4 className="font-semibold text-info mb-2">Increased Tip Potential</h4>
                 <p className="text-sm text-base-content">
                   When pilots successfully haul in big asteroid scores and escape the sector, they tip the sector
-                  registry. Having your details properly mapped to the &ldquo;about&rdquo; module{" "}
+                  registry for relaying telemetry data across the Extract Protocol network. Having your details properly
+                  mapped to the &ldquo;about&rdquo; module{" "}
                   <strong>increases your chances of receiving better tips</strong> from grateful pilots!
                 </p>
               </div>
@@ -206,16 +210,25 @@ export const Chapter2 = () => {
             <div className="flex items-start space-x-3">
               <div className="text-success text-2xl">⚡</div>
               <div>
-                <h4 className="font-semibold text-success mb-3">Quick Way: Check Your Last Audit</h4>
+                <h4 className="font-semibold text-success mb-3">Check Your Audit Status</h4>
                 <div className="text-sm text-base-content mb-3">
-                  The easiest way to check your most recent audit is to use the{" "}
-                  <code className="bg-base-100 px-1 rounded">lastAuditResult</code> function on the Auditor contract (
+                  While you can always check your most recent audit with{" "}
+                  <code className="bg-base-100 px-1 rounded">lastAuditResult</code> on the Auditor contract (
                   {auditorAddress && (
                     <span className="inline-flex">
                       <Address address={auditorAddress} />
                     </span>
                   )}
-                  ).
+                  ), there is also an{" "}
+                  <Link
+                    href="/audits"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline font-semibold"
+                  >
+                    Audits
+                  </Link>{" "}
+                  page for submitting and viewing audits.
                 </div>
               </div>
             </div>

@@ -23,8 +23,8 @@ export const Chapter5 = () => {
           <h3 className="text-xl font-semibold mb-4 text-secondary">Overview</h3>
           <p className="mb-4">
             Your sector is live, your identity is known, and pilots can access your station with credentials. But
-            there&apos;s a problem: your station is <strong>class 0</strong>—bare bones, no processing facilities, no
-            fuel production.
+            there&apos;s a problem: your station lacks the infrastructure to{" "}
+            <strong>process asteroids into fuel</strong>. No processing facilities, no fuel production.
           </p>
           <p className="mb-4">
             To process asteroids into fuel and truly serve your pilots, you need to{" "}
@@ -417,8 +417,7 @@ export const Chapter5 = () => {
           <h3 className="text-xl font-semibold mb-4 mt-6 text-secondary">The Crowdsale Begins</h3>
           <div className="bg-accent/10 border border-accent rounded-lg p-6">
             <p className="mb-3">
-              Once your fuel contract is audited, the crowdsale goes live. Pilots with credentials can buy fuel tokens
-              using credits.
+              Once your fuel contract is audited, the crowdsale goes live. Any pilot can buy fuel tokens using credits.
             </p>
             <p className="mb-3">
               As you approach 50k credits, pilots will race to call{" "}
