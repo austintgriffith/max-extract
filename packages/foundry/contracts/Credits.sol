@@ -1,8 +1,25 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-// Useful for debugging. Remove when deploying to a live network.
-import "forge-std/console.sol";
+/*
+'##::::'##::::'###::::'##::::'##::::'########:'##::::'##:'########:'########:::::'###:::::'######::'########:
+ ###::'###:::'## ##:::. ##::'##::::: ##.....::. ##::'##::... ##..:: ##.... ##:::'## ##:::'##... ##:... ##..::
+ ####'####::'##:. ##:::. ##'##:::::: ##::::::::. ##'##:::::: ##:::: ##:::: ##::'##:. ##:: ##:::..::::: ##::::
+ ## ### ##:'##:::. ##:::. ###::::::: ######:::::. ###::::::: ##:::: ########::'##:::. ##: ##:::::::::: ##::::
+ ##. #: ##: #########::: ## ##:::::: ##...:::::: ## ##:::::: ##:::: ##.. ##::: #########: ##:::::::::: ##::::
+ ##:.:: ##: ##.... ##:: ##:. ##::::: ##:::::::: ##:. ##::::: ##:::: ##::. ##:: ##.... ##: ##::: ##:::: ##::::
+ ##:::: ##: ##:::: ##: ##:::. ##:::: ########: ##:::. ##:::: ##:::: ##:::. ##: ##:::: ##:. ######::::: ##::::
+..:::::..::..:::::..::..:::::..:::::........::..:::::..:::::..:::::..:::::..::..:::::..:::......::::::..:::::
+........................................................
+..####...#####...######..#####...######..######...####..
+.##..##..##..##..##......##..##....##......##....##.....
+.##......#####...####....##..##....##......##.....####..
+.##..##..##..##..##......##..##....##......##........##.
+..####...##..##..######..#####...######....##.....####..
+........................................................
+                                                                                    */
+
+
 
 // Use OpenZeppelin for battle-tested ERC-20 implementation
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -26,7 +43,6 @@ contract Credits is ERC20, Ownable {
         // Mint initial supply to the owner
         _mint(_owner, INITIAL_SUPPLY);
         
-        console.log("Credits contract deployed with initial supply:", INITIAL_SUPPLY);
         emit CreditsInitialized(_owner, INITIAL_SUPPLY);
     }
 
@@ -37,7 +53,6 @@ contract Credits is ERC20, Ownable {
      */
     function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
-        console.log("Minted credits, amount:", amount);
     }
 
     /**
@@ -52,8 +67,6 @@ contract Credits is ERC20, Ownable {
         for (uint256 i = 0; i < recipients.length; i++) {
             _mint(recipients[i], amounts[i]);
         }
-        
-        console.log("Batch minted credits to addresses, count:", recipients.length);
     }
 
     /**
@@ -62,7 +75,6 @@ contract Credits is ERC20, Ownable {
      */
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
-        console.log("Burned credits, amount:", amount);
     }
 
     /**
@@ -73,7 +85,6 @@ contract Credits is ERC20, Ownable {
     function burnFrom(address from, uint256 amount) external {
         _spendAllowance(from, msg.sender, amount);
         _burn(from, amount);
-        console.log("Burned credits from address via burnFrom, amount:", amount);
     }
 
     /**

@@ -4112,17 +4112,795 @@ const WhitepaperPage = () => {
               system is live, permissionless, and unstoppable. The code is the law, the ledger is the truth, and the
               galaxy awaits coordination.
             </p>
+          </section>
 
-            <p
-              className="text-justify mb-4"
+          {/* Appendix A - Configuration Reference */}
+          <section className="mb-8">
+            <h2
+              className="font-bold mb-4"
               style={{
-                textAlign: "justify",
-                hyphens: "auto",
-                margin: "1.5rem 0 0.9rem",
-                fontStyle: "italic",
+                fontSize: "1.15rem",
+                fontWeight: "700",
+                marginTop: "2.5rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
               }}
             >
-              In the end, no pirate commands the galaxy. The galaxy is commanded by code.
+              Appendix A&nbsp;&nbsp;&nbsp;&nbsp;Configuration Reference
+            </h2>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              A.1 Core TypeScript Types
+            </h3>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>Vector2D:</strong> Two-dimensional coordinate system for positions and velocities (x, y
+              components).
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>Asteroid:</strong> Asteroid entity with position, velocity, size category, resource content, and
+              spawn time.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>Ship:</strong> Ship entity with pilot info, ship type, position, velocity, targeting state, fuel,
+              cargo, and movement flags.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>PilotAssignment:</strong> Maps pilot addresses to sectors, tracks death status and killer
+              information.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>TipResult:</strong> Result of tipping transaction including success status, amount, and
+              transaction hash.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>AboutContractInfo:</strong> Metadata about sector owner&apos;s contracts including station name,
+              registry address, and audit status.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>SectorEvent:</strong> Union type for 20+ game event types including spawns, mining, combat,
+              deaths, slashing, tipping, staking, and credentials.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>SectorSnapshot:</strong> Current sector state containing all asteroids, ships, and last update
+              timestamp.
+            </p>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              A.2 Game Configuration Constants
+            </h3>
+
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto",
+                marginBottom: "1rem",
+              }}
+            >
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.9rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #000" }}>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        fontWeight: "600",
+                        width: "35%",
+                      }}
+                    >
+                      Variable
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        fontWeight: "600",
+                        width: "15%",
+                      }}
+                    >
+                      Value
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        fontWeight: "600",
+                        width: "50%",
+                      }}
+                    >
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>WIDTH</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>2000</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Sector boundary width in pixels</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>HEIGHT</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>2000</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Sector boundary height in pixels</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      CHARACTER_COUNT
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>30</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Number of pilot characters to generate per sector</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      PILOT_BATCH_SIZE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>25</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Number of pilots to add per transaction batch</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ASTEROID_SIZES.small
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>45px</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Small asteroid size (100-200 resources)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ASTEROID_SIZES.medium
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>75px</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Medium asteroid size (200-350 resources)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ASTEROID_SIZES.large
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>120px</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Large asteroid size (350-500 resources)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ASTEROID_SPEED
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>20</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Base speed for asteroid movement</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      SHIP_SPEED
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>80</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Base speed for ship movement</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      INNER_LOOP_INTERVAL
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>3000ms</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>
+                      Fast loop interval for ship movement, mining, and battles
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      OUTER_LOOP_INTERVAL
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>9000ms</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>
+                      Slow loop interval for heavy operations and commit-reveal
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ASTEROID_SPAWN_CHANCE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>0.8</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Probability of asteroid spawn per outer loop (80%)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      SHIP_SPAWN_CHANCE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>0.7</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Probability of ship spawn per outer loop (70%)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      FUEL_CONSUMPTION_RATE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>0.7</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Fuel consumed per game loop cycle</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      LOW_FUEL_THRESHOLD
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>20</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Fuel level that triggers low fuel warnings</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      REFUEL_FUEL_THRESHOLD
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>50</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>
+                      Fuel level that triggers automatic refueling at station
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      REFUEL_ARRIVAL_DISTANCE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>50</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Distance threshold for arriving at station center</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      COURSE_RECALC_CYCLES
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>3</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Recalculate course every N game loops (optimization)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      SHIP_COMBAT_RANGE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>15</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Range for ship-to-ship vector matching and combat</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      CARGO_SPEED_MULTIPLIER
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>0.5</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Speed multiplier when ship carries full cargo (50%)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      EXIT_REMOVAL_BUFFER
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>5</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Buffer distance for entity removal from game</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      EXIT_TARGET_BUFFER
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>200</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Buffer distance for where ships aim when exiting</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ASTEROID_EDGE_BUFFER
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>100</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Buffer for asteroid edge collision calculations</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      TIP_SCORE_THRESHOLDS
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>90/150/240</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Score thresholds for low/medium/high tip amounts</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      TIP_AMOUNTS.STANDARD
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>1/2/3</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Standard tip amounts for low/medium/high scores</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      TIP_AMOUNTS.ENHANCED
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>2/3/4</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>
+                      Enhanced tips (+1 bonus) for players with about contract
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      COUNTDOWN_SECONDS
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>10</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Countdown duration before game starts (buy-in period)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      ENTROPY_REVEAL_DELAY_SECONDS
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>5</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Wait time before revealing entropy (Universe minimum)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      AUTO_GAME_CYCLE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>true</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Enable/disable automated game cycles</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      CROWDSALE_PILOTS_PER_LOOP
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>3</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Process 3 pilots per outer loop during crowdsale</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      CROWDSALE_TARGET_CREDITS
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>50,000</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Total credits target for crowdsale completion</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      CROWDSALE_MAX_UPGRADE_ATTEMPTS
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>3</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Stop after 3 pilots attempt upgrade during crowdsale</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      FEDERATION_LOCK_TIME
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>180,000ms</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Federation lock duration (3 minutes)</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      CARGO_PAYMENT_RATE
+                    </td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>5</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Credits paid per cargo unit delivered</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              A.3 Utility Functions
+            </h3>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>getCargoCapacity(shipType):</strong> Calculates cargo capacity based on ship type (1-12) using
+              formula: 20 + (shipType × 25). Range: 45 units (type 1) to 320 units (type 12).
+            </p>
+          </section>
+
+          {/* Development Meta Section */}
+          <section
+            id="development-meta"
+            style={{
+              marginBottom: "3rem",
+            }}
+          >
+            <h2
+              className="font-bold mb-6"
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1.5rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              Development Meta
+            </h2>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              Extract Protocol represents a significant development effort spanning both blockchain and game server
+              infrastructure. The entire codebase was developed using Claude Sonnet 4.5 in Cursor, demonstrating the
+              capabilities of AI-assisted development for complex, multi-layered systems.
+            </p>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              Codebase Statistics
+            </h3>
+
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto",
+                marginBottom: "1rem",
+              }}
+            >
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.9rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #000" }}>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        fontWeight: "600",
+                        width: "50%",
+                      }}
+                    >
+                      Component
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "right",
+                        padding: "0.5rem 0.25rem",
+                        fontWeight: "600",
+                        width: "25%",
+                      }}
+                    >
+                      Lines of Code
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.5rem 0.25rem",
+                        fontWeight: "600",
+                        width: "25%",
+                      }}
+                    >
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontWeight: "600" }}>Smart Contracts (Solidity)</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>2,061</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Core blockchain logic</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Game.sol</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>956</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Game state & logic</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>MaxExtract.sol</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>521</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Main protocol contract</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Auditor.sol</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>271</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Audit & verification</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Universe.sol</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>219</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Entropy & sectors</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Credits.sol</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>94</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>ERC-20 token</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontWeight: "600" }}>Game Server & Scripts</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>17,578</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>Backend simulation engine</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: "0.4rem 0.25rem", fontWeight: "600" }}>Frontend Application</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>20,952</td>
+                    <td style={{ padding: "0.4rem 0.25rem" }}>UI & user experience</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>App Pages</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>10,366</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Next.js pages & routes</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Components</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>6,433</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>React components</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Hooks</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>3,017</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Custom React hooks</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #ddd", backgroundColor: "#f9f9f9" }}>
+                    <td style={{ padding: "0.4rem 0.25rem 0.4rem 1.5rem", fontSize: "0.85rem" }}>Utils</td>
+                    <td style={{ padding: "0.4rem 0.25rem", textAlign: "right", fontFamily: "monospace" }}>1,136</td>
+                    <td style={{ padding: "0.4rem 0.25rem", fontSize: "0.85rem" }}>Utility functions</td>
+                  </tr>
+                  <tr style={{ borderBottom: "2px solid #000", backgroundColor: "#e8e8e8" }}>
+                    <td style={{ padding: "0.6rem 0.25rem", fontWeight: "700", fontSize: "1rem" }}>
+                      Total Custom Code
+                    </td>
+                    <td
+                      style={{
+                        padding: "0.6rem 0.25rem",
+                        textAlign: "right",
+                        fontWeight: "700",
+                        fontFamily: "monospace",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      40,591
+                    </td>
+                    <td style={{ padding: "0.6rem 0.25rem", fontWeight: "600" }}>All custom-written code</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+                fontSize: "0.9rem",
+                fontStyle: "italic",
+                color: "#666",
+              }}
+            >
+              Note: Line counts exclude third-party libraries, node_modules, test files, deployment scripts, and
+              generated code. All custom code was written using Claude Sonnet 4.5 in Cursor.
+            </p>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              Technology Stack
+            </h3>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>Blockchain Layer:</strong> Built on Scaffold-ETH 2, leveraging Foundry for smart contract
+              development, testing, and deployment. Smart contracts are written in Solidity and deployed to Arbitrum.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>Frontend Layer:</strong> Next.js 14 with App Router, TypeScript, TailwindCSS, and RainbowKit for
+              wallet integration. Real-time WebSocket connections provide live game updates and sector visualization.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              <strong>Backend Layer:</strong> Node.js/TypeScript game server implementing dual-loop architecture (3s
+              inner loop for movement/combat, 9s outer loop for blockchain operations). Handles sector simulation,
+              commit-reveal entropy, and blockchain state synchronization.
+            </p>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              AI-Assisted Development
+            </h3>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              The entire Extract Protocol codebase—spanning over 40,000 lines of custom code across smart contracts,
+              game server logic, and frontend application—was developed using Claude Sonnet 4.5 within the Cursor IDE.
+              This includes:
+            </p>
+
+            <ul
+              style={{
+                marginLeft: "1.5rem",
+                marginBottom: "0.9rem",
+                listStyleType: "disc",
+              }}
+            >
+              <li style={{ marginBottom: "0.5rem" }}>
+                Complete smart contract suite with advanced game mechanics, staking, and slashing logic
+              </li>
+              <li style={{ marginBottom: "0.5rem" }}>
+                Sophisticated game server with dual-loop architecture and complex AI behavior systems
+              </li>
+              <li style={{ marginBottom: "0.5rem" }}>
+                Full-featured web application with real-time visualization and blockchain integration
+              </li>
+              <li style={{ marginBottom: "0.5rem" }}>
+                Commit-reveal entropy system and deterministic sector generation algorithms
+              </li>
+              <li style={{ marginBottom: "0.5rem" }}>
+                Comprehensive game mechanics including mining, combat, federation formation, and economic systems
+              </li>
+            </ul>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              This development approach showcases the potential of AI-assisted programming for creating complex,
+              production-ready blockchain applications with intricate game mechanics and real-time multiplayer features.
+            </p>
+
+            <h3
+              className="font-bold mb-4"
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: "600",
+                marginTop: "2rem",
+                marginBottom: "1rem",
+                fontFamily: '"Times New Roman", serif',
+                color: "#000",
+              }}
+            >
+              Acknowledgments
+            </h3>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              This project was built on <strong>Scaffold-ETH 2</strong>, an exceptional open-source toolkit that
+              provides everything needed to build decentralized applications on Ethereum. Scaffold-ETH 2 offers a
+              comprehensive development environment with hot-reload smart contract editing, type-safe frontend
+              integration, pre-built components for common blockchain interactions, and a seamless developer experience
+              that dramatically accelerates dApp development.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              Special recognition to the Scaffold-ETH 2 core team and contributors whose dedication to creating
+              developer-friendly tools and fostering the Ethereum builder ecosystem made this project possible.
+              Scaffold-ETH 2 represents years of refinement in making blockchain development accessible and productive.
+            </p>
+
+            <p
+              className="mb-4"
+              style={{
+                margin: "0 0 0.9rem",
+              }}
+            >
+              From the smart contract hot-reload functionality to the built-in block explorer, from the intuitive hooks
+              for reading and writing contract state to the beautiful component library for addresses and balances—every
+              aspect of Scaffold-ETH 2 demonstrates thoughtful design for the developer experience. Extract Protocol
+              stands on the shoulders of this remarkable foundation.
             </p>
           </section>
 
@@ -4136,6 +4914,23 @@ const WhitepaperPage = () => {
             }}
           >
             <p>Extract Protocol Whitepaper v1.0 • {new Date().getFullYear()}</p>
+          </div>
+
+          {/* Final Quote */}
+          <div
+            className="text-center mt-8"
+            style={{
+              fontSize: "0.95rem",
+              fontStyle: "italic",
+              color: "#333",
+              marginTop: "2rem",
+            }}
+          >
+            <p style={{ margin: "0.5rem 0" }}>────────────────────</p>
+            <p style={{ margin: "0.75rem 0" }}>
+              In the end, no pirate commands the galaxy. The galaxy is commanded by code.
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>────────────────────</p>
           </div>
         </div>
       </div>

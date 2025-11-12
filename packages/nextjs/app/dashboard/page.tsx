@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { blo } from "blo";
 import type { NextPage } from "next";
 import { Address } from "~~/components/scaffold-eth";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import deployedContracts from "~~/contracts/deployedContracts";
+import { useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { useGameServerStats } from "~~/hooks/useGameServerStatus";
 import { usePilotsData } from "~~/hooks/usePilotsData";
-import { usePlaceholderRedirect } from "~~/hooks/usePlaceholderRedirect";
+import { usePlaceholder } from "~~/hooks/usePlaceholder";
 import { Pilot, SECTOR_CONFIG } from "~~/types/sector";
 import { BASE_SCALE_FACTORS, SHIP_SCALE_FACTORS, getShipModel } from "~~/utils/shipConstants";
 
@@ -89,7 +91,6 @@ const PilotRow = ({ pilot }: { pilot: Pilot }) => {
             className="object-contain rotate-90"
             title={`Ship Model ${shipModel} (Type ${pilot.shipType})`}
           />
-          <span className="text-[10px] font-mono text-cyan-400">M-{shipModel}</span>
         </div>
       </td>
       <td>
@@ -374,8 +375,9 @@ const WinnersDisplay = ({ winners, winningScore }: { winners: string[]; winningS
 };
 
 const Dashboard: NextPage = () => {
-  // Redirect to home if maintenance mode is active
-  usePlaceholderRedirect();
+  // Check for maintenance mode placeholder (but don't redirect - dashboard stays accessible)
+  const { placeholder } = usePlaceholder();
+  const { targetNetwork } = useTargetNetwork();
 
   const [siteUrl, setSiteUrl] = useState<string>("");
   const [players, setPlayers] = useState<PlayerData[]>([]);
@@ -384,6 +386,12 @@ const Dashboard: NextPage = () => {
   const [playerNames, setPlayerNames] = useState<Map<string, string>>(new Map());
   const [playerSocials, setPlayerSocials] = useState<Map<string, string>>(new Map());
   const [playerScores, setPlayerScores] = useState<Map<string, number>>(new Map());
+
+  // Get contract addresses from deployed contracts
+  const networkId = targetNetwork.id;
+  const networkContracts = deployedContracts[networkId as keyof typeof deployedContracts];
+  const maxExtractAddress = networkContracts?.MaxExtract?.address;
+  const gameAddress = networkContracts?.Game?.address;
 
   // Generate stable star positions once
   const [stars] = useState(() => ({
@@ -619,11 +627,42 @@ const Dashboard: NextPage = () => {
               />
             ))}
           </div>
+
+          {/* Contract Blockies - Visual signature of deployed contracts */}
+          {maxExtractAddress && (
+            <div className="absolute top-20 left-4 z-10 tooltip tooltip-bottom" data-tip="MaxExtract Contract">
+              <div className="ring-2 ring-primary rounded-full p-1 bg-base-100 shadow-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={blo(maxExtractAddress as `0x${string}`)}
+                  alt="MaxExtract Contract"
+                  className="rounded-full"
+                  width={48}
+                  height={48}
+                />
+              </div>
+            </div>
+          )}
+          {gameAddress && (
+            <div className="absolute top-20 right-4 z-10 tooltip tooltip-bottom" data-tip="Game Contract">
+              <div className="ring-2 ring-secondary rounded-full p-1 bg-base-100 shadow-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={blo(gameAddress as `0x${string}`)}
+                  alt="Game Contract"
+                  className="rounded-full"
+                  width={48}
+                  height={48}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="card-body relative z-10">
-            {/* Site URL Title */}
-            {siteUrl && (
+            {/* Site URL Title / Placeholder Title */}
+            {(placeholder && placeholder.trim() !== "" ? placeholder : siteUrl) && (
               <h1 className="text-5xl font-bold text-center mb-8 text-warning drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
-                {siteUrl}
+                {placeholder && placeholder.trim() !== "" ? placeholder : siteUrl}
                 {visibleChapters && Array.isArray(visibleChapters) && visibleChapters.length > 0 && (
                   <span className="ml-3">[{visibleChapters.map((chapter: number) => chapter).join(", ")}]</span>
                 )}

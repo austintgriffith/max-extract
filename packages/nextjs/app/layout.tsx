@@ -9,6 +9,13 @@ export const metadata = getMetadata({
   description: "Decentralized extraction protocol built on Ethereum",
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 0.65,
+  maximumScale: 5.0,
+  userScalable: true,
+};
+
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <html suppressHydrationWarning className={``}>
