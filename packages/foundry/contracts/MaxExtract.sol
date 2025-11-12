@@ -45,7 +45,7 @@ contract MaxExtract {
     // The three core rules of the Extract Protocol - immutable and eternal
     // Max's direct commandments to all who take the oath
     string public constant RULE_ONE = "You will not attack other pirates who have signed the oath";
-    string public constant RULE_TWO = "You will claim asteroids fairly, not steal them by force";
+    string public constant RULE_TWO = "Each sector governs its own rules and regulations";
     string public constant RULE_THREE = "Your reputation will be recorded, traceable, and unforgeable";
 
     // Universe contract for entropy access
