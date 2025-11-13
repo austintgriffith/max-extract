@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import { Address } from "~~/components/scaffold-eth";
@@ -9,6 +9,7 @@ import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaf
 export const GameBuyIn = () => {
   const { address: connectedAddress } = useAccount();
   const [isLoading, setIsLoading] = useState(false);
+  const playersListRef = useRef<HTMLDivElement>(null);
 
   // Read game state and info
   const { data: gameInfo } = useScaffoldReadContract({
@@ -49,6 +50,15 @@ export const GameBuyIn = () => {
         functionName: "buyIn",
         value: gameInfo[2], // buyInPrice from gameInfo
       });
+
+      // Scroll to players list after successful buy-in
+      // Small delay to allow the UI to update
+      setTimeout(() => {
+        playersListRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 1000);
     } catch (error) {
       console.error("Error buying in:", error);
     } finally {
@@ -114,7 +124,7 @@ export const GameBuyIn = () => {
       )}
 
       {/* Players List */}
-      <div className="w-full">
+      <div className="w-full" ref={playersListRef}>
         <h3 className="text-lg font-semibold mb-4 text-center">Players ({playerCount?.toString() || "0"})</h3>
 
         {players && players.length > 0 ? (

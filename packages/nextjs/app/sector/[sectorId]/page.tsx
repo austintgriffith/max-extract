@@ -68,6 +68,8 @@ const SectorPage = () => {
     return true;
   });
 
+  // Radar activation modal state - removed, will use audioUnlocked state directly
+
   // Selection state
   const [selectedObject, setSelectedObject] = useState<SelectedObject | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<StationDetails | ShipDetails | Asteroid | null>(null);
@@ -90,6 +92,8 @@ const SectorPage = () => {
     playShipAttackSequence,
     playShipDestructionSequence,
     getPointsSoundForTipAmount,
+    audioUnlocked,
+    unlockAudio,
   } = useSectorSounds();
 
   // Track which ships are currently mining (to avoid duplicate drill sounds)
@@ -821,6 +825,21 @@ const SectorPage = () => {
     return () => clearInterval(interval);
   }, [selectedObject, sectorData]);
 
+  // Handle radar activation (from modal)
+  const handleRadarActivation = () => {
+    console.log("🛰️ Activating sector radar...");
+
+    // Unlock audio
+    unlockAudio();
+
+    // Play close sound to confirm activation (after a brief delay to ensure audio is unlocked)
+    setTimeout(() => {
+      if (soundEnabled) {
+        playSound("close", 0.3);
+      }
+    }, 100);
+  };
+
   // Handle object selection
   const handleObjectSelect = (object: SelectedObject | null) => {
     // Play close sound when deselecting (closing the UI)
@@ -832,6 +851,9 @@ const SectorPage = () => {
 
   // Handle outside clicks to deselect
   const handlePageClick = () => {
+    // Don't try to unlock audio via page clicks - user must use the radar activation modal
+    // This prevents accidental unlocking when they just want to deselect an object
+
     if (selectedObject) {
       // Use handleObjectSelect to ensure sound is played
       handleObjectSelect(null);
@@ -1079,6 +1101,9 @@ const SectorPage = () => {
     previousBaseTypeRef.current = currentBaseType;
   }, [baseType, soundEnabled, playSound, setParticles]);
 
+  // Note: Audio confirmation sound is played in handleRadarActivation()
+  // when the user clicks "ACTIVATE SECTOR RADAR" button
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -1126,6 +1151,47 @@ const SectorPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8" onClick={handlePageClick}>
+      {/* Radar Activation Modal - Shows when sounds enabled but audio not unlocked */}
+      {soundEnabled && !audioUnlocked && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
+          <div className="relative w-full max-w-2xl mx-4">
+            {/* Video Container */}
+            <div className="relative rounded-lg overflow-hidden shadow-2xl border-4 border-yellow-500/50">
+              <video
+                key="radar-video"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-auto"
+                style={{ opacity: 1, transition: "none" }}
+              >
+                <source src="/radargirl.mp4" type="video/mp4" />
+              </video>
+
+              {/* Overlay gradient for better button visibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+
+              {/* Activation Button */}
+              <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+                <button
+                  onClick={handleRadarActivation}
+                  className="btn btn-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold border-none shadow-2xl px-8 py-4 text-xl animate-pulse hover:scale-110 transition-transform"
+                  style={{ textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}
+                >
+                  🛰️ ACTIVATE SECTOR RADAR
+                </button>
+              </div>
+            </div>
+
+            {/* Sector ID Display */}
+            <div className="mt-4 text-center text-yellow-500 font-mono text-sm opacity-75">
+              SECTOR: {sectorId ? sectorId.slice(0, 16) : "UNKNOWN"}...
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <Link href="/" className="btn btn-sm btn-ghost">
           <ArrowLeftIcon className="h-4 w-4 mr-2" />

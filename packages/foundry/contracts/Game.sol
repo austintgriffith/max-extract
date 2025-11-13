@@ -62,6 +62,9 @@ contract Game {
     // Reference to the Auditor contract
     address public auditorContract;
     
+    // Reference to the MaxExtract contract address for authorization checks
+    address public maxExtractContract;
+    
     // Reference to the Credits ERC20 token contract
     IERC20 public creditsContract;
     
@@ -145,6 +148,7 @@ contract Game {
     error NotAFuelContract();
     error StationMaxLevel();
     error InvalidBaseType();
+    error OnlyMaxExtract();
     
     modifier onlyGod() {
         if (msg.sender != universe.GOD()) revert OnlyGod();
@@ -715,6 +719,7 @@ contract Game {
     function setMaxExtract(address _maxExtract) external onlyGod {
         require(_maxExtract != address(0), "Invalid address");
         maxExtract = IMaxExtract(_maxExtract);
+        maxExtractContract = _maxExtract;
     }
     
     /**
@@ -892,6 +897,29 @@ contract Game {
         scores[_player] = currentScore - _amount;
         
         emit PointsDeducted(_player, _amount, scores[_player]);
+    }
+    
+    /**
+     * Award broadcast points to a player
+     * Only callable by the MaxExtract contract
+     * Called when a player broadcasts their sector for the first time
+     * @param _player The player address to award points to
+     */
+    function awardBroadcastPoints(address _player) external {
+        if (msg.sender != maxExtractContract) revert OnlyMaxExtract();
+        
+        // Check if the player exists
+        bool isValidPlayer = false;
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == _player) {
+                isValidPlayer = true;
+                break;
+            }
+        }
+        if (!isValidPlayer) revert NotAPlayer();
+        
+        // Award 5 points
+        scores[_player] += 5;
     }
     
     /**

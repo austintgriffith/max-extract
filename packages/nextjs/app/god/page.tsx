@@ -234,6 +234,19 @@ export default function GodPage() {
   };
 
   // Chapter management handlers
+  const handleShowOnlyChapter0 = async () => {
+    try {
+      await writeGameAsync({
+        functionName: "showChapters",
+        args: [[0]], // Array containing only chapter 0
+      });
+      notification.success("All chapters hidden - showing only Chapter 0!");
+    } catch (error) {
+      console.error("Error hiding chapters:", error);
+      notification.error("Error hiding chapters");
+    }
+  };
+
   const handleMakeChapter1Visible = async () => {
     try {
       await writeGameAsync({
@@ -472,6 +485,9 @@ export default function GodPage() {
 
           {/* Chapter Control Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <button className="btn btn-lg btn-warning" onClick={handleShowOnlyChapter0}>
+              🔒 Hide All Chapters (Show Only 0)
+            </button>
             <button
               className={`btn btn-lg ${visibleChapters && visibleChapters.includes(1) ? "btn-disabled" : "btn-primary"}`}
               onClick={handleMakeChapter1Visible}

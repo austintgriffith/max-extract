@@ -151,6 +151,7 @@ export class SectorTargetingManager {
   ): string | null {
     let bestId: string | null = null;
     let bestScore = 0;
+    let reachableCount = 0;
 
     const currentTarget = currentTargetId
       ? asteroids.get(currentTargetId)
@@ -161,6 +162,7 @@ export class SectorTargetingManager {
 
     for (const [id, asteroid] of asteroids) {
       if (this.canShipReachAsteroid(shipPos, asteroid, ship)) {
+        reachableCount++;
         const score = this.calculateTargetScore(shipPos, asteroid, ship);
 
         if (score > bestScore) {
@@ -168,6 +170,13 @@ export class SectorTargetingManager {
           bestId = id;
         }
       }
+    }
+
+    // Log search result
+    if (bestId) {
+      console.log(`🪨 [${ship.pilotName}] Found asteroid ${bestId.substring(0, 8)} (${reachableCount} reachable)`);
+    } else if (reachableCount === 0 && asteroids.size > 0) {
+      console.log(`🔍 [${ship.pilotName}] No reachable asteroids (${asteroids.size} in sector)`);
     }
 
     // Only switch if new target is significantly better

@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Universe: {
-      address: "0xa922c3227149d9bc5001d796aa418b590d0c4a7b",
+      address: "0x8b03e92900e9d2251a93e6640a79353e3e10df1c",
       abi: [
         {
           type: "constructor",
@@ -367,10 +367,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 843,
+      deployedOnBlock: 2582,
     },
     Credits: {
-      address: "0x0d8694f47cdc22bb8c6d2668a38d07a439f378f9",
+      address: "0x741050c1d044e23d3ebd2e85ad8b6ce5c17555c7",
       abi: [
         {
           type: "constructor",
@@ -889,10 +889,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 844,
+      deployedOnBlock: 2583,
     },
     Game: {
-      address: "0x9b2b34edd270947dff226d57b233ed2465a8a1fa",
+      address: "0x4f29f479d3e6c41ad3fc8c7c8d6f423cb2784b8e",
       abi: [
         {
           type: "constructor",
@@ -973,6 +973,19 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "awardBroadcastPoints",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1464,6 +1477,19 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract IMaxExtract",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "maxExtractContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -2206,6 +2232,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "OnlyMaxExtract",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "OnlyPilot",
           inputs: [],
         },
@@ -2241,10 +2272,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 845,
+      deployedOnBlock: 2583,
     },
     Auditor: {
-      address: "0x5061c45ce504cdf3afc0cc566480f6e814241e0e",
+      address: "0x127a31cc786aec5bc96f395b8d666b8e9c2a516b",
       abi: [
         {
           type: "constructor",
@@ -2808,10 +2839,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 845,
+      deployedOnBlock: 2583,
     },
     MaxExtract: {
-      address: "0xf8a3b247d7deee8a3460431827dd2e8ae9857a7a",
+      address: "0x0e4b6314d9756d40ee0b3d68cf3999d29eefb147",
       abi: [
         {
           type: "constructor",
@@ -3450,7 +3481,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 845,
+      deployedOnBlock: 2583,
     },
   },
   42161: {
@@ -4424,6 +4455,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "awardBroadcastPoints",
+          inputs: [
+            {
+              name: "_player",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "buyIn",
           inputs: [],
           outputs: [],
@@ -4912,6 +4956,19 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract IMaxExtract",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "maxExtractContract",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -5650,6 +5707,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "OnlyGod",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyMaxExtract",
           inputs: [],
         },
         {

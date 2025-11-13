@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Sound types available in the sector
@@ -99,16 +99,69 @@ export const useSectorSounds = () => {
   // Single shared audio element for refuel sounds that we can actually stop
   const activeRefuelAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Track loading state and audio unlock
+  const [soundsLoaded, setSoundsLoaded] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const audioUnlockAttemptedRef = useRef(false);
+
   // Preload sounds on mount
   useEffect(() => {
+    let loadedCount = 0;
+    const totalSounds = 43; // Count of all sounds being loaded
+
+    // Track failed sounds for a single summary log
+    const failedSounds: SoundType[] = [];
+
     // Load currently available sounds
     const loadSound = (type: SoundType, path: string) => {
       try {
         const audio = new Audio(path);
         audio.preload = "auto";
+
+        // Track when each sound is loaded
+        audio.addEventListener(
+          "canplaythrough",
+          () => {
+            loadedCount++;
+            if (loadedCount === totalSounds) {
+              if (failedSounds.length > 0) {
+                console.warn(`⚠️ ${failedSounds.length} sound(s) failed to load:`, failedSounds.join(", "));
+              }
+              console.log("✅ Sound system ready!");
+              setSoundsLoaded(true);
+            }
+          },
+          { once: true },
+        );
+
+        // Also handle load errors (silently track them)
+        audio.addEventListener(
+          "error",
+          () => {
+            failedSounds.push(type);
+            loadedCount++; // Count errors too, so we don't get stuck
+            if (loadedCount === totalSounds) {
+              if (failedSounds.length > 0) {
+                console.warn(`⚠️ ${failedSounds.length} sound(s) failed to load:`, failedSounds.join(", "));
+              }
+              console.log("✅ Sound system ready!");
+              setSoundsLoaded(true);
+            }
+          },
+          { once: true },
+        );
+
         soundsRef.current[type] = audio;
       } catch (error) {
-        console.error(`Failed to load sound: ${type}`, error);
+        console.warn(`Failed to create audio for ${type}:`, error);
+        failedSounds.push(type);
+        loadedCount++;
+        if (loadedCount === totalSounds) {
+          if (failedSounds.length > 0) {
+            console.warn(`⚠️ ${failedSounds.length} sound(s) failed to load:`, failedSounds.join(", "));
+          }
+          setSoundsLoaded(true);
+        }
       }
     };
 
@@ -178,7 +231,9 @@ export const useSectorSounds = () => {
 
     return () => {
       // Cleanup: pause and remove all audio elements
-      Object.values(soundsRef.current).forEach(audio => {
+      // Capture the current sounds object to avoid ref issues
+      const sounds = soundsRef.current;
+      Object.values(sounds).forEach(audio => {
         if (audio) {
           audio.pause();
           audio.src = "";
@@ -186,6 +241,68 @@ export const useSectorSounds = () => {
       });
     };
   }, []);
+
+  /**
+   * Unlock audio playback by playing a silent sound or attempting playback
+   * This must be called in response to a user interaction (click, keypress, etc.)
+   */
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockAttemptedRef.current) {
+      return; // Already attempted unlock
+    }
+
+    audioUnlockAttemptedRef.current = true;
+    console.log("🔓 Attempting to unlock audio...");
+
+    // Try to play and immediately pause a sound to unlock the audio context
+    // Use a very quiet blip sound so it's not jarring
+    const testSound = soundsRef.current.blip;
+    if (testSound) {
+      const audio = new Audio(testSound.src);
+      audio.volume = 0.01; // Very quiet
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Successfully played - audio is now unlocked
+            audio.pause();
+            audio.currentTime = 0;
+            audio.src = "";
+            setAudioUnlocked(true);
+            console.log("✅ Audio unlocked successfully!");
+          })
+          .catch(error => {
+            // Still blocked - user needs to interact more
+            console.warn("⚠️ Audio still blocked:", error.message);
+            // Reset so we can try again on next interaction
+            audioUnlockAttemptedRef.current = false;
+          });
+      }
+    }
+  }, []);
+
+  // Auto-unlock audio on first user interaction
+  useEffect(() => {
+    if (!soundsLoaded || audioUnlocked) {
+      return;
+    }
+
+    const handleFirstInteraction = () => {
+      unlockAudio();
+    };
+
+    // Listen for various user interaction events
+    window.addEventListener("click", handleFirstInteraction, { once: true });
+    window.addEventListener("keydown", handleFirstInteraction, { once: true });
+    window.addEventListener("touchstart", handleFirstInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener("click", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
+      window.removeEventListener("touchstart", handleFirstInteraction);
+    };
+  }, [soundsLoaded, audioUnlocked, unlockAudio]);
 
   /**
    * Play a sound effect
@@ -541,5 +658,8 @@ export const useSectorSounds = () => {
     playShipAttackSequence,
     playShipDestructionSequence,
     getPointsSoundForTipAmount,
+    soundsLoaded,
+    audioUnlocked,
+    unlockAudio,
   };
 };

@@ -134,11 +134,11 @@ export const SECTOR_CONFIG = {
   SHIP_SPEED: 80,
   // Dual-loop system configuration
   INNER_LOOP_INTERVAL: 2000, // Fast loop for ship movement, mining, battles
-  OUTER_LOOP_INTERVAL: 15000, // Slow loop for heavy operations (including rolling commit-reveal)
+  OUTER_LOOP_INTERVAL: 12000, // Slow loop for heavy operations (including rolling commit-reveal)
   // Independent spawn probabilities (0-1 range, checked each outer loop)
   // Both can spawn in the same cycle if both rolls succeed
-  ASTEROID_SPAWN_CHANCE: 0.6, // % chance per outer loop
-  SHIP_SPAWN_CHANCE: 0.5, // % chance per outer loop
+  ASTEROID_SPAWN_CHANCE: 0.7, // % chance per outer loop
+  SHIP_SPAWN_CHANCE: 0.6, // % chance per outer loop
   FUEL_CONSUMPTION_RATE: 0.7,
   LOW_FUEL_THRESHOLD: 20,
   REFUEL_FUEL_THRESHOLD: 50, // Fuel threshold for initiating refueling at station

@@ -382,6 +382,17 @@ const Dashboard: NextPage = () => {
 
   const [siteUrl, setSiteUrl] = useState<string>("");
   const [players, setPlayers] = useState<PlayerData[]>([]);
+
+  // Hard reload every 20 seconds when in placeholder mode
+  useEffect(() => {
+    if (placeholder && placeholder.trim() !== "") {
+      const reloadInterval = setInterval(() => {
+        window.location.reload();
+      }, 20000); // 20 seconds
+
+      return () => clearInterval(reloadInterval);
+    }
+  }, [placeholder]);
   const [playerSectors, setPlayerSectors] = useState<Map<string, string>>(new Map());
   const [playerRegistries, setPlayerRegistries] = useState<Map<string, string>>(new Map());
   const [playerNames, setPlayerNames] = useState<Map<string, string>>(new Map());
@@ -938,8 +949,19 @@ const Dashboard: NextPage = () => {
             {pilotsError && (
               <>
                 <div className="divider">Pilots</div>
-                <div className="alert alert-error">
-                  <span>Error loading pilots: {pilotsError}</span>
+                <div className="card bg-base-200 shadow-xl">
+                  <div className="card-body items-center text-center">
+                    <div className="text-4xl mb-4 animate-pulse">🛰️</div>
+                    <h3 className="text-lg font-semibold">
+                      Searching for a signal from pilots
+                      <span className="inline-flex">
+                        <span className="animate-[bounce_1s_ease-in-out_0s_infinite]">.</span>
+                        <span className="animate-[bounce_1s_ease-in-out_0.2s_infinite]">.</span>
+                        <span className="animate-[bounce_1s_ease-in-out_0.4s_infinite]">.</span>
+                      </span>
+                    </h3>
+                    <progress className="progress progress-primary w-56 mt-4"></progress>
+                  </div>
                 </div>
               </>
             )}

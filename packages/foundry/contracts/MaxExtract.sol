@@ -29,6 +29,7 @@ interface IGame {
     function state() external view returns (uint8); // 0 = Open, 1 = Active
     function getPlayers() external view returns (address[] memory);
     function getPlayerScore(address player) external view returns (uint256);
+    function awardBroadcastPoints(address player) external;
 }
 
 // Interface for the Auditor contract to check if contracts are audited
@@ -188,6 +189,9 @@ contract MaxExtract {
         
         // Store the sector-to-owner mapping for efficient lookups
         sectorToOwner[sectorId] = tx.origin;
+        
+        // Award 5 points to the player for their first broadcast
+        game.awardBroadcastPoints(tx.origin);
         
         emit SectorBroadcast(sectorId, msg.sender, tx.origin);
     }
