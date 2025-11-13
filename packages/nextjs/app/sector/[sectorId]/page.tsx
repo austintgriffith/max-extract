@@ -1153,7 +1153,10 @@ const SectorPage = () => {
     <div className="container mx-auto px-4 py-8" onClick={handlePageClick}>
       {/* Radar Activation Modal - Shows when sounds enabled but audio not unlocked */}
       {soundEnabled && !audioUnlocked && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 cursor-pointer"
+          onClick={handleRadarActivation}
+        >
           <div className="relative w-full max-w-2xl mx-4">
             {/* Video Container */}
             <div className="relative rounded-lg overflow-hidden shadow-2xl border-4 border-yellow-500/50">
@@ -1173,13 +1176,13 @@ const SectorPage = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
 
               {/* Activation Button */}
-              <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+              <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-2">
                 <button
                   onClick={handleRadarActivation}
                   className="btn btn-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold border-none shadow-2xl px-8 py-4 text-xl animate-pulse hover:scale-110 transition-transform"
                   style={{ textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}
                 >
-                  🛰️ ACTIVATE SECTOR RADAR
+                  📡 click anywhere to activate sector radar
                 </button>
               </div>
             </div>

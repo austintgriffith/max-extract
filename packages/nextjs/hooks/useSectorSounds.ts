@@ -103,6 +103,7 @@ export const useSectorSounds = () => {
   const [soundsLoaded, setSoundsLoaded] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioUnlockAttemptedRef = useRef(false);
+  const initialCheckDoneRef = useRef(false);
 
   // Preload sounds on mount
   useEffect(() => {
@@ -281,6 +282,39 @@ export const useSectorSounds = () => {
       }
     }
   }, []);
+
+  // Check if audio is already working on mount (e.g., from previous user interactions)
+  useEffect(() => {
+    if (!soundsLoaded || audioUnlocked || initialCheckDoneRef.current) {
+      return;
+    }
+
+    initialCheckDoneRef.current = true;
+
+    // Try to test if audio is already unlocked by attempting a silent play
+    const testSound = soundsRef.current.blip;
+    if (testSound) {
+      const audio = new Audio(testSound.src);
+      audio.volume = 0; // Completely silent
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Audio is already unlocked!
+            audio.pause();
+            audio.currentTime = 0;
+            audio.src = "";
+            setAudioUnlocked(true);
+            console.log("✅ Audio already unlocked from previous interaction");
+          })
+          .catch(() => {
+            // Audio is blocked - user needs to interact
+            console.log("🔒 Audio locked - waiting for user interaction");
+          });
+      }
+    }
+  }, [soundsLoaded, audioUnlocked]);
 
   // Auto-unlock audio on first user interaction
   useEffect(() => {
