@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="https://extract.fi/maxwider.jpg" alt="Max Extract" width="100%" />
-</p>
-
-<h1 align="center">Max Extract</h1>
+<h1 align="center">🛰️ Max Extract 🚀</h1>
 
 <p align="center">
   <strong>A Solidity programming game on Arbitrum</strong>
@@ -48,10 +44,6 @@ The contract was simple but radical:
 It was a call to order in deep space, a promise that trust could be built from code, not blood. And it worked—without any centralized control, it was unstoppable and immutable.
 
 Now, the galaxy waits for new signers. **You are one of them.**
-
-<p align="center">
-  <img src="https://extract.fi/maxwidenotext.jpg" alt="The Asteroid Belt" width="100%" />
-</p>
 
 ---
 
