@@ -8,7 +8,7 @@ const titleTemplate = "%s | Max Extract Protocol";
 export const getMetadata = ({
   title,
   description,
-  imageRelativePath = "/thumbnail.jpg",
+  imageRelativePath = "/maxwider.jpg",
 }: {
   title: string;
   description: string;
@@ -32,10 +32,14 @@ export const getMetadata = ({
       images: [
         {
           url: imageUrl,
+          width: 1200,
+          height: 630,
+          type: "image/jpeg",
         },
       ],
     },
     twitter: {
+      card: "summary_large_image",
       title: {
         default: title,
         template: titleTemplate,
