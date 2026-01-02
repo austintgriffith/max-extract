@@ -2247,19 +2247,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.2.5":
-  version: 15.2.5
-  resolution: "@next/env@npm:15.2.5"
-  checksum: 39b23d80e5b5984c9ee7ff65fe48e167becb35b87b7087a53a234fa3a0b80940626c1f3b9f9dfdcbfc9d647fd2faad67b3c6497fabb9993b0a45e3779984cec5
+"@next/env@npm:15.2.8":
+  version: 15.2.8
+  resolution: "@next/env@npm:15.2.8"
+  checksum: df7606a0cca0b47b1157ef2e791c892f1fd6b9f715624e5aef48a3ca1de57d09cb3c821cc13c888a9b20ba8b17c5fb5742bb5ac6e0e7cd95f1e162fe33d9e59c
   languageName: node
   linkType: hard
 
-"@next/eslint-plugin-next@npm:15.2.5":
-  version: 15.2.5
-  resolution: "@next/eslint-plugin-next@npm:15.2.5"
+"@next/eslint-plugin-next@npm:15.2.8":
+  version: 15.2.8
+  resolution: "@next/eslint-plugin-next@npm:15.2.8"
   dependencies:
     fast-glob: 3.3.1
-  checksum: 2249701b4ea61c51ae73809e0e95b8f66778265d6742b3665a4efbc6c1167517e37c0ca7f09bae7a07de993d1672acd55e9a473c0f8ae60947fe6c337883b015
+  checksum: 3cbb1e73f59cb61b7a50ce11c740f8d453ee6b70eb494f5d860d179f5d642d55b26b390c574979f92c9581e402691e99edd0dd817c61020c4dfc920be3ff7a1c
   languageName: node
   linkType: hard
 
@@ -3137,13 +3137,13 @@ __metadata:
     burner-connector: 0.0.16
     daisyui: 5.0.9
     eslint: ~9.23.0
-    eslint-config-next: ~15.2.3
+    eslint-config-next: ~15.2.6
     eslint-config-prettier: ~10.1.1
     eslint-plugin-prettier: ~5.2.4
     isows: ^1.0.7
     katex: ^0.16.23
     kubo-rpc-client: ~5.0.2
-    next: ~15.2.3
+    next: ~15.2.6
     next-nprogress-bar: ~2.3.13
     next-themes: ~0.3.0
     postcss: ~8.4.45
@@ -7488,11 +7488,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-next@npm:~15.2.3":
-  version: 15.2.5
-  resolution: "eslint-config-next@npm:15.2.5"
+"eslint-config-next@npm:~15.2.6":
+  version: 15.2.8
+  resolution: "eslint-config-next@npm:15.2.8"
   dependencies:
-    "@next/eslint-plugin-next": 15.2.5
+    "@next/eslint-plugin-next": 15.2.8
     "@rushstack/eslint-patch": ^1.10.3
     "@typescript-eslint/eslint-plugin": ^5.4.2 || ^6.0.0 || ^7.0.0 || ^8.0.0
     "@typescript-eslint/parser": ^5.4.2 || ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -7508,7 +7508,7 @@ __metadata:
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 5bfa5a9d1d9f4d5b74568b192cd4efd5e53418d40cdd60a1a4b4025666411447c4cbe35410a2ee589c9d6a66042f488125cd6c544dc731ac4310463ea4f05e99
+  checksum: 0fd8b6a1b74afe5545052036c96e9d87d8209b3e6e11a2843a3f7b8148f603897211809e4053bac654631d26cb004082beedbeb8df709a486f43c4ae1af5f02d
   languageName: node
   linkType: hard
 
@@ -11722,11 +11722,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:~15.2.3":
-  version: 15.2.5
-  resolution: "next@npm:15.2.5"
+"next@npm:~15.2.6":
+  version: 15.2.8
+  resolution: "next@npm:15.2.8"
   dependencies:
-    "@next/env": 15.2.5
+    "@next/env": 15.2.8
     "@next/swc-darwin-arm64": 15.2.5
     "@next/swc-darwin-x64": 15.2.5
     "@next/swc-linux-arm64-gnu": 15.2.5
@@ -11779,7 +11779,7 @@ __metadata:
       optional: true
   bin:
     next: dist/bin/next
-  checksum: 191464cc3b190977deb2cdc92bd61642f8558cbc31ec020e11bb4f34ed01ccae20953c0ba0a1f28d98bc3297c839e52434fc1a5ed7fd10f01a92641615fe7ec0
+  checksum: 8d60e137d7e425615fbf639a05f7268c99016b89237bebc20805fb63da18692fd2534ef5ccdda790ddf0c1fd12c5a32850eb87feb6f322b0f5432a83867972ca
   languageName: node
   linkType: hard
 
