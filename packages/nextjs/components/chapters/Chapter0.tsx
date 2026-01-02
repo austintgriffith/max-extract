@@ -17,11 +17,6 @@ export const Chapter0 = () => {
 
   return (
     <div className="space-y-6">
-      {/* TODO Section */}
-      <div className="bg-warning/10 border border-warning rounded-lg p-4">
-        <p className="text-warning font-semibold">TODO: Graphics and lore content coming soon</p>
-      </div>
-
       {/* Main Content */}
       <div className="prose prose-lg max-w-none text-base-content">
         <h3 className="text-xl font-semibold mb-4 text-secondary">The Signal Relay System</h3>
